@@ -135,7 +135,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
          * this constant stuck at 1.0.6 while publishing 1.0.8 — so `diagnose()` and every event
          * envelope reported a version that had not been released for two cycles, and nothing noticed.
          */
-        private const val WRAPPER_VERSION = "1.0.7"
+        private const val WRAPPER_VERSION = "1.0.8"
     }
 
     // ── Promise-owning coroutines (E6) ────────────────────────────────────────
