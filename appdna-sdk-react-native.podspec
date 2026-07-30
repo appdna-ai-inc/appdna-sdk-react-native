@@ -9,7 +9,7 @@ Pod::Spec.new do |s|
   s.homepage         = "https://appdna.ai"
   s.license          = { :type => "SEE LICENSE IN LICENSE", :file => "LICENSE" }
   s.authors          = { "AppDNA AI" => "support@appdna.ai" }
-  s.source           = { :git => "https://github.com/appdna-ai/appdna-sdk-react-native.git", :tag => "v#{s.version}" }
+  s.source           = { :git => "https://github.com/appdna-ai-inc/appdna-sdk-react-native.git", :tag => "v#{s.version}" }
 
   # SPEC-070-B P0. The iOS core SDK targets 16.0 (AppDNASDK.podspec:15); a wrapper cannot ask for
   # less than the thing it wraps.
