@@ -1,0 +1,121 @@
+name: "\U0001F41E Bug / rendering fidelity report"
+description: Something is broken, crashes, or renders differently from how it is configured in the console
+title: "[Bug] <one-line summary>"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report! A complete report usually ships much faster than an incomplete one.
+
+        > ⚠️ **Never include API keys, tokens, or end-user personal data.** Redact logs before pasting.
+        > 🔒 **Security vulnerability?** Do NOT file it here — use [private reporting](https://github.com/appdna-ai-inc/appdna-sdk-react-native/security/advisories/new) instead.
+  - type: dropdown
+    id: report-type
+    attributes:
+      label: Report type
+      description: >
+        **Bug** = broken, crashes, or behaves wrong vs the console configuration.
+        **Fidelity** = it renders, but doesn't match the console preview / the other platform / the configured values (spacing, color, alignment, size).
+      options:
+        - "Bug — broken / crash / wrong behavior"
+        - "Fidelity — renders, but doesn't match the configuration or preview"
+    validations:
+      required: true
+  - type: input
+    id: sdk-version
+    attributes:
+      label: SDK version
+      placeholder: "e.g. 1.0.7 (plus the iOS/Android native SDK versions if known)"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Device & OS version
+      placeholder: "e.g. iPhone 15 / iOS 18.2, Pixel 8 / Android 15"
+    validations:
+      required: true
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - "Blocker — crashes, or a flow cannot be completed"
+        - "Major — wrong behavior or clearly wrong rendering"
+        - "Minor — cosmetic"
+    validations:
+      required: true
+  - type: input
+    id: location
+    attributes:
+      label: Flow / screen / step
+      description: Which flow (name or id) and which step/screen the problem appears on.
+      placeholder: "e.g. onboarding flow \"New user\", step 3"
+    validations:
+      required: true
+  - type: input
+    id: element
+    attributes:
+      label: Element
+      description: >
+        The configured element/block type, using its console name if you know it — e.g.
+        `input_select`, `input_slider`, `wheel_picker`, `progress_bar`, `carousel`, `pricing_card`,
+        `button`, `heading`, `image`, `lottie`. If unsure, describe it and attach a screenshot.
+      placeholder: "e.g. input_select"
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected
+      description: One or two lines — what should happen / how it is configured in the console.
+      placeholder: "Rows centered, selected row uses the configured accent color"
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual
+      description: One or two lines — what actually happens on device.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open flow …
+        2. Go to step …
+        3. Tap …
+    validations:
+      required: true
+  - type: dropdown
+    id: cross-platform
+    attributes:
+      label: Does it happen on both iOS and Android?
+      options:
+        - "Yes — same on both"
+        - "No — only iOS"
+        - "No — only Android"
+        - "Only tested one platform"
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / recordings
+      description: >
+        Drag & drop images here. For a fidelity mismatch, attach BOTH sides (device vs console
+        preview, or iOS vs Android). Reports with screenshots get fixed much faster.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+      description: >
+        Only in dark mode? Only with long text / RTL / small screens? A regression
+        ("worked in X, broken in Y")? Sanitized log output?
+    validations:
+      required: false

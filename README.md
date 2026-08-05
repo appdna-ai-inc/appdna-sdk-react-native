@@ -108,6 +108,15 @@ Full integration guide, configuration reference, and API docs at **[docs.appdna.
 - Sales / commercial: [sales@appdna.ai](mailto:sales@appdna.ai)
 - Licensing: [legal@appdna.ai](mailto:legal@appdna.ai)
 
+## Reporting issues
+
+- 🐞 **SDK bug or rendering issue** → [open an issue](https://github.com/appdna-ai-inc/appdna-sdk-react-native/issues/new/choose) using the bug report template.
+- 🆕 **Missing capability / configuration gap** → use the capability gap template on the same page.
+- 🔒 **Security vulnerability** → [report privately](https://github.com/appdna-ai-inc/appdna-sdk-react-native/security/advisories/new) — see [SECURITY.md](./SECURITY.md). Never in a public issue.
+- 🖥️ **Console / platform issue** (not the SDK) → use the Support widget in the [console](https://console.appdna.ai).
+
+> This repository is a read-only release mirror — development happens in our internal repository, so we don't accept pull requests here. Issues are very welcome and are triaged into our internal backlog; you'll see a comment on your issue when a fix ships.
+
 ## License
 
 ⚠️ **The AppDNA SDK is proprietary software, not open source.** This repository is publicly visible for marketing, evaluation, and reference purposes only.

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "\U0001F512 Security vulnerability"
+    url: https://github.com/appdna-ai-inc/appdna-sdk-react-native/security/advisories/new
+    about: Report security issues privately — never in a public issue.
+  - name: "\U0001F5A5 Console / platform issue"
+    url: https://console.appdna.ai
+    about: Problems with the AppDNA console or platform (not the SDK) — use the Support widget inside the console.
+  - name: "\U0001F4DA Documentation"
+    url: https://docs.appdna.ai
+    about: SDK guides, API reference, and integration docs.

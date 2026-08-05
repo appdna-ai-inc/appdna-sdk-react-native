@@ -1,0 +1,53 @@
+name: "\U0001F195 Capability / configuration gap"
+description: The console can't configure the design you need, or an element/option is missing
+title: "[Gap] <one-line summary of the capability>"
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when the capability itself is missing — nothing you can change in the console
+        would produce the result you need. (If it *is* configurable but renders wrong, file a
+        🐞 Bug / fidelity report instead.)
+
+        > ⚠️ **Never include API keys, tokens, or end-user personal data.**
+  - type: input
+    id: capability
+    attributes:
+      label: Capability
+      placeholder: "e.g. a measurement wheel picker with a kg/lbs unit toggle"
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Where you've seen it / reference
+      description: The app or design pattern you are trying to build — attach a screenshot or link.
+    validations:
+      required: true
+  - type: input
+    id: extends
+    attributes:
+      label: Closest existing element
+      description: The existing element this would extend (e.g. `wheel_picker`) — or "new element" if nothing close exists.
+      placeholder: "e.g. wheel_picker — or: new element"
+    validations:
+      required: true
+  - type: textarea
+    id: config-needs
+    attributes:
+      label: What you'd need to configure
+      description: The options an author would set in the console for this to work.
+      placeholder: |
+        - measurement type (weight/height)
+        - unit toggle (kg/lbs) that converts the value
+        - look: ruler / dial / gauge
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why it matters / how common
+      description: How often you hit this, and what it blocks for you.
+    validations:
+      required: true
