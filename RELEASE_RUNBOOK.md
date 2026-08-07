@@ -82,10 +82,10 @@ follow-up, so the RN-0.77 validation should cover an Expo-53 host too.
 The wrapper pins the natives, so the natives must exist on their registries first, or `pod install`
 and Gradle will resolve nothing.
 
-1. **iOS** `AppDNASDK` 1.0.70 → CocoaPods trunk.
-2. **Android** `ai.appdna:sdk-android` 1.0.42 → Maven Central.
+1. **iOS** `AppDNASDK` 1.0.71 → CocoaPods trunk.
+2. **Android** `ai.appdna:sdk-android` 1.0.43 → Maven Central.
 3. **Flutter** `appdna_sdk` → pub.dev.
-4. **React Native** `@appdna-ai/react-native-sdk` 1.0.7 → npm.
+4. **React Native** `@appdna-ai/react-native-sdk` 1.0.8 → npm.
 5. **Then** the `npm deprecate` above.
 
 `pnpm check:native-pins` asserts each wrapper pins the version actually being shipped, and
