@@ -566,7 +566,8 @@ internal object AppdnaVetoDecoder {
             title = map["title"] as? String,
             subtitle = map["subtitle"] as? String,
             ctaText = map["ctaText"] as? String,
-            layoutOverrides = map["layoutOverrides"]?.let { anyMap(it) },
+            // SPEC-448 §B — replaces the removed `layoutOverrides`, which nothing ever read.
+            fieldOptions = decodeFieldOptions(map["fieldOptions"]),
         )
     }
 
@@ -604,4 +605,19 @@ internal object AppdnaVetoDecoder {
             if (inner == null) null else key.toString() to inner
         }.toMap()
     }
+}
+
+/**
+ * SPEC-448 §B — `[blockId: [option maps]]` from the bridge into typed options, via the SAME
+ * `parseInputOptionList` the config parser uses so the two cannot drift.
+ */
+private fun decodeFieldOptions(raw: Any?): Map<String, List<ai.appdna.sdk.onboarding.InputOption>>? {
+    val byBlock = raw as? Map<*, *> ?: return null
+    val out = mutableMapOf<String, List<ai.appdna.sdk.onboarding.InputOption>>()
+    for ((k, v) in byBlock) {
+        val blockId = k as? String ?: continue
+        val list = v as? List<*> ?: continue
+        out[blockId] = ai.appdna.sdk.onboarding.OnboardingConfigParser.parseInputOptionList(list)
+    }
+    return out.ifEmpty { null }
 }

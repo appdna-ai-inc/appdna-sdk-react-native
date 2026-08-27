@@ -540,7 +540,8 @@ enum AppdnaVetoDecoder {
             title: map["title"] as? String,
             subtitle: map["subtitle"] as? String,
             ctaText: map["ctaText"] as? String,
-            layoutOverrides: anyMap(map["layoutOverrides"])
+            // SPEC-448 §B — replaces the removed `layoutOverrides`, which nothing ever read.
+            fieldOptions: decodeFieldOptions(map["fieldOptions"])
         )
     }
 
@@ -592,4 +593,19 @@ enum AppdnaVetoDecoder {
         guard let map = present as? [String: Any] else { return [:] }
         return map.filter { !($0.value is NSNull) }
     }
+}
+
+/// SPEC-448 §B — `[blockId: [option maps]]` from the bridge into typed options, decoded against
+/// the SAME `InputOption` the config parser uses so the two cannot drift.
+private func decodeFieldOptions(_ raw: Any?) -> [String: [InputOption]]? {
+    guard let byBlock = raw as? [String: Any] else { return nil }
+    var out: [String: [InputOption]] = [:]
+    for (blockId, list) in byBlock {
+        guard let arr = list as? [[String: Any]],
+              let data = try? JSONSerialization.data(withJSONObject: arr),
+              let options = try? JSONDecoder().decode([InputOption].self, from: data)
+        else { continue }
+        out[blockId] = options
+    }
+    return out.isEmpty ? nil : out
 }
