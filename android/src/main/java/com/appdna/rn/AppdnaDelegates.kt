@@ -608,16 +608,12 @@ internal object AppdnaVetoDecoder {
 }
 
 /**
- * SPEC-448 §B — `[blockId: [option maps]]` from the bridge into typed options, via the SAME
- * `parseInputOptionList` the config parser uses so the two cannot drift.
+ * SPEC-448 §B — `[blockId: [option maps]]` from the bridge into typed options.
+ *
+ * A one-line forward into the core, which is all a wrapper is allowed to be. The previous version
+ * reached into `OnboardingConfigParser` -- `internal`, so from this separate Gradle module it did
+ * not compile at all -- and the tempting fix, re-parsing the maps here, would have put a second
+ * option parser in a wrapper that ADR-001 says holds no logic.
  */
-private fun decodeFieldOptions(raw: Any?): Map<String, List<ai.appdna.sdk.onboarding.InputOption>>? {
-    val byBlock = raw as? Map<*, *> ?: return null
-    val out = mutableMapOf<String, List<ai.appdna.sdk.onboarding.InputOption>>()
-    for ((k, v) in byBlock) {
-        val blockId = k as? String ?: continue
-        val list = v as? List<*> ?: continue
-        out[blockId] = ai.appdna.sdk.onboarding.OnboardingConfigParser.parseInputOptionList(list)
-    }
-    return out.ifEmpty { null }
-}
+private fun decodeFieldOptions(raw: Any?): Map<String, List<ai.appdna.sdk.onboarding.InputOption>>? =
+    ai.appdna.sdk.onboarding.StepConfigOverride.decodeFieldOptions(raw)
