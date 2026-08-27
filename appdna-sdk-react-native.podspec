@@ -37,7 +37,7 @@ Pod::Spec.new do |s|
   # `pod lib lint` runs test_specs by default (`--skip-tests` opts out).
   #
   # ⚠️ A test_spec LAUNCHES A SIMULATOR → macOS runner only. It also inherits P0's
-  # `--include-podspecs` requirement while AppDNASDK 1.0.72 is unpublished.
+  # `--include-podspecs` requirement while AppDNASDK 1.0.73 is unpublished.
   s.test_spec 'Tests' do |test_spec|
     test_spec.source_files = "ios/Tests/**/*.{swift}"
     # `requires_app_host` because the tests exercise MainActor delivery and a DispatchQueue.main
@@ -54,7 +54,7 @@ Pod::Spec.new do |s|
   # SPEC-070-B D-v: the wrapper always pins the freshest native. `~>` admits a newer PATCH with no
   # source edit, so `check:version-lockstep` (AC-34) asserts this line matches the shipped iOS
   # version rather than trusting that it does.
-  s.dependency "AppDNASDK", "~> 1.0.72"
+  s.dependency "AppDNASDK", "~> 1.0.73"
 
   # A pure-Swift TurboModule is impossible: codegen emits a C++ `NativeAppdnaModuleSpecJSI` plus an
   # ObjC @protocol, and registration returns a std::shared_ptr over headers Swift cannot import. The

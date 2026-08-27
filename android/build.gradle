@@ -135,7 +135,7 @@ dependencies {
     // SPEC-070-B D-v: pinned to the native this wrapper wraps. A bare Gradle version is a required
     // MINIMUM, not a lock — Gradle happily resolves something newer — so `check:version-lockstep`
     // (AC-34) asserts this coordinate equals the shipped Android version rather than assuming it.
-    implementation "ai.appdna:sdk-android:1.0.44"
+    implementation "ai.appdna:sdk-android:1.0.45"
 
     // SPEC-070-B P4: Compose runtime/UI + the ViewTree owners (SlotViewTreeOwner) needed to host a
     // ComposeView outside a ComponentActivity. sdk-android pulls Compose in via `implementation`
