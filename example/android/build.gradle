@@ -29,7 +29,22 @@ apply plugin: "com.facebook.react.rootproject"
 allprojects {
     repositories {
         if (System.getenv("APPDNA_ANDROID_SDK_PATH")) {
-            mavenLocal()   // listed FIRST so an unpublished local artifact wins
+            // `exclusiveContent`, not a plain `mavenLocal()` listed first.
+            //
+            // Listing it first is not enough. Gradle consults every repository for a module until
+            // one answers, and the RN toolchain's own dependencies bring in jitpack.io — declared
+            // nowhere in this repo and not removable. When jitpack `Read timed out`, Gradle DISABLES
+            // that repository and fails the entire configuration, reporting
+            // `Could not resolve ai.appdna:sdk-android` — an artifact sitting in mavenLocal that was
+            // never the problem. It happened on two consecutive runs and survived a retry, so it is
+            // not a blip.
+            //
+            // This says `ai.appdna` is served by mavenLocal and by nothing else, so our own artifact
+            // can never be the thing a third-party outage takes down.
+            exclusiveContent {
+                forRepository { mavenLocal() }
+                filter { includeGroup "ai.appdna" }
+            }
         }
     }
 }
