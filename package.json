@@ -2,7 +2,7 @@
   "name": "@appdna-ai/react-native-sdk",
   "version": "1.0.13",
   "appdna_feature_parity": "1.0.76",
-  "description": "AppDNA SDK for React Native \u2014 analytics, experiments, paywalls, surveys, and more.",
+  "description": "AppDNA SDK for React Native — analytics, experiments, paywalls, surveys, and more.",
   "main": "lib/commonjs/index.js",
   "module": "lib/module/index.js",
   "types": "lib/typescript/src/index.d.ts",
