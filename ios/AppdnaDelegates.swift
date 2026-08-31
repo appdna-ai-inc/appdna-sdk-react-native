@@ -541,7 +541,11 @@ enum AppdnaVetoDecoder {
             subtitle: map["subtitle"] as? String,
             ctaText: map["ctaText"] as? String,
             // SPEC-448 §B — replaces the removed `layoutOverrides`, which nothing ever read.
-            fieldOptions: decodeFieldOptions(map["fieldOptions"])
+            fieldOptions: decodeFieldOptions(map["fieldOptions"]),
+            // SPEC-452 — the `{{hook_data.…}}` payload. `anyMap` (not a plain cast) because a
+            // bridged nested dictionary fails `as? [String: Any]` at depth, and this value is
+            // nested by definition: hosts send objects and arrays of objects here.
+            dataContext: anyMap(map["dataContext"])
         )
     }
 

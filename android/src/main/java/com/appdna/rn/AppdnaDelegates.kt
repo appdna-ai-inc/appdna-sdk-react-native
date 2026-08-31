@@ -568,6 +568,10 @@ internal object AppdnaVetoDecoder {
             ctaText = map["ctaText"] as? String,
             // SPEC-448 §B — replaces the removed `layoutOverrides`, which nothing ever read.
             fieldOptions = decodeFieldOptions(map["fieldOptions"]),
+            // SPEC-452 — the `{{hook_data.…}}` payload. `anyMap`, not a plain cast: a bridged
+            // nested map fails a direct cast at depth, and this value is nested by definition —
+            // hosts send objects and arrays of objects here.
+            dataContext = map["dataContext"]?.let { anyMap(it) },
         )
     }
 
