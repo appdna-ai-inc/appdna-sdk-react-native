@@ -572,6 +572,8 @@ internal object AppdnaVetoDecoder {
             // nested map fails a direct cast at depth, and this value is nested by definition —
             // hosts send objects and arrays of objects here.
             dataContext = map["dataContext"]?.let { anyMap(it) },
+            // SPEC-451 — a one-line forward into the core decoder, which is all a wrapper may be.
+            mapRoutes = ai.appdna.sdk.onboarding.StepConfigOverride.decodeMapRoutes(map["mapRoutes"]),
         )
     }
 

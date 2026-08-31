@@ -545,7 +545,9 @@ enum AppdnaVetoDecoder {
             // SPEC-452 — the `{{hook_data.…}}` payload. `anyMap` (not a plain cast) because a
             // bridged nested dictionary fails `as? [String: Any]` at depth, and this value is
             // nested by definition: hosts send objects and arrays of objects here.
-            dataContext: anyMap(map["dataContext"])
+            dataContext: anyMap(map["dataContext"]),
+            // SPEC-451 — a one-line forward into the core decoder, which is all a wrapper may be.
+            mapRoutes: StepConfigOverride.decodeMapRoutes(map["mapRoutes"])
         )
     }
 

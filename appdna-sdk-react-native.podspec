@@ -54,7 +54,7 @@ Pod::Spec.new do |s|
   # SPEC-070-B D-v: the wrapper always pins the freshest native. `~>` admits a newer PATCH with no
   # source edit, so `check:version-lockstep` (AC-34) asserts this line matches the shipped iOS
   # version rather than trusting that it does.
-  s.dependency "AppDNASDK", "~> 1.0.73"
+  s.dependency "AppDNASDK", "~> 1.0.76"
 
   # A pure-Swift TurboModule is impossible: codegen emits a C++ `NativeAppdnaModuleSpecJSI` plus an
   # ObjC @protocol, and registration returns a std::shared_ptr over headers Swift cannot import. The

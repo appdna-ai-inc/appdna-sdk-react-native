@@ -52,6 +52,9 @@ export { AppDNAPush } from './push';
 export { AppDNAScreenSlot } from './AppDNAScreenSlot';
 export type { AppDNAScreenSlotProps } from './AppDNAScreenSlot';
 export type { PushPayload } from './push';
+// SPEC-451 — the route a `map` block draws, supplied by the host at runtime.
+export { mapRoute } from './mapRoute';
+export type { MapRouteInput, MapRouteStop, MapRouteBridgePayload } from './mapRoute';
 
 // MARK: - Delegate Interfaces
 //
