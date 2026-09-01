@@ -169,6 +169,45 @@ describe('setDelegate replaces, it does not stack', () => {
   });
 });
 
+describe('the flag bucket survives the bridge into a host delegate', () => {
+  /**
+   * A flag CTA writes its key into the step's answers AND into a flat `flags` bucket, and the host
+   * reads that bucket at `onOnboardingCompleted` to route once onboarding has finished.
+   *
+   * React Native needs no wrapper code for this — `responses` crosses as a plain object and the
+   * facade forwards it untouched — which is exactly why it deserves a test: "no code needed" is a
+   * claim, and an untested claim about a nested value crossing a bridge is how a wrapper quietly
+   * flattens one. Flutter's `cast<String, dynamic>()` is shallow for precisely this reason.
+   */
+  it('a nested flags map arrives intact, alongside the step answers', async () => {
+    await AppDNA.configure('adn_test_key');
+
+    const seen: Array<{ flowId: string; responses: Record<string, unknown> }> = [];
+    AppDNA.onboarding.setDelegate({
+      onOnboardingCompleted: (flowId, responses) => {
+        seen.push({ flowId, responses });
+      },
+    });
+
+    for (const listener of listenersByEvent.get('onOnboardingCompleted') ?? []) {
+      listener({
+        flowId: 'flow_tour_booking',
+        responses: {
+          ask_goal: ['relax'],
+          summary: { upsell_choice: 'booking' },
+          flags: { upsell_choice: 'booking', wants_callback: 'true' },
+        },
+      });
+    }
+
+    expect(seen).toHaveLength(1);
+    const flags = seen[0]!.responses.flags as Record<string, unknown>;
+    expect(flags).toEqual({ upsell_choice: 'booking', wants_callback: 'true' });
+    // The step-scoped copy is still there — the bucket is an addition, nothing is moved.
+    expect(seen[0]!.responses.summary).toEqual({ upsell_choice: 'booking' });
+  });
+});
+
 describe('a delegate swap replaces the VETO HOOKS too, not just the listeners', () => {
   /** The hooks are registered conditionally, so a new delegate that omits one never overwrites it. */
   const onboardingDelegate = (opts: { withVeto: boolean }) => ({
