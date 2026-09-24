@@ -12,13 +12,13 @@
  */
 
 import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { mapRoute, type MapRouteStop } from '../src/mapRoute';
+import { fixturePath } from './fixtureRoot';
 
-const FIXTURE = join(
-  __dirname,
-  '../../sdk-shared-fixtures/config_overrides/map_delegate_route.fixture.json',
-);
+// 🔴 Resolved, never hardcoded. `join(__dirname, '../../sdk-shared-fixtures/...')` worked only in
+// the monorepo and killed this whole suite on a standalone checkout (the Mac build bridge), where
+// it walked up to `~/Projects/sdk-shared-fixtures`. Green in CI the entire time. See `fixtureRoot`.
+const FIXTURE = fixturePath('config_overrides', 'map_delegate_route.fixture.json');
 
 describe('map route bridge shape', () => {
   const fixture = JSON.parse(readFileSync(FIXTURE, 'utf8')) as {

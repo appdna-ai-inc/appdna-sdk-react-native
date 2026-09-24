@@ -51,6 +51,7 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { resolveFixturesRoot } from './fixtureRoot';
 
 // ---- Mock the entire react-native module surface used by ../src --------
 
@@ -131,24 +132,8 @@ interface Fixture {
   };
 }
 
-function resolveFixturesRoot(): string {
-  const env = process.env.APPDNA_SDK_FIXTURES_DIR;
-  if (env && fs.existsSync(env)) return env;
-
-  let here = __dirname;
-  for (let i = 0; i < 10; i++) {
-    const candidate = path.join(here, 'packages', 'sdk-shared-fixtures');
-    if (fs.existsSync(candidate)) return candidate;
-    const parent = path.dirname(here);
-    if (parent === here) break;
-    here = parent;
-  }
-  const codespace = '/workspaces/appdna-ai/packages/sdk-shared-fixtures';
-  if (fs.existsSync(codespace)) return codespace;
-  throw new Error(
-    'Could not locate packages/sdk-shared-fixtures. Set APPDNA_SDK_FIXTURES_DIR.',
-  );
-}
+// Shared with `mapRouteBridge.test.ts`, which used to hardcode a relative path and died on a
+// standalone checkout. One resolver so a third copy cannot diverge — see `./fixtureRoot`.
 
 function walkFixtureFiles(root: string): string[] {
   const out: string[] = [];
