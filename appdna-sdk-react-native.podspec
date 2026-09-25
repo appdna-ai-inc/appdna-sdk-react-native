@@ -54,7 +54,23 @@ Pod::Spec.new do |s|
   # SPEC-070-B D-v: the wrapper always pins the freshest native. `~>` admits a newer PATCH with no
   # source edit, so `check:version-lockstep` (AC-34) asserts this line matches the shipped iOS
   # version rather than trusting that it does.
-  s.dependency "AppDNASDK", "~> 1.0.81"
+  s.dependency "AppDNASDK", "~> 1.0.82"
+
+  # SPEC-495 — 🔴 STATIC, because this pod links the static AppDNASDK and inherits its map symbols.
+  #
+  # AppDNASDK is `static_framework` (GoogleMaps ships as a static xcframework). A DYNAMIC framework
+  # that links a static library must resolve that library's external symbols at its own link step,
+  # so this wrapper failed exactly where the SDK used to:
+  #
+  #     Undefined symbols for architecture arm64:
+  #       "_OBJC_CLASS_$_GMSMapView", referenced from:
+  #            in AppDNASDK[arm64](MapInteractive.o)
+  #     (in target 'appdna-sdk-react-native' from project 'Pods')
+  #
+  # Declaring this pod static too removes that link step: the objects flow into the app, which links
+  # GoogleMaps alongside them. Every pod in the chain from the map code to the app has to be static
+  # or link GoogleMaps itself; static is the one that does not multiply.
+  s.static_framework = true
 
   # A pure-Swift TurboModule is impossible: codegen emits a C++ `NativeAppdnaModuleSpecJSI` plus an
   # ObjC @protocol, and registration returns a std::shared_ptr over headers Swift cannot import. The

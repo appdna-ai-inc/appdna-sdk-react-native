@@ -16,6 +16,31 @@ ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 prepare_react_native_project!
 
+# SPEC-495 — GoogleMaps is a STATIC xcframework, and this example links dynamically.
+#
+# `pod install` refuses outright:
+#
+#     [!] The 'Pods-AppdnaExample' target has transitive dependencies that include statically
+#         linked binaries: (.../Pods/GoogleMaps/Maps/Frameworks/GoogleMaps.xcframework)
+#
+# That check exists to catch the same static code being embedded in SEVERAL dynamic frameworks,
+# where the duplicate symbols are a real problem. Here there is exactly one consumer — the app — so
+# the condition it warns about cannot arise, and the standard remedy in the GoogleMaps ecosystem
+# (react-native-maps documents the same one) is to disable that specific validation.
+#
+# 🔴 The alternative was tried and rejected on evidence, not taste: `use_frameworks! :linkage =>
+# :static` is recorded below as wedging for 1800s inside BoringSSL-GRPC on this pod graph. Firebase
+# is not optional for this SDK, so dynamic linkage is not a preference here — it is the only
+# configuration that installs.
+#
+# Any RN or Flutter host that links dynamically needs these four lines too; the installation guides
+# say so. 🔴 CI DOES NOT COVER THE FLUTTER SIDE OF THIS — the Flutter job runs `pub get`, `analyze`
+# and `test`, and never a `pod install`, so a Flutter host is the one place this can only be caught
+# by a person.
+pre_install do |installer|
+  Pod::Installer::Xcode::TargetValidator.send(:define_method, :verify_no_static_framework_transitive_dependencies) {}
+end
+
 target 'AppdnaExample' do
   # SPEC-070-B AC-11 / AC-21 / AC-30b — install the podspec's `Tests` test_spec, so CI can RUN the
   # iOS unit tests (`parseOptions`, the promo-code default) rather than merely compile them.
@@ -52,6 +77,23 @@ target 'AppdnaExample' do
   pod 'appdna-sdk-react-native',
       :path => '../../',
       :testspecs => ['Tests']
+
+  # SPEC-495 — the app target must link GoogleMaps ITSELF, and this is the second half of the
+  # `pre_install` patch above rather than a duplicate of it.
+  #
+  # Disabling the validator lets `pod install` finish; it does not make CocoaPods LINK a static
+  # framework that arrived transitively through a dynamic one. The app compiled perfectly and then
+  # died at the linker:
+  #
+  #     Undefined symbols for architecture arm64
+  #     > Symbol: _OBJC_CLASS_$_GMSCameraPosition
+  #     > Referenced from: in MapInteractive.o
+  #
+  # `MapInteractive.o` existing at all is the tell: the Swift compiled fine against the pod's
+  # headers, so this is purely about which target owns the static binary. Naming the pod in the app
+  # target gives it an owner. react-native-maps asks its users for the same line, for the same
+  # reason.
+  pod 'GoogleMaps', '~> 9.4'
 
   config = use_native_modules!
 
