@@ -174,6 +174,8 @@ internal class OnboardingForwarder(
                 value?.let { put("value", it) }
                 put("inputValues", inputValues)
             },
+            // SPEC-496 §5b C5.5 — wait at least as long as the SDK's own deadline for this action.
+            timeoutMs = maxOf(invoker.timeoutMs, ElementInteractionResult.minimumBridgeTimeoutMs(action) ?: 0L),
         )
         return AppdnaVetoDecoder.elementInteractionResult(reply)
     }
@@ -590,6 +592,9 @@ internal object AppdnaVetoDecoder {
             // #657 — replacement options for a refresh; same decoder as the render-time override.
             fieldOptions = decodeFieldOptions(map["fieldOptions"]),
             advance = map["advance"] as? Boolean ?: false,
+            // SPEC-496 §5b C2 — a one-line forward into the core decoder. NOT `anyMap`: it drops null
+            // members, and a null member is how a host removes a `hook_data` key.
+            dataContext = ElementInteractionResult.decodeDataContext(map["dataContext"]),
         )
     }
 

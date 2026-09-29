@@ -35,6 +35,8 @@ import {
   unregisterHostCallback,
   __resetHostCallbacksForTesting,
 } from '../src/hostCallbacks';
+import { readFileSync } from 'node:fs';
+import { fixturePath } from './fixtureRoot';
 
 /** Deliver a native veto request and wait for the dispatcher's async reply. */
 async function fireHostCallback(hook: string, args: Record<string, unknown>, callbackId = 'e1:1') {
@@ -148,3 +150,50 @@ describe('host-callback dispatcher', () => {
     spy.mockRestore();
   });
 });
+
+/**
+ * SPEC-496 §5b C10 — the JS half of the `element_interaction_data_context_decode` shared fixture.
+ *
+ * The decode of `dataContext` (null members kept as removal markers, 0/1 kept as numbers) happens in
+ * the native bridge, into the core `ElementInteractionResult.decodeDataContext`. The wrapper's job is to
+ * FORWARD the host's map unchanged — a `null` member must cross, or "null removes a key" is impossible
+ * for every RN host. An `undefined` member cannot cross JSON, so it is a no-op, not a removal: that is
+ * the documented TS contract, pinned here. The reply is READ FROM THE FIXTURE the natives decode.
+ */
+describe('onElementInteraction reply forwarding (SPEC-496 §5b C10)', () => {
+  const fixture = JSON.parse(
+    readFileSync(fixturePath('config_overrides', 'element_interaction_data_context_decode.fixture.json'), 'utf8'),
+  ) as { setup: { session_data: { host_interaction_reply: Record<string, unknown> } } };
+  const reply = fixture.setup.session_data.host_interaction_reply;
+
+  beforeEach(() => {
+    mockReplies.length = 0;
+    mockHostCallbackListener = undefined;
+    __resetHostCallbacksForTesting();
+  });
+
+  it('forwards the host map unchanged, null members included', async () => {
+    registerHostCallback('onElementInteraction', () => reply);
+
+    await fireHostCallback('onElementInteraction', { stepId: 'step_eir', blockId: 'show_more', action: 'refresh', value: 'more' });
+
+    const sent = JSON.parse(mockReplies[0].resultJson) as { dataContext: Record<string, unknown> };
+    expect(sent).toEqual(reply);
+    expect('banner' in sent.dataContext).toBe(true);
+    expect(sent.dataContext.banner).toBeNull();
+    expect(sent.dataContext.count).toBe(0);
+    expect(sent.dataContext.flag).toBe(1);
+    expect(sent.dataContext.enabled).toBe(true);
+  });
+
+  it('does not forward an undefined member — it is a no-op, not a removal', async () => {
+    registerHostCallback('onElementInteraction', () => ({ dataContext: { banner: undefined, label: 'x' } }));
+
+    await fireHostCallback('onElementInteraction', { action: 'refresh' });
+
+    const sent = JSON.parse(mockReplies[0].resultJson) as { dataContext: Record<string, unknown> };
+    expect(sent.dataContext).toEqual({ label: 'x' });
+    expect('banner' in sent.dataContext).toBe(false);
+  });
+});
+

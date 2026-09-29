@@ -161,7 +161,10 @@ final class OnboardingForwarder: NSObject, AppDNAOnboardingDelegate {
             "inputValues": inputValues,
         ]
         if let value { args["value"] = value }
-        return AppdnaVetoDecoder.elementInteractionResult(await invoker.invoke("onElementInteraction", args))
+        // SPEC-496 §5b C5.5 — wait at least as long as core's deadline for this action (8 s for a
+        // `refresh`), so the bridge never cuts a slow "Show more" short. One line; the rule is core's.
+        let timeout = max(invoker.timeout, ElementInteractionResult.minimumBridgeTimeout(action: action) ?? 0)
+        return AppdnaVetoDecoder.elementInteractionResult(await invoker.invoke("onElementInteraction", args, timeout: timeout))
     }
 
     func onPermissionRequest(_ permissionType: String) async -> PermissionHandling? {
@@ -568,7 +571,10 @@ enum AppdnaVetoDecoder {
             inputValuePatches: anyMap(map["inputValuePatches"]),
             // #657 — replacement options for a refresh; same decoder as the render-time override.
             fieldOptions: decodeFieldOptions(map["fieldOptions"]),
-            advance: (map["advance"] as? Bool) ?? false
+            advance: (map["advance"] as? Bool) ?? false,
+            // SPEC-496 §5b C2 — a one-line forward into the CORE decoder. Never `anyMap`: it drops
+            // null members, and a null member here means "remove this key".
+            dataContext: ElementInteractionResult.decodeDataContext(map["dataContext"])
         )
     }
 

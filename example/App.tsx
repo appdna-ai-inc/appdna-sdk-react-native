@@ -61,6 +61,42 @@ type Props = {
   experimentVariantId?: string;
   /** A paywall placement name, for `paywall.presentByPlacement`. */
   placement?: string;
+  /**
+   * SPEC-496 device pass — `items` makes `onBeforeStepRender` hand every step a sample
+   * `dataContext` (`hook_data.recommendations`, three items); `empty` hands it an empty list, so the
+   * empty-text / required-select path can be exercised. `showmore` is the SPEC-496 §5b paging host for
+   * "Show more" (`refresh_step`): page 1 is a–d, and every `refresh` interaction answers — after 1.5 s, so
+   * the spinner shows — with the list so far plus the next four (accumulate, at most 20). Unset → no
+   * override, as before.
+   */
+  hostDataDemo?: string;
+};
+
+/** SPEC-496 — sample host data for the `hostDataDemo` launch arg. Public placeholder images only. */
+const HOST_DATA_DEMO_ITEMS = [
+  { id: 'w1', name: 'Castello di Ama', subtitle: 'Tuscany', imageUrl: 'https://picsum.photos/seed/w1/400/300' },
+  { id: 'w2', name: 'Opus One', subtitle: 'Napa', imageUrl: 'https://picsum.photos/seed/w2/400/300' },
+  { id: 'w3', name: 'Quinta do Crasto', subtitle: 'Douro', imageUrl: 'https://picsum.photos/seed/w3/400/300' },
+];
+
+/** SPEC-496 §5b — the `showmore` host's list: `a`, `b`, … with the page each arrived on as its subtitle. */
+const showMoreItems = (count: number) =>
+  Array.from({ length: count }, (_, i) => {
+    const id = String.fromCharCode(97 + i);
+    return {
+      id,
+      name: `Winery ${id.toUpperCase()}`,
+      subtitle: `page ${Math.floor(i / 4) + 1}`,
+      imageUrl: `https://picsum.photos/seed/p1b-${id}/400/300`,
+    };
+  });
+
+/** SPEC-496 §5b — the `showmore` host's stand-in for backend latency (see the call site). */
+const demoLatency = (ms: number) => {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    // spin — see the call site for why this is not setTimeout
+  }
 };
 
 /** Every option native parses, set explicitly — the defaults path was the only one ever exercised. */
@@ -91,6 +127,7 @@ export default function App({
   experimentId,
   experimentVariantId,
   placement,
+  hostDataDemo,
 }: Props) {
   const [status, setStatus] = useState(apiKey ? 'Configuring…' : 'No API key — pass -appdnaApiKey');
   const [log, setLog] = useState<string[]>([]);
@@ -99,6 +136,8 @@ export default function App({
   const [suppressed, setSuppressed] = useState(false);
   // Unsubscribers from the standalone listener helpers, so the shutdown button can prove they detach.
   const subscriptions = useRef<Array<() => void>>([]);
+  // `showmore` host: pages shown so far, per step. A revisit answers with the list the user last saw.
+  const showMorePages = useRef<Record<string, number>>({});
 
   // The log is what the device pass reads back: every delegate callback and every veto appends a
   // line, so a hook that never fires is visible as an ABSENCE, not inferred from a passing await.
@@ -145,12 +184,39 @@ export default function App({
       // the proof the hook ran; returning an override here would mutate every step of every flow this
       // example is pointed at, which is a worse default for a demo than a visible log.
       onBeforeStepRender: async (_flowId, stepId) => {
+        // SPEC-496 — opt-in via the `appdnaHostDataDemo` launch arg only, so the default stays "no
+        // override". The payload is what a host's `{{hook_data.recommendations}}` repeat reads.
+        if (hostDataDemo === 'showmore') {
+          const recommendations = showMoreItems(4 * (showMorePages.current[stepId] ?? 1));
+          append(`veto onBeforeStepRender(${stepId}) → dataContext: ${recommendations.length} recommendation(s)`);
+          return { dataContext: { recommendations } };
+        }
+        if (hostDataDemo === 'items' || hostDataDemo === 'empty') {
+          const recommendations = hostDataDemo === 'items' ? HOST_DATA_DEMO_ITEMS : [];
+          append(`veto onBeforeStepRender(${stepId}) → dataContext: ${recommendations.length} recommendation(s)`);
+          return { dataContext: { recommendations } };
+        }
         append(`veto onBeforeStepRender(${stepId}) → no override`);
         return null;
       },
       // `null` = "no field patches, do not advance" — the interaction proceeds natively.
-      onElementInteraction: async (_flowId, stepId, blockId, action) => {
-        append(`veto onElementInteraction(${stepId}/${blockId}, ${action}) → no patch`);
+      onElementInteraction: async (_flowId, stepId, blockId, action, value) => {
+        if (hostDataDemo === 'showmore' && action === 'refresh') {
+          append(`veto onElementInteraction(${stepId}/${blockId}, ${action}, value=${value ?? '<none>'}) → loading`);
+          // Slow enough that the tapped button's spinner is visible. Deliberately NOT `setTimeout`: React
+          // Native on Android pauses JS timers while its Activity is paused, and the SDK's onboarding
+          // Activity is in front during a flow — a timer-based delay would not resolve until the flow
+          // closes, so the SDK's 8 s deadline would drop the reply. A real host awaits its network call,
+          // which is not paused; this demo stands in for that with a clock spin.
+          demoLatency(1500);
+          const pages = Math.min((showMorePages.current[stepId] ?? 1) + 1, 5);
+          showMorePages.current[stepId] = pages;
+          const recommendations = showMoreItems(4 * pages);
+          append(`onElementInteraction(${stepId}/${blockId}) → dataContext: ${recommendations.length} recommendation(s)`);
+          // The WHOLE list so far (accumulate), under the key the Select repeats over.
+          return { dataContext: { recommendations }, advance: false };
+        }
+        append(`veto onElementInteraction(${stepId}/${blockId}, ${action}, value=${value ?? '<none>'}) → no patch`);
         return null;
       },
       // `{type:'proceed'}` = run the native OS prompt. (`{type:'handledByHost', granted}` would
@@ -256,7 +322,7 @@ export default function App({
       AppDNAPush.onPushReceived((_p, inForeground) => append(`AppDNAPush.onPushReceived (fg=${inForeground})`)),
       AppDNAPush.onPushTapped((_p, actionId) => append(`AppDNAPush.onPushTapped (${actionId ?? 'default'})`)),
     ];
-  }, [append]);
+  }, [append, hostDataDemo]);
 
   const boot = useCallback(async () => {
     if (!apiKey) return;

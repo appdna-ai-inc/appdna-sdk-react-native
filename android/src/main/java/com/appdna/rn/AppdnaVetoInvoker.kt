@@ -22,7 +22,8 @@ import kotlin.coroutines.resume
  * every caller reads it as "apply my default".
  */
 internal class AppdnaVetoInvoker(
-    private val timeoutMs: Long,
+    /** The configured wait (`AppDNAOptions.vetoTimeout`), the default for every [invoke]. */
+    internal val timeoutMs: Long,
     private val emit: (Map<String, Any?>) -> Unit,
 ) {
 
@@ -37,10 +38,13 @@ internal class AppdnaVetoInvoker(
     /**
      * Emit the veto request and await JS's reply.
      *
+     * @param timeoutMs this call's wait; defaults to the configured one. SPEC-496 §5b C5.5 — only the
+     *   `onElementInteraction` bridge passes its own (`max(configured, core minimumBridgeTimeoutMs)`),
+     *   so a `refresh` is never cut short of the SDK's 8 s deadline.
      * @return the decoded reply (a `Map`, a `Boolean`, …), or `null` on timeout, on a saturated
      *   pending map, or when JS answered `null` — all of which mean "no opinion".
      */
-    suspend fun invoke(hook: String, args: Map<String, Any?>): Any? {
+    suspend fun invoke(hook: String, args: Map<String, Any?>, timeoutMs: Long = this.timeoutMs): Any? {
         val reply: Reply? = withTimeoutOrNull(timeoutMs) {
             suspendCancellableCoroutine { continuation ->
                 val callbackId = AppdnaHostCallbacks.register { resultJson ->

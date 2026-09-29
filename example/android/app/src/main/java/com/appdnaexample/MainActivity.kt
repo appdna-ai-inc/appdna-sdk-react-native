@@ -64,6 +64,8 @@ class MainActivity : ReactActivity() {
             "appdnaExperimentId" to "experimentId",
             "appdnaExperimentVariantId" to "experimentVariantId",
             "appdnaPlacement" to "placement",
+            // SPEC-496 device pass: `items` | `empty` — sample host data for onBeforeStepRender.
+            "appdnaHostDataDemo" to "hostDataDemo",
         )
   }
 }
