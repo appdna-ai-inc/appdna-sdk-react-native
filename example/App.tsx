@@ -74,9 +74,9 @@ type Props = {
 
 /** SPEC-496 — sample host data for the `hostDataDemo` launch arg. Public placeholder images only. */
 const HOST_DATA_DEMO_ITEMS = [
-  { id: 'w1', name: 'Castello di Ama', subtitle: 'Tuscany', imageUrl: 'https://picsum.photos/seed/w1/400/300' },
-  { id: 'w2', name: 'Opus One', subtitle: 'Napa', imageUrl: 'https://picsum.photos/seed/w2/400/300' },
-  { id: 'w3', name: 'Quinta do Crasto', subtitle: 'Douro', imageUrl: 'https://picsum.photos/seed/w3/400/300' },
+  { id: 'w1', name: 'Maple Farm', subtitle: 'Toronto', imageUrl: 'https://picsum.photos/seed/w1/400/300' },
+  { id: 'w2', name: 'Oak Hall', subtitle: 'Nashville', imageUrl: 'https://picsum.photos/seed/w2/400/300' },
+  { id: 'w3', name: 'Birch Mill', subtitle: 'Dublin', imageUrl: 'https://picsum.photos/seed/w3/400/300' },
 ];
 
 /** SPEC-496 §5b — the `showmore` host's list: `a`, `b`, … with the page each arrived on as its subtitle. */
@@ -85,7 +85,7 @@ const showMoreItems = (count: number) =>
     const id = String.fromCharCode(97 + i);
     return {
       id,
-      name: `Winery ${id.toUpperCase()}`,
+      name: `Venue ${id.toUpperCase()}`,
       subtitle: `page ${Math.floor(i / 4) + 1}`,
       imageUrl: `https://picsum.photos/seed/p1b-${id}/400/300`,
     };
