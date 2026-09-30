@@ -602,8 +602,11 @@ class SharedFixtureBridgeTest {
     fun failsLoudlyFixturesRejectPurchaseWithTheFixtureErrorType() {
         val failures = mutableListOf<String>()
         try {
-            for (id in listOf("paywall_purchase_no_provider_fails_loudly", "paywall_purchase_revenuecat_fails_loudly")) {
-                val fixture = JSONObject(File(fixturesRoot(), "billing/$id.fixture.json").readText())
+            // Every `purchase` fixture whose id ends in `_fails_loudly` — the §3.9 ruling's own
+            // selector (check-fixture-coverage.ts `case 'purchase'`), so a new one joins by itself.
+            val loud = failsLoudlyFixtures()
+            assertTrue("no `*_fails_loudly` purchase fixture found — this would assert nothing", loud.isNotEmpty())
+            for ((id, fixture) in loud) {
                 val provider = fixture.getJSONObject("setup").getJSONObject("config").getString("billing_provider")
                 val args = fixture.getJSONObject("expect").getJSONArray("delegate_calls").getJSONObject(0).getJSONObject("args")
                 reconfigure(provider)
@@ -655,6 +658,13 @@ class SharedFixtureBridgeTest {
         val m = billing::class.java.declaredMethods.first { it.name.startsWith("deliveringDelegate") }
         return m.apply { isAccessible = true }.invoke(billing)
     }
+
+    private fun failsLoudlyFixtures(): List<Pair<String, JSONObject>> =
+        File(fixturesRoot(), "billing").listFiles().orEmpty()
+            .filter { it.name.endsWith("_fails_loudly.fixture.json") }
+            .sortedBy { it.name }
+            .map { it.name.removeSuffix(".fixture.json") to JSONObject(it.readText()) }
+            .filter { (_, json) -> json.getJSONObject("action").getString("kind") == "purchase" }
 
     /** Shut the singleton down and configure it again through the module, with [provider]. */
     private fun reconfigure(provider: String) {
