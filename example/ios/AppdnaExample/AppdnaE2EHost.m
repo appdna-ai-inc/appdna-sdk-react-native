@@ -40,6 +40,16 @@ RCT_EXPORT_MODULE();
     _requests = [NSMutableArray new];
     _requestProducts = [NSMutableDictionary new];
     _deferred = [NSMutableSet new];
+    // A deferred (Ask to Buy) transaction outlives the process: it stays in the payment queue until it
+    // is approved or declined. Rebuild the set from the queue so the "refused already deferred" guard in
+    // `hostBuy` also holds after a relaunch, not only within one session. (A deferred SDK purchase of
+    // the same product would be counted too — conservative for the refusal; the device rows start no
+    // SDK Ask-to-Buy.)
+    for (SKPaymentTransaction *t in [SKPaymentQueue defaultQueue].transactions) {
+      if (t.transactionState == SKPaymentTransactionStateDeferred) {
+        [_deferred addObject:t.payment.productIdentifier];
+      }
+    }
     [[SKPaymentQueue defaultQueue] addTransactionObserver:self];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(logUnfinished)

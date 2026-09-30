@@ -272,7 +272,7 @@ export default function App({
         console.log(line);
         append(`${label} → ${line}`);
       } catch (e) {
-        const code = (e as { code?: string }).code ?? 'unknown';
+        const code = (e as { code?: string } | null)?.code ?? 'unknown';
         const line = `AppDNA-E2E restoreFailed ${code}`;
         console.log(line);
         append(`${label} ✗ ${line}`);
