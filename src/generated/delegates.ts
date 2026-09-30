@@ -2,7 +2,7 @@
 // Source: src/lib/sdk-delegates/index.ts
 // Generator: scripts/sdk-codegen/emit-delegates.ts
 // Regenerate: pnpm sdk-codegen
-// Last codegen commit: 59f9a19bd3884dd3efa20064540be78b8afb420d
+// Last codegen commit: efb8490bcb9a530a9df32eeb22dba299fed49aa8
 
 /** Onboarding flow lifecycle observer + SPEC-083/419/421 async return-value hooks (routed via the sync_callbacks channel on Flutter/RN; native-hand-written on iOS, hand-written-Android per D11). */
 export interface AppDNAOnboardingDelegate {
@@ -10,7 +10,7 @@ export interface AppDNAOnboardingDelegate {
   onOnboardingStepChanged(flowId: string, stepId: string, stepIndex: number, totalSteps: number): void;
   onOnboardingCompleted(flowId: string, responses: Record<string, unknown>): void;
   onOnboardingDismissed(flowId: string, atStep: number): void;
-  /** Async advance hook. Return {type: 'proceed'} to advance, or a block/skip/stay result. An empty or missing answer advances an ordinary step but blocks a sign-in action. */
+  /** Async advance hook. Return a result whose type is proceed, proceedWithData, block, skipTo or stay. An empty or missing answer, or an unrecognised type, advances an ordinary step but blocks a sign-in action. */
   onBeforeStepAdvance?(flowId: string, fromStepId: string, stepIndex: number, stepType: string, responses: Record<string, unknown>, stepData: Record<string, unknown> | undefined): Promise<Record<string, unknown>>;
   /** Async pre-render hook. Return null (default) or a config override. */
   onBeforeStepRender?(flowId: string, stepId: string, stepIndex: number, stepType: string, responses: Record<string, unknown>): Promise<Record<string, unknown> | null>;
