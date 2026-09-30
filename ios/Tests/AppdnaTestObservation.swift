@@ -15,10 +15,10 @@ final class AppdnaTestObservation: NSObject {
     static var delegateClassAtInstall = ""
 
     /// SPEC-497 §3.10 — the ONE StoreKit test session of this process, opened before anything touches
-    /// StoreKit. An earlier test that calls StoreKit with no session (the handler pass drives
-    /// `purchase` / `restorePurchases`) binds the process to the real sandbox environment, after which
-    /// `Transaction.updates` no longer carries a later session's transactions — the late-purchase tests
-    /// then see nothing. `AppdnaAAStoreKitHostedTests` reuses this session.
+    /// StoreKit (the handler pass drives `purchase` / `restorePurchases`). `AppdnaStoreKitHostedTests`
+    /// reuses it. Hygiene, not a fix: measured on the bridge, the late-purchase tests also pass with a
+    /// fresh session per test — the losses once blamed on session binding were the core queue's stale
+    /// in-memory reported set (fixed in `PurchaseDeliveryQueue.activate`).
     static var storeKitSession: SKTestSession?
 
     override init() {

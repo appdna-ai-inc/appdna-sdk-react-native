@@ -43,9 +43,9 @@ Pod::Spec.new do |s|
     # `requires_app_host` because the tests exercise MainActor delivery and a DispatchQueue.main
     # timeout — both need a real run loop, which an app host provides and a bare logic bundle does not.
     test_spec.requires_app_host = true
-    # SPEC-497 §3.10 fallback: the app-hosted StoreKit tests (`AppdnaAAStoreKitHostedTests`, named to run
-    # first) load this StoreKit configuration into an `SKTestSession` — the same five test products as the
-    # core SDK's own test target — and need the StoreKit framework plus the principal class below.
+    # SPEC-497 §3.10 fallback: the app-hosted StoreKit tests (`AppdnaStoreKitHostedTests`) load this
+    # StoreKit configuration into an `SKTestSession` — the same five test products as the core SDK's own
+    # test target — and need the StoreKit framework plus the principal class below.
     test_spec.resources = ['ios/Tests/AppDNATestProducts.storekit']
     test_spec.frameworks = 'StoreKit'
     # SPEC-497 §9a.8 — the principal class installs the notification proxy explicitly before any test
