@@ -55,7 +55,8 @@ enum AppdnaMappers {
             out["expiresAt"] = iso.string(from: expiresAt)
         }
         // `store`, `status`, `isTrial` and `offerType` are Android-only — iOS's Entitlement does not
-        // carry them, and `getEntitlements()` hardcodes `isActive: true, expiresAt: nil` besides.
+        // carry them. `isActive` and `expiresAt` are the native SDK's real values (StoreKit's expiry, or the
+        // server's for a server-only entitlement) on both `getEntitlements()` and `onEntitlementsChanged`.
         return out
     }
 
