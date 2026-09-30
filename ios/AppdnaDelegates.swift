@@ -373,10 +373,9 @@ final class BillingForwarder: NSObject, AppDNABillingDelegate {
 
     /// ⚠ `onEntitlementsChanged` is deliberately NOT implemented here.
     ///
-    /// The SDK fans entitlement changes out through two independent paths: this delegate method
-    /// (fired by `RevenueCatBridge` on Android, and by nothing at all on iOS) and the explicit
-    /// observer behind `AppDNA.billing.onEntitlementsChanged(_:)` (live on both). Implementing both
-    /// would deliver every change twice to a RevenueCat-configured Android host.
+    /// The SDK fans entitlement changes out through two paths: this delegate method and the explicit
+    /// observer behind `AppDNA.billing.onEntitlementsChanged(_:)`. On iOS the two now fire together for
+    /// every change (same list), so implementing both would deliver every change twice.
     ///
     /// `startEntitlementObserver()` is the single source, because it is the only one that fires on
     /// both platforms. The protocol's default no-op keeps this class conforming.
