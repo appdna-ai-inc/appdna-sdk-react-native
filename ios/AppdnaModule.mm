@@ -2,7 +2,6 @@
 // Source: src/lib/sdk-delegates/sdk-methods.ts
 // Generator: scripts/sdk-codegen/emit-turbomodule-ios-adapter.ts
 // Regenerate: pnpm sdk-codegen
-// Last codegen commit: 32999f556a2b3c20856ac7ff56c2b2b793fa6762
 
 #import <React/RCTAssert.h>
 #import <React/RCTBridgeModule.h>

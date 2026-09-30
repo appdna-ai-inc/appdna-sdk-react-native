@@ -30,7 +30,7 @@ import ai.appdna.sdk.billing.ProductInfo
 internal object AppdnaMappers {
 
     /** Play statuses that mean the user currently has access. Mirrors `EntitlementCache`. */
-    private val ACTIVE_STATUSES = setOf("active", "trialing", "grace_period")
+    private val ACTIVE_STATUSES = setOf("active", "trialing", "grace_period", "billing_retry")
 
     fun map(tx: TransactionInfo): Map<String, Any?> = mapOf(
         "transactionId" to tx.transactionId,

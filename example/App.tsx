@@ -161,6 +161,16 @@ const SAMPLE_PUSH = {
   action: { type: 'deep_link', value: 'appdnaexample://push' },
 };
 
+/**
+ * A NEW delivery each press. The SDK tracks a delivery / tap once per `delivery_id ?: push_id` and
+ * persists that key, so with one fixed payload "Forward message" / "Forward tap" worked on the first
+ * press of the install and then returned `true` and tracked nothing, forever.
+ */
+const freshSamplePush = () => ({
+  ...SAMPLE_PUSH,
+  delivery_id: `rn_e2e_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+});
+
 /** SPEC-496 — sample host data for the `hostDataDemo` launch arg. Public placeholder images only. */
 const HOST_DATA_DEMO_ITEMS = [
   { id: 'w1', name: 'Maple Farm', subtitle: 'Toronto', imageUrl: 'https://picsum.photos/seed/w1/400/300' },
@@ -735,8 +745,8 @@ export default function App({
           <Button label="Track delivered" onPress={() => run('push.trackDelivered()', () => AppDNA.push.trackDelivered('rn_e2e_push'))} />
           <Button label="Track tapped" onPress={() => run('push.trackTapped()', () => AppDNA.push.trackTapped('rn_e2e_push', 'open'))} />
           <Button label="Is AppDNA message" onPress={() => run('push.isAppDNAMessage()', () => AppDNA.push.isAppDNAMessage(SAMPLE_PUSH))} />
-          <Button label="Forward message" onPress={() => run('push.handleMessage()', () => AppDNA.push.handleMessage(SAMPLE_PUSH))} />
-          <Button label="Forward tap" onPress={() => run('push.handleTap()', () => AppDNA.push.handleTap(SAMPLE_PUSH))} />
+          <Button label="Forward message" onPress={() => run('push.handleMessage()', () => AppDNA.push.handleMessage(freshSamplePush()))} />
+          <Button label="Forward tap" onPress={() => run('push.handleTap()', () => AppDNA.push.handleTap(freshSamplePush()))} />
         </Section>
 
         <Section title="Experiments & flags">

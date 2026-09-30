@@ -221,6 +221,12 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         // that has never existed on either platform.
         val environment = if (env == "sandbox") Environment.SANDBOX else Environment.PRODUCTION
 
+        val vetoTimeoutMs = try {
+            parseVetoTimeoutMs(options)
+        } catch (e: Throwable) {
+            promise.reject("CONFIGURE_ERROR", e.message, e)
+            return
+        }
         val parsed = try {
             parseOptions(options)
         } catch (e: Throwable) {
@@ -238,7 +244,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         // `configure()` should still `try/catch` — the strictly-safer superset of the iOS contract.
         launchSettling(promise, "CONFIGURE_ERROR", Dispatchers.Default) { p ->
             AppDNA.configure(reactContext, apiKey, environment, parsed)
-            registerDelegates(parsed.vetoTimeout)
+            registerDelegates(vetoTimeoutMs)
             p.resolve(null)
         }
     }
@@ -755,11 +761,12 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
      * `MessageManager` / `DeepLinksModule` / `ScreenManager` consult in addition to the sync delegate
      * method. Both can suppress; only the async one can wait.
      *
-     * @param vetoTimeoutSeconds from `AppDNAOptions.vetoTimeout` — never a literal, per E7.
+     * @param vetoTimeoutMs the host's `vetoTimeout` in milliseconds (`parseVetoTimeoutMs`) — never a
+     *   literal, per E7.
      */
-    private fun registerDelegates(vetoTimeoutSeconds: Long) {
+    private fun registerDelegates(vetoTimeoutMs: Long) {
         val emitter = AppdnaEventEmitter { event, payload -> emitEventNamed(event, payload) }
-        val veto = AppdnaVetoInvoker(vetoTimeoutSeconds * 1000L) { payload ->
+        val veto = AppdnaVetoInvoker(vetoTimeoutMs) { payload ->
             emitEventNamed("onHostCallback", payload)
         }
         invoker = veto
@@ -975,8 +982,25 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
             requireConsent = values["requireConsent"] as? Boolean ?: defaults.requireConsent,
             // A zero / negative value is the native default (as on Flutter, SPEC-497 §4.2), so the
             // invoker and diagnose() agree.
-            vetoTimeout = (values["vetoTimeout"] as? Number)?.toLong()?.takeIf { it > 0 } ?: defaults.vetoTimeout,
+            // The core field is whole seconds (it only feeds diagnose()); rounded UP so 0.5 s reads 1,
+            // not 0 → the default. The bridge's own wait uses the exact value (`parseVetoTimeoutMs`).
+            vetoTimeout = vetoTimeoutSeconds(values)?.let { kotlin.math.ceil(it).toLong() } ?: defaults.vetoTimeout,
         )
+    }
+
+    /** The host's `vetoTimeout` in seconds when it is a positive number; `null` means the native default. */
+    private fun vetoTimeoutSeconds(values: Map<String, Any?>): Double? =
+        (values["vetoTimeout"] as? Number)?.toDouble()?.takeIf { it > 0 && it.isFinite() }
+
+    /**
+     * The bridge's veto wait in MILLISECONDS, without truncating: `vetoTimeout` is seconds and may be
+     * fractional (iOS reads it as a `TimeInterval`, the Flutter bridges as a double). This used to go
+     * through `toLong()` first, so 0.5 became 0 — the 5 s default — and 2.7 became 2.
+     */
+    internal fun parseVetoTimeoutMs(map: ReadableMap?): Long {
+        val values = AppdnaBridge.toValueMap(map) ?: emptyMap()
+        val seconds = vetoTimeoutSeconds(values) ?: AppDNAOptions().vetoTimeout.toDouble()
+        return (seconds * 1000.0).coerceIn(1.0, Long.MAX_VALUE / 2.0).let { kotlin.math.round(it).toLong() }
     }
 
     /**
