@@ -183,6 +183,8 @@ RCT_EXPORT_METHOD(logTransactions:(RCTPromiseResolveBlock)resolve
         } else if (t.transactionState == SKPaymentTransactionStateFailed) {
           [_deferredInherited removeObject:pid];
           NSLog(@"AppDNA-E2E deferred-outcome %@ failed %@ (origin unknown)", pid, t.error.localizedDescription);
+          // Deliberately NOT finished, even though it failed: its origin is unknown and it may be the
+          // SDK's, and the host finishes only transactions it started (as for the purchased case above).
         }
         continue;
       }
