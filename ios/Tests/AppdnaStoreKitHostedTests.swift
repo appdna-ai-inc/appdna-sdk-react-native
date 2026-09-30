@@ -95,7 +95,8 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
 
     /// A HOST purchase that the host deliberately does not finish (the revenueCat / Adapty shape).
     private func hostBuyWithoutFinishing(_ productId: String) async throws -> Transaction {
-        let product = try XCTUnwrap(try await Product.products(for: [productId]).first)
+        let products = try await Product.products(for: [productId])
+        let product = try XCTUnwrap(products.first)
         let result = try await product.purchase()
         guard case .success(.verified(let t)) = result else {
             throw XCTSkip("SKTestSession purchase did not succeed in the app-hosted target: \(result)")
