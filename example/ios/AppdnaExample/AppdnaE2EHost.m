@@ -1,8 +1,3 @@
-- (void)logUnfinished
-{
-  [AppdnaE2EStoreKit logTransactions:nil];
-}
-
 // SPEC-497 §3.11 — the example host's OWN StoreKit calls, for the billing-ownership device rows.
 //
 // `hostBuy(productId)` buys through the host's own StoreKit payment queue and deliberately NEVER
@@ -133,13 +128,7 @@ RCT_EXPORT_METHOD(logTransactions:(RCTPromiseResolveBlock)resolve
 
 - (void)logUnfinished
 {
-  NSMutableArray<NSString *> *ids = [NSMutableArray new];
-  for (SKPaymentTransaction *t in [SKPaymentQueue defaultQueue].transactions) {
-    if (t.transactionState == SKPaymentTransactionStatePurchased || t.transactionState == SKPaymentTransactionStateRestored) {
-      [ids addObject:[NSString stringWithFormat:@"%@:%@", t.payment.productIdentifier, t.transactionIdentifier]];
-    }
-  }
-  NSLog(@"AppDNA-E2E unfinished=%@", [ids componentsJoinedByString:@","]);
+  [AppdnaE2EStoreKit logTransactions:nil];
 }
 
 @end
