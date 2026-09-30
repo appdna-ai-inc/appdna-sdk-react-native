@@ -40,17 +40,19 @@ RCT_EXPORT_MODULE();
     _requests = [NSMutableArray new];
     _requestProducts = [NSMutableDictionary new];
     _deferred = [NSMutableSet new];
+    [[SKPaymentQueue defaultQueue] addTransactionObserver:self];
     // A deferred (Ask to Buy) transaction outlives the process: it stays in the payment queue until it
     // is approved or declined. Rebuild the set from the queue so the "refused already deferred" guard in
     // `hostBuy` also holds after a relaunch, not only within one session. (A deferred SDK purchase of
     // the same product would be counted too — conservative for the refusal; the device rows start no
-    // SDK Ask-to-Buy.)
+    // SDK Ask-to-Buy.) `SKPaymentQueue.transactions` is only valid while the queue has an observer, so
+    // this runs AFTER `addTransactionObserver:`; a deferred transaction the queue re-delivers through
+    // `updatedTransactions` later is added there too.
     for (SKPaymentTransaction *t in [SKPaymentQueue defaultQueue].transactions) {
       if (t.transactionState == SKPaymentTransactionStateDeferred) {
         [_deferred addObject:t.payment.productIdentifier];
       }
     }
-    [[SKPaymentQueue defaultQueue] addTransactionObserver:self];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(logUnfinished)
                                                  name:UIApplicationDidBecomeActiveNotification
@@ -152,6 +154,13 @@ RCT_EXPORT_METHOD(logTransactions:(RCTPromiseResolveBlock)resolve
     NSString *pid = t.payment.productIdentifier;
     RCTPromiseResolveBlock resolve = _pending[pid];
     if (resolve == nil) {
+      // A deferred (Ask to Buy) transaction with no pending buy — the queue re-delivering one from an
+      // earlier session: remember it, so `hostBuy` refuses a second buy of the product (same
+      // conservative rule as the rebuild in `init`).
+      if (t.transactionState == SKPaymentTransactionStateDeferred) {
+        [_deferred addObject:pid];
+        continue;
+      }
       // The later outcome of a deferred (Ask to Buy) host buy: logged, never finished when purchased.
       if ([_deferred containsObject:pid]) {
         if (t.transactionState == SKPaymentTransactionStatePurchased) {
