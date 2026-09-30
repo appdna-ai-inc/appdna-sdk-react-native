@@ -86,4 +86,24 @@ class AppdnaParseOptionsTest {
         assertNotEquals("0.76.5", spoofed)
         assertTrue("reports no version at all", !absent.isNullOrBlank())
     }
+
+    /**
+     * `vetoTimeout` is seconds and may be fractional. It went through `toLong()` before becoming
+     * milliseconds: 0.5 became 0 (→ the 5 s default) and 2.7 became 2. NEGATIVE CONTROL: the old
+     * conversion gives 5000 and 2000 here.
+     */
+    @Test
+    fun `vetoTimeout converts fractional seconds to milliseconds without truncating`() {
+        fun ms(v: Double) = module.parseVetoTimeoutMs(JavaOnlyMap().apply { putDouble("vetoTimeout", v) })
+        assertEquals(500L, ms(0.5))
+        assertEquals(2700L, ms(2.7))
+        assertEquals(8000L, ms(8.0))
+        val defaultMs = ai.appdna.sdk.AppDNAOptions().vetoTimeout * 1000L
+        assertEquals(defaultMs, ms(0.0))
+        assertEquals(defaultMs, ms(-1.0))
+        assertEquals(defaultMs, module.parseVetoTimeoutMs(JavaOnlyMap()))
+        // The core's whole-second field (diagnose only) rounds UP, so a sub-second value is not the default.
+        assertEquals(1L, module.parseOptions(JavaOnlyMap().apply { putDouble("vetoTimeout", 0.5) }).vetoTimeout)
+        assertEquals(3L, module.parseOptions(JavaOnlyMap().apply { putDouble("vetoTimeout", 2.7) }).vetoTimeout)
+    }
 }
