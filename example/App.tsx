@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  NativeModules,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -81,7 +83,35 @@ type Props = {
   vetoTimeout?: string;
   stepAdvanceDelaySeconds?: string;
   stepAdvanceReply?: string;
+  /**
+   * SPEC-497 §3.11 / §13h — the billing, local-server and location device rows:
+   * `billingProvider` — `storeKit2` (default) | `revenueCat` | `none` | `adapty:<publicKey>`;
+   * `appdnaEnv` — `sandbox`, emitted natively only when the build carries the base-URL override
+   * (never a hand-passed argument); `hostProductId` — what "Host buy (no finish)" buys (iOS);
+   * `locationFlowId` — the "Location flow" button's flow (`APPDNA_E2E_LOCATION_FLOW_ID`).
+   */
+  billingProvider?: string;
+  appdnaEnv?: string;
+  hostProductId?: string;
+  locationFlowId?: string;
+  /** A slow endpoint for `hostWait` (e.g. a local server's delay route); defaults to a 1 s delay URL. */
+  waitUrl?: string;
 };
+
+/** `billingProvider` launch value → the option; unknown → the SDK default. */
+const billingProviderOption = (raw?: string): AppDNAOptions['billingProvider'] | undefined => {
+  if (raw === 'storeKit2' || raw === 'revenueCat' || raw === 'none') return raw;
+  if (raw?.startsWith('adapty:')) return { type: 'adapty', apiKey: raw.slice('adapty:'.length) };
+  return undefined;
+};
+
+/**
+ * SPEC-497 §3.11 — the iOS host's OWN StoreKit calls (`AppdnaE2EHost.m`): a purchase the host never
+ * finishes, and the `AppDNA-E2E unfinished=<ids>` log. Absent on Android (its ownership rows run on the
+ * native sample host).
+ */
+const e2eHost: { hostBuy(productId: string): Promise<string>; logTransactions(): Promise<null> } | undefined =
+  Platform.OS === 'ios' ? NativeModules.AppdnaE2EHost : undefined;
 
 /** The sign-in actions a host must answer (the SDK's own list, SPEC-497 §4.2) — picks which delay applies. */
 const SIGN_IN_ACTIONS = new Set([
@@ -96,13 +126,19 @@ const SIGN_IN_ACTIONS = new Set([
  * the JS thread yielding (each `fetch` settles through native networking, which is not paused), and a
  * failed fetch (offline) just loops again.
  */
-const hostWait = async (seconds: number) => {
+const hostWait = async (seconds: number, waitUrl = 'https://httpbin.org/delay/1') => {
   const end = Date.now() + seconds * 1000;
   while (Date.now() < end) {
     try {
-      await fetch('https://clients3.google.com/generate_204', { method: 'HEAD' });
+      // A SLOW endpoint (≈1 s per request), so this is a handful of requests, not a hammer.
+      await fetch(waitUrl, { method: 'GET' });
     } catch {
-      // offline — keep polling the clock
+      // Offline or refused: back off with a short clock spin before the next attempt, so a fast
+      // failure cannot turn into a tight request loop.
+      const until = Date.now() + 250;
+      while (Date.now() < until) {
+        // spin
+      }
     }
   }
 };
@@ -174,6 +210,11 @@ export default function App({
   vetoTimeout,
   stepAdvanceDelaySeconds,
   stepAdvanceReply,
+  billingProvider,
+  appdnaEnv,
+  hostProductId,
+  locationFlowId,
+  waitUrl,
 }: Props) {
   const [status, setStatus] = useState(apiKey ? 'Configuring…' : 'No API key — pass -appdnaApiKey');
   const [log, setLog] = useState<string[]>([]);
@@ -234,7 +275,7 @@ export default function App({
           if (delay > 0 && !signInDelayed.current) {
             signInDelayed.current = true;
             append(`veto onBeforeStepAdvance(${fromStepId}, ${action}) — signing in for ${delay}s`);
-            await hostWait(delay);
+            await hostWait(delay, waitUrl);
           }
           append(`veto onBeforeStepAdvance(${fromStepId}, ${action}) → proceed`);
           return { type: 'proceed' };
@@ -243,7 +284,7 @@ export default function App({
         if (delay > 0) {
           const reply = stepAdvanceReply === 'stay' ? 'stay' : 'proceed';
           append(`veto onBeforeStepAdvance(${fromStepId}) — waiting ${delay}s`);
-          await hostWait(delay);
+          await hostWait(delay, waitUrl);
           append(`veto onBeforeStepAdvance(${fromStepId}) → ${reply}`);
           return { type: reply };
         }
@@ -254,6 +295,13 @@ export default function App({
       // the proof the hook ran; returning an override here would mutate every step of every flow this
       // example is pointed at, which is a worse default for a demo than a visible log.
       onBeforeStepRender: async (_flowId, stepId) => {
+        // SPEC-497 §13h D2-1 — the location device row reads the stored answer on the step after it.
+        if (locationFlowId && stepId === 'step_after') {
+          const loc = await AppDNA.getLocationData('e2e_location');
+          const line = `AppDNA-E2E location ${loc === null ? 'null' : JSON.stringify(loc)}`;
+          console.log(line);
+          append(line);
+        }
         // SPEC-496 — opt-in via the `appdnaHostDataDemo` launch arg only, so the default stays "no
         // override". The payload is what a host's `{{hook_data.recommendations}}` repeat reads.
         if (hostDataDemo === 'showmore') {
@@ -315,7 +363,11 @@ export default function App({
       onPaywallDismissed: (id) => append(`paywall dismissed: ${id}`),
       onPaywallAction: (id, action) => append(`paywall action: ${id} / ${action}`),
       onPaywallPurchaseCompleted: (id, product) => append(`paywall purchase: ${id} / ${product}`),
-      onPaywallPurchaseFailed: (id, error) => append(`paywall purchase failed: ${id} / ${error}`),
+      onPaywallPurchaseFailed: (id, error, errorType, productId) => {
+        // SPEC-497 §3.11 — the exact line the device rows grep (host log / logcat).
+        console.log(`AppDNA-E2E onPaywallPurchaseFailed ${errorType} ${productId}`);
+        append(`paywall purchase failed: ${id} / ${errorType} / ${productId} / ${String(error)}`);
+      },
       // 🔴 This read the FIRST parameter and called it `products`. The signature is
       // `(paywallId: string, restoredProductIds: string[])`, so `products` was the paywall ID and
       // `.length` was its CHARACTER COUNT: restoring zero products logged "paywall restore: 24
@@ -324,7 +376,10 @@ export default function App({
       // pass would have recorded a successful restore of N products that never happened.
       onPaywallRestoreCompleted: (paywallId, restoredProductIds) =>
         append(`paywall restore (${paywallId}): ${restoredProductIds.length} product(s)`),
-      onPaywallPurchaseStarted: (id, product) => append(`paywall purchase started: ${id} / ${product}`),
+      onPaywallPurchaseStarted: (id, product) => {
+        console.log(`AppDNA-E2E onPaywallPurchaseStarted ${product}`);
+        append(`paywall purchase started: ${id} / ${product}`);
+      },
       onPaywallRestoreStarted: (id) => append(`paywall restore started: ${id}`),
       onPaywallRestoreFailed: (id, error) => append(`paywall restore failed: ${id} / ${String(error)}`),
       onPostPurchaseDeepLink: (url) => append(`post-purchase deep link: ${url}`),
@@ -392,14 +447,21 @@ export default function App({
       AppDNAPush.onPushReceived((_p, inForeground) => append(`AppDNAPush.onPushReceived (fg=${inForeground})`)),
       AppDNAPush.onPushTapped((_p, actionId) => append(`AppDNAPush.onPushTapped (${actionId ?? 'default'})`)),
     ];
-  }, [append, hostDataDemo, signInDelaySeconds, stepAdvanceDelaySeconds, stepAdvanceReply]);
+  }, [append, hostDataDemo, signInDelaySeconds, stepAdvanceDelaySeconds, stepAdvanceReply, locationFlowId, waitUrl]);
 
   const boot = useCallback(async () => {
     if (!apiKey) return;
     registerDelegates();
 
     const veto = Number(vetoTimeout);
-    await AppDNA.configure(apiKey, 'production', veto > 0 ? { ...OPTIONS, vetoTimeout: veto } : OPTIONS);
+    const provider = billingProviderOption(billingProvider);
+    // `appdnaEnv` is `sandbox` only when the native host found the base-URL override (local-server runs).
+    await AppDNA.configure(apiKey, appdnaEnv === 'sandbox' ? 'sandbox' : 'production', {
+      ...OPTIONS,
+      ...(veto > 0 ? { vetoTimeout: veto } : {}),
+      ...(provider ? { billingProvider: provider } : {}),
+    });
+    append(`configured env=${appdnaEnv === 'sandbox' ? 'sandbox' : 'production'} billingProvider=${billingProvider ?? 'default'}`);
     setStatus('Configured');
 
     await AppDNA.onReady();
@@ -478,6 +540,18 @@ export default function App({
         </Section>
 
         <Section title="Onboarding">
+          <Button
+            label="Location flow"
+            onPress={() => run('onboarding.present(location)', () => AppDNA.onboarding.present(locationFlowId ?? 'default'))}
+          />
+          <Button
+            label="Host buy (no finish, iOS)"
+            onPress={() => run('hostBuy()', () => e2eHost?.hostBuy(hostProductId ?? 'ai.appdna.test.monthly') ?? 'iOS-only')}
+          />
+          <Button
+            label="Log unfinished transactions (iOS)"
+            onPress={() => run('logTransactions()', () => e2eHost?.logTransactions() ?? 'iOS-only')}
+          />
           <Button
             label="Present onboarding"
             onPress={() => run('onboarding.present()', () => AppDNA.onboarding.present(onboardingId ?? 'default'))}

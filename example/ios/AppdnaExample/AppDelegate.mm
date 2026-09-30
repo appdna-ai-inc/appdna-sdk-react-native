@@ -56,12 +56,25 @@
     @"appdnaVetoTimeout" : @"vetoTimeout",
     @"appdnaStepAdvanceDelaySeconds" : @"stepAdvanceDelaySeconds",
     @"appdnaStepAdvanceReply" : @"stepAdvanceReply",
+    // SPEC-497 §3.11 / §13h — billing provider, the host-buy product, the location flow, hostWait's URL.
+    @"appdnaBillingProvider" : @"billingProvider",
+    @"appdnaHostProductId" : @"hostProductId",
+    @"appdnaLocationFlowId" : @"locationFlowId",
+    @"appdnaWaitUrl" : @"waitUrl",
   };
   for (NSString *arg in launchKeys) {
     NSString *value = [[NSUserDefaults standardUserDefaults] stringForKey:arg];
     if (value.length > 0) {
       props[launchKeys[arg]] = value;
     }
+  }
+  // SPEC-497 §3.11 — `appdnaEnv=sandbox` exactly when this build carries the test-only base-URL
+  // override (Info.plist `AppDNABaseURLOverride` ← `$(APPDNA_BASE_URL_OVERRIDE)` from the uncommitted
+  // Local.xcconfig). Emitted even with no launch arguments.
+  NSString *override = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"AppDNABaseURLOverride"];
+  if ([override isKindOfClass:[NSString class]] &&
+      [override stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceCharacterSet]].length > 0) {
+    props[@"appdnaEnv"] = @"sandbox";
   }
   self.initialProps = props;
 

@@ -14,6 +14,7 @@
 		13B07FC11A68108700A75B9A /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 13B07FB71A68108700A75B9A /* main.m */; };
 		7699B88040F8A987B510C191 /* libPods-AppdnaExample-AppdnaExampleTests.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 19F6CBCC0A4E27FBF8BF4A61 /* libPods-AppdnaExample-AppdnaExampleTests.a */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		A497D0000000000000000003 /* AppdnaE2EHost.m in Sources */ = {isa = PBXBuildFile; fileRef = A497D0000000000000000002 /* AppdnaE2EHost.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -45,6 +46,9 @@
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = AppdnaExample/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		89C6BE57DB24E9ADA2F236DE /* Pods-AppdnaExample-AppdnaExampleTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-AppdnaExample-AppdnaExampleTests.release.xcconfig"; path = "Target Support Files/Pods-AppdnaExample-AppdnaExampleTests/Pods-AppdnaExample-AppdnaExampleTests.release.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
+		A497D0000000000000000001 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = AppdnaExample/Debug.xcconfig; sourceTree = "<group>"; };
+		A497D0000000000000000002 /* AppdnaE2EHost.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = AppdnaE2EHost.m; path = AppdnaExample/AppdnaE2EHost.m; sourceTree = "<group>"; };
+		A497D0000000000000000004 /* AppDNATestProducts.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; name = AppDNATestProducts.storekit; path = AppdnaExample/AppDNATestProducts.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -94,6 +98,9 @@
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB71A68108700A75B9A /* main.m */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				A497D0000000000000000002 /* AppdnaE2EHost.m */,
+				A497D0000000000000000001 /* Debug.xcconfig */,
+				A497D0000000000000000004 /* AppDNATestProducts.storekit */,
 			);
 			name = AppdnaExample;
 			sourceTree = "<group>";
@@ -182,6 +189,7 @@
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
+				A497D0000000000000000005 /* Copy GoogleService-Info-AppDNA.plist (if present) */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				00EEFC60759A1932668264C0 /* [CP] Embed Pods Frameworks */,
 				E235C05ADACE081382539298 /* [CP] Copy Pods Resources */,
@@ -251,6 +259,21 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		A497D0000000000000000005 /* Copy GoogleService-Info-AppDNA.plist (if present) */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Copy GoogleService-Info-AppDNA.plist (if present)";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# SPEC-497 §3.11 — the AppDNA Firebase file is gitignored (demo-tenant config, never committed), so a\n# Resources entry would fail every fresh-checkout build. Copy it only when a developer has put it here.\nif [ -f \"$SRCROOT/AppdnaExample/GoogleService-Info-AppDNA.plist\" ]; then cp \"$SRCROOT/AppdnaExample/GoogleService-Info-AppDNA.plist\" \"$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH/\"; fi\n";
+		};
 		00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
@@ -396,6 +419,7 @@
 			files = (
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
 				13B07FC11A68108700A75B9A /* main.m in Sources */,
+				A497D0000000000000000003 /* AppdnaE2EHost.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -463,7 +487,7 @@
 		};
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 3B4392A12AC88292D35C810B /* Pods-AppdnaExample.debug.xcconfig */;
+			baseConfigurationReference = A497D0000000000000000001 /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

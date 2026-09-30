@@ -72,6 +72,16 @@ def enableProguardInReleaseBuilds = false
  */
 def jscFlavor = 'org.webkit:android-jsc:+'
 
+// SPEC-497 §3.11 TEST-ONLY — the local-server base URL, from the gitignored local.properties
+// (`APPDNA_BASE_URL=https://…`) or `-PAPPDNA_BASE_URL=…`. Empty (the committed default) = no override;
+// the SDK honours the meta-data only in a debuggable build configured for the sandbox environment.
+def appdnaLocalProperties = new Properties()
+def appdnaLocalPropertiesFile = rootProject.file("local.properties")
+if (appdnaLocalPropertiesFile.exists()) {
+    appdnaLocalPropertiesFile.withReader("UTF-8") { appdnaLocalProperties.load(it) }
+}
+def appdnaBaseUrl = appdnaLocalProperties.getProperty("APPDNA_BASE_URL") ?: (project.findProperty("APPDNA_BASE_URL") ?: "")
+
 android {
     ndkVersion rootProject.ext.ndkVersion
     buildToolsVersion rootProject.ext.buildToolsVersion
@@ -84,6 +94,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [appdnaBaseUrlOverride: appdnaBaseUrl]
     }
     signingConfigs {
         debug {

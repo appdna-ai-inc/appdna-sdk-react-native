@@ -36,15 +36,29 @@ class MainActivity : ReactActivity() {
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       object : DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled) {
         override fun getLaunchOptions(): Bundle? {
-          val launchIntent = intent ?: return null
           val props =
               Bundle().apply {
-                for ((arg, prop) in LAUNCH_PROPS) {
-                  launchIntent.getStringExtra(arg)?.takeIf { it.isNotBlank() }?.let { putString(prop, it) }
+                intent?.let { launchIntent ->
+                  for ((arg, prop) in LAUNCH_PROPS) {
+                    launchIntent.getStringExtra(arg)?.takeIf { it.isNotBlank() }?.let { putString(prop, it) }
+                  }
                 }
+                // SPEC-497 §3.11 — `appdnaEnv=sandbox` exactly when this build carries the test-only
+                // base-URL override (the `ai.appdna.sdk.BASE_URL_OVERRIDE` meta-data, fed from the
+                // gitignored local.properties). Emitted even with no intent extras.
+                if (!baseUrlOverride().isNullOrBlank()) putString("appdnaEnv", "sandbox")
               }
           return if (props.isEmpty) null else props
         }
+      }
+
+  private fun baseUrlOverride(): String? =
+      try {
+        packageManager.getApplicationInfo(packageName, android.content.pm.PackageManager.GET_META_DATA)
+            .metaData
+            ?.getString("ai.appdna.sdk.BASE_URL_OVERRIDE")
+      } catch (e: Exception) {
+        null
       }
 
   companion object {
@@ -71,6 +85,11 @@ class MainActivity : ReactActivity() {
             "appdnaVetoTimeout" to "vetoTimeout",
             "appdnaStepAdvanceDelaySeconds" to "stepAdvanceDelaySeconds",
             "appdnaStepAdvanceReply" to "stepAdvanceReply",
+            // SPEC-497 §3.11 / §13h — billing provider, host-buy product, location flow, hostWait's URL.
+            "appdnaBillingProvider" to "billingProvider",
+            "appdnaHostProductId" to "hostProductId",
+            "appdnaLocationFlowId" to "locationFlowId",
+            "appdnaWaitUrl" to "waitUrl",
         )
   }
 }
