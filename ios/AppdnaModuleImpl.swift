@@ -53,6 +53,9 @@ public final class AppdnaModuleImpl: NSObject {
      */
     private var forwarders: [NSObject] = []
     private var invoker: AppdnaVetoInvoker?
+    /// The billing forwarder registered at `configure` (also retained by `forwarders`, since
+    /// `AppDNA.billingDelegate` is weak) — `billingDelegateReady` flips its delivery flag.
+    private var billingForwarder: BillingForwarder?
 
     private func emit(_ name: String, _ payload: [String: Any]) {
         // The ObjC `AppdnaEventSink` protocol's `payload:` is `NSDictionary *`, which imports into
@@ -554,7 +557,10 @@ public final class AppdnaModuleImpl: NSObject {
                 let productIds: [String] = try await AppDNA.billing.restorePurchases()
                 resolve(productIds)
             } catch {
-                reject("RESTORE_ERROR", error.localizedDescription, error)
+                // SPEC-497 §13b.2 restore error contract: the CODE is the `billingErrorType`
+                // (`providerNotAvailable` under revenueCat / adapty not linked / none), as `purchase`
+                // already does. It was a fixed "RESTORE_ERROR".
+                reject(billingErrorType(error), error.localizedDescription, error)
             }
         }
     }
@@ -596,6 +602,16 @@ public final class AppdnaModuleImpl: NSObject {
     /// taking its listeners with it.)" — a claim about Android, asserted in a Swift file, and only
     /// true ACROSS A SHUTDOWN. A plain re-subscribe (re-mount, Fast Refresh) stacked listeners there
     /// too. Android is idempotent now for the same reason this is.
+    /// SPEC-497 D-R40-1 (R41) — INTERNAL. Whether a JS `onPurchaseCompleted` is registered: flips the
+    /// billing forwarder's `deliversPurchases` (a flip to `true` drains the late-purchase queue into
+    /// it). Before native `configure` there is no forwarder — a no-op; the facade re-sends after
+    /// `configure()`.
+    @objc(billingDelegateReady:)
+    public func billingDelegateReady(_ ready: Bool) {
+        guard let forwarder = billingForwarder else { return }
+        AppDNA.billing.setDelegate(forwarder, deliversPurchases: ready)
+    }
+
     @objc(startEntitlementObserver:reject:)
     public func startEntitlementObserver(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         if let token = entitlementObserverToken {
@@ -646,6 +662,33 @@ public final class AppdnaModuleImpl: NSObject {
     public func trackPushTapped(_ pushId: String, action: NSString?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         AppDNA.trackPushTapped(pushId: pushId, action: action as String?)
         resolve(nil)
+    }
+
+    // MARK: - Push forwarding (SPEC-497 §9.2, B2)
+    //
+    // For a host that owns its notification handling. Classification and handling are native and
+    // marker-gated (no `appdna: "1"` → false, nothing done). On iOS the payload passes UNTOUCHED —
+    // nested `action` / `actions` stay dictionaries / arrays, never `String(describing:)`.
+
+    @objc(isAppDNAMessage:resolve:reject:)
+    public func isAppDNAMessage(_ data: NSDictionary, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        resolve(AppDNA.pushModule.isAppDNAMessage(Self.pushUserInfo(data)))
+    }
+
+    /// iOS has no display path: this is `handleMessageData` (tracks delivery, fires onPushReceived).
+    @objc(handlePushMessage:resolve:reject:)
+    public func handlePushMessage(_ data: NSDictionary, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        resolve(AppDNA.pushModule.handleMessageData(Self.pushUserInfo(data)))
+    }
+
+    @objc(handlePushTap:actionId:resolve:reject:)
+    public func handlePushTap(_ data: NSDictionary, actionId: NSString?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        resolve(AppDNA.pushModule.handleNotificationTap(Self.pushUserInfo(data), actionIdentifier: actionId as String?))
+    }
+
+    /// The JS payload as the `userInfo` the SDK takes — no conversion (internal: `ios/Tests` asserts it).
+    internal static func pushUserInfo(_ data: NSDictionary) -> [AnyHashable: Any] {
+        return (data as? [AnyHashable: Any]) ?? [:]
     }
 
     // MARK: - Deep links / web entitlements
@@ -734,7 +777,12 @@ public final class AppdnaModuleImpl: NSObject {
         AppDNA.surveys.setDelegate(survey)
         AppDNA.inAppMessages.setDelegate(messages)
         AppDNA.pushModule.setDelegate(push)
-        AppDNA.billing.setDelegate(billing)
+        // SPEC-497 D-R40-1 (R41): registered NOT delivering. The late-purchase queue drains into a
+        // delivering delegate, and a queued purchase handed to this forwarder while no JS
+        // `onPurchaseCompleted` exists is emitted into nothing — lost. JS says when it is ready
+        // (`billingDelegateReady`), and `configure()` re-sends the latest answer right after this.
+        billingForwarder = billing
+        AppDNA.billing.setDelegate(billing, deliversPurchases: false)
         AppDNA.deepLinks.setDelegate(deepLinks)
         AppDNA.initDelegate = initDelegate
         AppDNA.lifecycleDelegate = lifecycle
@@ -783,6 +831,7 @@ public final class AppdnaModuleImpl: NSObject {
         AppDNA.inAppMessages.setDelegate(nil)
         AppDNA.pushModule.setDelegate(nil)
         AppDNA.billing.setDelegate(nil)
+        billingForwarder = nil
         AppDNA.deepLinks.setDelegate(nil)
         AppDNA.initDelegate = nil
         AppDNA.lifecycleDelegate = nil
@@ -820,20 +869,16 @@ public final class AppdnaModuleImpl: NSObject {
         }
 
         // `billingProvider` crosses as a bare string, or as a tagged map for the associated-value
-        // adapty case. A bare "adapty" carries no apiKey, so it is refused rather than keyless.
-        let billingProvider: BillingProvider
-        if let map = values["billingProvider"] as? [String: Any],
-           map["type"] as? String == "adapty",
-           let apiKey = map["apiKey"] as? String, !apiKey.isEmpty {
-            billingProvider = .adapty(apiKey: apiKey)
-        } else {
-            switch values["billingProvider"] as? String {
-            case "revenueCat": billingProvider = .revenueCat
-            case "storeKit2": billingProvider = .storeKit2
-            case "none": billingProvider = .none
-            default: billingProvider = defaults.billingProvider
-            }
-        }
+        // adapty case. The core's `BillingProvider.fromWire` decides, as on every other bridge: a bare
+        // "adapty" or a key-less map carries no apiKey and is refused (→ the default).
+        let billingProvider = BillingProvider.fromWire(values["billingProvider"]) ?? defaults.billingProvider
+
+        // A zero, negative or non-numeric vetoTimeout is the native default (SPEC-497 §4.2), so the
+        // invoker and diagnose() agree.
+        let vetoTimeout: TimeInterval = {
+            if let t = (values["vetoTimeout"] as? NSNumber)?.doubleValue, t > 0 { return t }
+            return defaults.vetoTimeout
+        }()
 
         return AppDNAOptions(
             // E7: never a literal. `?? 300` is how the wrappers drifted 12× off the native TTL.
@@ -846,7 +891,7 @@ public final class AppdnaModuleImpl: NSObject {
             framework: Self.frameworkTag,
             frameworkVersion: Self.wrapperVersion,
             requireConsent: values["requireConsent"] as? Bool ?? defaults.requireConsent,
-            vetoTimeout: values["vetoTimeout"] as? TimeInterval ?? defaults.vetoTimeout
+            vetoTimeout: vetoTimeout
         )
     }
 

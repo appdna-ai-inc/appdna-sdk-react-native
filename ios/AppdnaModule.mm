@@ -2,7 +2,7 @@
 // Source: src/lib/sdk-delegates/sdk-methods.ts
 // Generator: scripts/sdk-codegen/emit-turbomodule-ios-adapter.ts
 // Regenerate: pnpm sdk-codegen
-// Last codegen commit: becec5bd534f3a891ae3ea7638d019d42a81b848
+// Last codegen commit: 32999f556a2b3c20856ac7ff56c2b2b793fa6762
 
 #import <React/RCTAssert.h>
 #import <React/RCTBridgeModule.h>
@@ -425,6 +425,11 @@ RCT_EXPORT_MODULE()
   [_impl startEntitlementObserver:resolve reject:reject];
 }
 
+- (void)billingDelegateReady:(BOOL)ready
+{
+  [_impl billingDelegateReady:ready];
+}
+
 - (void)requestPushPermission:(RCTPromiseResolveBlock )resolve
             reject:(RCTPromiseRejectBlock )reject
 {
@@ -464,6 +469,28 @@ RCT_EXPORT_MODULE()
             reject:(RCTPromiseRejectBlock )reject
 {
   [_impl trackPushTapped:pushId action:action resolve:resolve reject:reject];
+}
+
+- (void)isAppDNAMessage:(NSDictionary *)data
+            resolve:(RCTPromiseResolveBlock )resolve
+            reject:(RCTPromiseRejectBlock )reject
+{
+  [_impl isAppDNAMessage:data resolve:resolve reject:reject];
+}
+
+- (void)handlePushMessage:(NSDictionary *)data
+            resolve:(RCTPromiseResolveBlock )resolve
+            reject:(RCTPromiseRejectBlock )reject
+{
+  [_impl handlePushMessage:data resolve:resolve reject:reject];
+}
+
+- (void)handlePushTap:(NSDictionary *)data
+            actionId:(NSString *)actionId
+            resolve:(RCTPromiseResolveBlock )resolve
+            reject:(RCTPromiseRejectBlock )reject
+{
+  [_impl handlePushTap:data actionId:actionId resolve:resolve reject:reject];
 }
 
 - (void)handleDeepLink:(NSString *)url

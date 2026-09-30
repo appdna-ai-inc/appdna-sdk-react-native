@@ -36,6 +36,14 @@
  *   - track_event   → AppDNA.track(...)                    — AppdnaModule.track
  *   - identify      → AppDNA.identify(...)                 — AppdnaModule.identify
  *   - show_paywall  → AppDNA.paywall.presentByPlacement()  — AppdnaModule.presentPaywallByPlacement
+ *   - classify_push → AppDNA.push.isAppDNAMessage() — AppdnaModule.isAppDNAMessage
+ *   - tap_push → AppDNA.push.handleTap() — AppdnaModule.handlePushTap
+ *   - receive_push (via) → AppDNA.push.handleMessage() — AppdnaModule.handlePushMessage
+ *
+ * The three push kinds (SPEC-497 §8.7) are host API calls since B2, so this runner asserts their
+ * BRIDGE CONTRACT only (the call, with the fixture's payload and action id); the `expect` block is
+ * proven by the RN Android JVM runner `SharedFixtureBridgeTest.kt`, driving the same module methods
+ * into the live native SDK.
  *
  * FIXTURE PATH RESOLUTION
  * -----------------------
@@ -210,6 +218,21 @@ async function runFixture(fixture: Fixture): Promise<void> {
       await AppDNA.paywall.presentByPlacement(placement);
       return;
     }
+    case 'classify_push':
+      await AppDNA.push.isAppDNAMessage(pushPayload(fixture));
+      return;
+    case 'tap_push':
+      await AppDNA.push.handleTap(pushPayload(fixture), fixture.action.action_id as string | undefined);
+      return;
+    case 'receive_push': {
+      // Only the `via: handleMessageData` form is a host API call. A raw FCM RemoteMessage through the
+      // SDK's own service is not — such a fixture must not claim `rn` (§8.7 ruling).
+      if (fixture.action.via !== 'handleMessageData') {
+        throw new Error(`[${fixture.id}] receive_push without via=handleMessageData has no RN entry point`);
+      }
+      await AppDNA.push.handleMessage(pushPayload(fixture));
+      return;
+    }
     default:
       // 🔴 There used to be a soft-skip here: `{skipped: true, reason: 'not yet implemented'}`, and the
       // harness `console.warn`ed it and RETURNED — inside the `it()`. Jest printed a tick. 35 of the 37
@@ -225,6 +248,14 @@ async function runFixture(fixture: Fixture): Promise<void> {
           `remove "rn" from this fixture's platforms — it asserts behaviour the wrapper does not have.`,
       );
   }
+}
+
+function pushPayload(fixture: Fixture): Record<string, unknown> {
+  const payload = fixture.action.payload;
+  if (!payload || typeof payload !== 'object') {
+    throw new Error(`[${fixture.id}] push fixture has no 'payload' object`);
+  }
+  return payload as Record<string, unknown>;
 }
 
 function assertBridgeContract(fixture: Fixture): void {
@@ -255,6 +286,29 @@ function assertBridgeContract(fixture: Fixture): void {
       expect(c.method).toBe('presentPaywallByPlacement');
       expect(c.args[0]).toBe(fixture.action.placement);
       expect(c.args[1]).toBeUndefined();
+      break;
+    }
+    case 'classify_push': {
+      expect(mockCapturedCalls).toHaveLength(1);
+      const c = mockCapturedCalls[0]!;
+      expect(c.method).toBe('isAppDNAMessage');
+      expect(c.args[0]).toEqual(fixture.action.payload);
+      break;
+    }
+    case 'tap_push': {
+      expect(mockCapturedCalls).toHaveLength(1);
+      const c = mockCapturedCalls[0]!;
+      expect(c.method).toBe('handlePushTap');
+      expect(c.args[0]).toEqual(fixture.action.payload);
+      // `undefined` when the fixture has no tapped button.
+      expect(c.args[1]).toBe(fixture.action.action_id as string | undefined);
+      break;
+    }
+    case 'receive_push': {
+      expect(mockCapturedCalls).toHaveLength(1);
+      const c = mockCapturedCalls[0]!;
+      expect(c.method).toBe('handlePushMessage');
+      expect(c.args[0]).toEqual(fixture.action.payload);
       break;
     }
     default:

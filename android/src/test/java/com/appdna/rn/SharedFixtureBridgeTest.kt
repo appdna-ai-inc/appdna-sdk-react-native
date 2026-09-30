@@ -2,7 +2,10 @@ package com.appdna.rn
 
 import ai.appdna.sdk.AppDNA
 import android.app.Activity
+import android.app.NotificationManager
+import android.content.Context
 import android.os.Looper
+import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.CxxCallbackImpl
 import com.facebook.react.bridge.JavaOnlyArray
 import com.facebook.react.bridge.JavaOnlyMap
@@ -19,6 +22,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.MockedStatic
 import org.mockito.Mockito.mock
 import org.mockito.stubbing.Answer
 import org.robolectric.Robolectric
@@ -121,6 +125,10 @@ class SharedFixtureBridgeTest {
     /** SDK outputs observed by the driver. A key absent here makes its `state_after` assertion FAIL. */
     private val state = LinkedHashMap<String, Any?>()
 
+    /** The last `(type, value)` the core push-tap router reported through its `routeSink` test seam. */
+    @Volatile
+    private var routed: Pair<String, String>? = null
+
     // ── Harness ──────────────────────────────────────────────────────────────────
 
     /**
@@ -135,8 +143,22 @@ class SharedFixtureBridgeTest {
                 "  `platforms` list and record WHY in RN_NATIVE_ONLY (scripts/check-fixture-coverage.ts).",
         )
 
+    /**
+     * `Arguments.createMap()` / `createArray()` build `WritableNative*` objects, whose class init loads
+     * React Native's C++ library — absent under Robolectric. Every forwarder emit goes through
+     * `AppdnaBridge.toWritableMap`, so without this the emit throws inside the SDK's delegate fan-out
+     * (which swallows it) and NO delegate call ever reaches the recorder. The Java-only maps are RN's
+     * own test doubles with the same `ReadableMap` / `WritableMap` contract. (No fixture claiming `rn`
+     * asserted a delegate call before SPEC-497's push fixtures, so this was never exercised.)
+     */
+    private var argumentsMock: MockedStatic<Arguments>? = null
+
     @Before
     fun setUp() {
+        argumentsMock = org.mockito.Mockito.mockStatic(Arguments::class.java, org.mockito.Mockito.CALLS_REAL_METHODS).also { m ->
+            m.`when`<WritableMap> { Arguments.createMap() }.thenAnswer { JavaOnlyMap() }
+            m.`when`<WritableArray> { Arguments.createArray() }.thenAnswer { JavaOnlyArray() }
+        }
         activity = Robolectric.buildActivity(Activity::class.java).setup().get()
 
         val reactContext = mock(ReactApplicationContext::class.java)
@@ -179,6 +201,9 @@ class SharedFixtureBridgeTest {
 
     @After
     fun tearDown() {
+        argumentsMock?.close()
+        argumentsMock = null
+        runCatching { setRouteSink(null) }
         // Detach this module's forwarders from the process-global singleton, and leave no events
         // behind for whatever test class Robolectric runs next in this sandbox. Defensive: if setUp
         // never got the SDK to READY, there is no store to clear and the real failure is the one the
@@ -303,7 +328,7 @@ class SharedFixtureBridgeTest {
                 runOneFixture()
                 println("  ✓ $name — driven through the bridge into live native")
             } catch (t: Throwable) {
-                failures[name] = t.message ?: t::class.java.name
+                failures[name] = (t.message ?: t::class.java.name) + "\n      at " + t.stackTrace.take(4).joinToString("\n      at ")
             }
         }
 
@@ -316,6 +341,13 @@ class SharedFixtureBridgeTest {
     }
 
     private fun runOneFixture() {
+        // SPEC-497 §9.2 — the handled-key set is process-wide and the Android tap key is persisted, so two
+        // push fixtures sharing a push_id would dedup each other. The core's own reset, by reflection.
+        if (fixtureJson.optString("category") == "push_payload") {
+            resetPushIdempotency()
+            routed = null
+            setRouteSink { type, value -> routed = type to value }
+        }
         applySetup()
 
         // Everything above was setup. The fixture measures the ACTION.
@@ -327,6 +359,9 @@ class SharedFixtureBridgeTest {
             "identify" -> driveIdentify(action)
             "track_event" -> driveTrackEvent(action)
             "show_paywall" -> driveShowPaywall(action)
+            "classify_push" -> driveClassifyPush(action)
+            "tap_push" -> driveTapPush(action)
+            "receive_push" -> driveReceivePush(action)
             else -> unsupported("no driver for action.kind=$kind")
         }
         idle()
@@ -456,6 +491,222 @@ class SharedFixtureBridgeTest {
             ?.getStringExtra("paywall_id")
     }
 
+    // ── SPEC-497 §8.7 push drivers — the module's isAppDNAMessage / handlePushTap / handlePushMessage ──
+
+    private fun driveClassifyPush(action: JSONObject) {
+        if (action.optString("payload_shape") == "apns") {
+            unsupported("an APNs userInfo never reaches Android — this fixture must not claim `rn`")
+        }
+        val payload = jsonToReadableMap(action.getJSONObject("payload"))
+        state["is_appdna"] = capture { p -> module.isAppDNAMessage(payload, p) }
+    }
+
+    private fun driveTapPush(action: JSONObject) {
+        val payload = jsonToReadableMap(action.getJSONObject("payload"))
+        val actionId = action.optStringOrNull("action_id")
+        val before = postedCount()
+        state["returned"] = capture { p -> module.handlePushTap(payload, actionId, p) }
+        settlePush()
+        state["routed"] = routed?.let { mapOf("type" to it.first, "value" to it.second) }
+        state["notification_posted"] = postedCount() > before
+    }
+
+    private fun driveReceivePush(action: JSONObject) {
+        if (action.optString("via") != "handleMessageData") {
+            unsupported("receive_push without via=handleMessageData — a raw FCM RemoteMessage has no host entry point")
+        }
+        val payload = jsonToReadableMap(action.getJSONObject("payload"))
+        val before = postedCount()
+        state["returned"] = capture { p -> module.handlePushMessage(payload, p) }
+        settlePush()
+        state["routed"] = routed?.let { mapOf("type" to it.first, "value" to it.second) }
+        state["notification_posted"] = postedCount() > before
+    }
+
+    /**
+     * Let the push's routing run to the end. A deep link asks the JS host first (`shouldOpen`, an
+     * `onHostCallback`); this runner is that host and answers "open" through the module's own
+     * `respondToHostCallback`, exactly as `hostCallbacks.ts` would.
+     */
+    private fun settlePush() {
+        val want = fixtureJson.getJSONObject("expect")
+        val wantEvents = want.optJSONArray("events")?.length() ?: 0
+        val wantCalls = want.optJSONArray("delegate_calls")?.length() ?: 0
+        val answered = HashSet<String>()
+        val deadline = System.currentTimeMillis() + 5_000
+        while (System.currentTimeMillis() < deadline) {
+            idle()
+            for ((name, payload) in emitted.toList()) {
+                if (name != "onHostCallback") continue
+                val id = payload.optString("callbackId")
+                if (id.isNotEmpty() && answered.add(id)) {
+                    module.respondToHostCallback(id, if (payload.optString("hook") == "shouldOpen") "true" else "null")
+                }
+            }
+            val pushEvents = persistedEnvelopes().count { !it.optString("event_name").startsWith("screen_") }
+            if (pushEvents >= wantEvents && projectedPushCalls().size >= wantCalls) {
+                Thread.sleep(50); idle()
+                return
+            }
+            Thread.sleep(20)
+        }
+    }
+
+    /**
+     * The §8.7 projection: `onHostCallback` dropped, `payload` unwrapped into the args, `push_id` →
+     * `pushId`. (The RN push forwarders emit `{payload: {...}, …}`; the fixtures name the core's fields.)
+     * The routed destination's own screen-lifecycle callbacks (`onScreen*` — a `show_screen` route to a
+     * screen this runner's config does not have is dismissed at once) are left out for the same reason
+     * as its `screen_*` events: they are not the push path the fixture pins; the route is asserted
+     * through `state_after.routed`.
+     */
+    private fun projectedPushCalls(): List<Pair<String, Map<String, Any?>>> = emitted.toList()
+        .filter { it.first != "onHostCallback" && !it.first.startsWith("onScreen") }
+        .map { (name, payload) ->
+            val out = LinkedHashMap<String, Any?>()
+            payload.toValue().forEach { (k, v) -> if (k != "payload") out[k] = v }
+            (payload.optJSONObject("payload"))?.toValue()?.forEach { (k, v) -> out[k] = v }
+            if (out.containsKey("push_id") && !out.containsKey("pushId")) out["pushId"] = out.remove("push_id")
+            name to out
+        }
+
+    private fun postedCount(): Int {
+        val nm = RuntimeEnvironment.getApplication().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        return shadowOf(nm).allNotifications.size
+    }
+
+    /** `PushIdempotency.resetForTesting()` — `internal` to the SDK module, `@JvmName` for exactly this call. */
+    private fun resetPushIdempotency() {
+        val cls = Class.forName("ai.appdna.sdk.integrations.PushIdempotency")
+        val instance = cls.getDeclaredField("INSTANCE").get(null)
+        cls.getDeclaredMethod("resetForTesting").apply { isAccessible = true }.invoke(instance)
+    }
+
+    /** `PushTapRouter.routeSink` — an `internal @JvmField`, so a static field of that name. */
+    private fun setRouteSink(sink: ((String, String) -> Unit)?) {
+        val cls = Class.forName("ai.appdna.sdk.integrations.PushTapRouter")
+        cls.getDeclaredField("routeSink").apply { isAccessible = true }.set(null, sink)
+    }
+
+    // ── SPEC-497 §3.9 — the wrapper-reachable half of the `*_fails_loudly` fixtures ──────────────────
+
+    /**
+     * `billing/paywall_purchase_no_provider_fails_loudly` and `…_revenuecat_fails_loudly` drive a paywall
+     * tap inside the native PaywallManager, which no wrapper API can trigger without UI. What a HOST can
+     * reach is `AppDNA.billing.purchase` on the same provider: configured through the module's own
+     * `configure` with that `billingProvider`, `purchase()` must REJECT with the code the fixture names
+     * as the delegate's `errorType` — and `restorePurchases()` with `providerNotAvailable` (the restore
+     * error contract, §13b.2).
+     */
+    @Test
+    fun failsLoudlyFixturesRejectPurchaseWithTheFixtureErrorType() {
+        val failures = mutableListOf<String>()
+        try {
+            for (id in listOf("paywall_purchase_no_provider_fails_loudly", "paywall_purchase_revenuecat_fails_loudly")) {
+                val fixture = JSONObject(File(fixturesRoot(), "billing/$id.fixture.json").readText())
+                val provider = fixture.getJSONObject("setup").getJSONObject("config").getString("billing_provider")
+                val args = fixture.getJSONObject("expect").getJSONArray("delegate_calls").getJSONObject(0).getJSONObject("args")
+                reconfigure(provider)
+                val code = rejectionCode { p -> module.purchase(args.optString("productId", "plan_monthly"), null, p) }
+                if (code != args.getString("errorType")) failures += "[$id] purchase rejected with '$code', expected '${args.getString("errorType")}'"
+                val restore = rejectionCode { p -> module.restorePurchases(p) }
+                if (restore != "providerNotAvailable") failures += "[$id] restore rejected with '$restore', expected 'providerNotAvailable'"
+            }
+        } finally {
+            runCatching { AppDNA.shutdown() }
+            idle()
+        }
+        assertTrue(failures.joinToString("\n"), failures.isEmpty())
+    }
+
+    /**
+     * SPEC-497 D-R40-1 (R41) — the RN forwarder is registered NOT delivering (a queued purchase emitted
+     * to a JS side with no `onPurchaseCompleted` would be lost), and only `billingDelegateReady(true)`
+     * makes it the delegate the delivery-queue drain calls; `false` takes that back. Before native
+     * `configure` there is no forwarder, and the call is a no-op.
+     */
+    @Test
+    fun billingDelegateReadyFlipsWhetherTheForwarderTakesQueuedPurchases() {
+        assertTrue("configure registers the billing forwarder", billingListener() is BillingForwarder)
+        assertEquals("registered NOT delivering", null, deliveringDelegate())
+        module.billingDelegateReady(true)
+        idle()
+        assertTrue("ready → the drain may call it", deliveringDelegate() is BillingForwarder)
+        module.billingDelegateReady(false)
+        idle()
+        assertEquals("not ready → the drain may not", null, deliveringDelegate())
+
+        // A module that never configured has no forwarder: a no-op, not a crash, and it changes nothing.
+        val before = billingListener()
+        AppdnaModule(mock(ReactApplicationContext::class.java)).billingDelegateReady(true)
+        assertTrue(billingListener() === before)
+        assertEquals(null, deliveringDelegate())
+    }
+
+    /** `BillingModule.billingListener` / `deliveringDelegate()` — `internal`, so found by name prefix. */
+    private fun billingListener(): Any? {
+        val billing = AppDNA.billing
+        val getter = billing::class.java.declaredMethods.first { it.name.startsWith("getBillingListener") }
+        return getter.apply { isAccessible = true }.invoke(billing)
+    }
+
+    private fun deliveringDelegate(): Any? {
+        val billing = AppDNA.billing
+        val m = billing::class.java.declaredMethods.first { it.name.startsWith("deliveringDelegate") }
+        return m.apply { isAccessible = true }.invoke(billing)
+    }
+
+    /** Shut the singleton down and configure it again through the module, with [provider]. */
+    private fun reconfigure(provider: String) {
+        runCatching { module.invalidate() }
+        AppDNA.shutdown()
+        idle()
+        val reactContext = mock(ReactApplicationContext::class.java)
+        org.mockito.Mockito.`when`(reactContext.applicationContext).thenReturn(RuntimeEnvironment.getApplication())
+        org.mockito.Mockito.`when`(reactContext.currentActivity).thenReturn(activity)
+        module = AppdnaModule(reactContext)
+        installEmitterRecorder(module)
+        val options = JavaOnlyMap().apply {
+            putInt("batchSize", 0)
+            putString("logLevel", "none")
+            putString("billingProvider", provider)
+        }
+        val ready = CountDownLatch(1)
+        module.configure("adn_test_placeholder", "sandbox", options, mock(Promise::class.java, Answer { null }))
+        AppDNA.onReady { ready.countDown() }
+        val deadline = System.currentTimeMillis() + 20_000
+        while (ready.count > 0L && System.currentTimeMillis() < deadline) {
+            idle()
+            Thread.sleep(20)
+        }
+        assertTrue("the SDK never reached READY with billingProvider=$provider", ready.count == 0L)
+    }
+
+    /** Run a bridged method that must REJECT; return its code. A resolve fails the test. */
+    private fun rejectionCode(call: (Promise) -> Unit): String? {
+        var code: String? = null
+        var settled = false
+        val promise = mock(
+            Promise::class.java,
+            Answer<Any?> { invocation ->
+                if (invocation.method.name == "resolve") {
+                    throw AssertionError("the bridged call RESOLVED (${invocation.arguments.toList()}) — it must be refused")
+                }
+                code = invocation.arguments.firstOrNull() as? String
+                settled = true
+                null
+            },
+        )
+        call(promise)
+        val deadline = System.currentTimeMillis() + 10_000
+        while (!settled && System.currentTimeMillis() < deadline) {
+            idle()
+            Thread.sleep(10)
+        }
+        assertTrue("the bridged call never settled", settled)
+        return code
+    }
+
     /** Run a bridged method and return the value its promise resolved with. */
     private fun capture(call: (Promise) -> Unit): Any? {
         var resolved: Any? = null
@@ -495,7 +746,15 @@ class SharedFixtureBridgeTest {
 
     private fun assertExpectations() {
         val expect = fixtureJson.getJSONObject("expect")
-        val envelopes = persistedEnvelopes()
+        // A push tap routed to `show_screen` hands the id to the live SDK's ScreenManager, which — with
+        // no such screen in this runner's config — emits its own `screen_dismissed`. That event belongs
+        // to the routed destination, not to the push path the fixture pins (the core runners present
+        // nothing, so they never see it); the route itself is asserted through `state_after.routed`.
+        val envelopes = if (fixtureJson.optString("category") == "push_payload") {
+            persistedEnvelopes().filterNot { it.optString("event_name").startsWith("screen_") }
+        } else {
+            persistedEnvelopes()
+        }
 
         // Wrapper-only invariant (SPEC-070-B §7). No other runner can assert it: on iOS/Android core
         // the tag is `native`. A wrapper that stops injecting it mis-attributes every RN event in
@@ -533,6 +792,28 @@ class SharedFixtureBridgeTest {
 
         // The delegate calls, as JS receives them: `(event, payload)` off the generated emitter.
         val expectedCalls = expect.optJSONArray("delegate_calls") ?: JSONArray()
+        if (fixtureJson.optString("category") == "push_payload") {
+            // §14 per-category rule: push delegate calls compare ORDER-INSENSITIVELY, after the §8.7
+            // projection (payload unwrapped, push_id → pushId, onHostCallback dropped).
+            val remaining = projectedPushCalls().toMutableList()
+            assertEquals(
+                "[$fixtureName] delegate-call count (the wrapper emitted ${remaining.map { it.first }} to JS)",
+                expectedCalls.length(),
+                remaining.size,
+            )
+            for (i in 0 until expectedCalls.length()) {
+                val exp = expectedCalls.getJSONObject(i)
+                val args = exp.optJSONObject("args") ?: JSONObject()
+                val at = remaining.indexOfFirst { (name, a) ->
+                    name == exp.getString("name") && args.keys().asSequence().all { k ->
+                        val ev = args.opt(k)
+                        if (ev is JSONObject) canon(ev) == canon((a[k] as? Map<*, *>)?.filterKeys { ev.has(it.toString()) }) else canon(ev) == canon(a[k])
+                    }
+                }
+                assertTrue("[$fixtureName] no delegate call matches $exp among $remaining", at >= 0)
+                remaining.removeAt(at)
+            }
+        } else {
         val actualCalls = emitted.toList()
         assertEquals(
             "[$fixtureName] delegate-call count (the wrapper emitted ${actualCalls.map { it.first }} to JS)",
@@ -547,6 +828,7 @@ class SharedFixtureBridgeTest {
             for (key in expectedArgs.keys()) {
                 assertValue("[$fixtureName] delegate[$i]($name).args.$key", expectedArgs.opt(key), payload.opt(key))
             }
+        }
         }
 
         expect.optJSONObject("state_after")?.let { expectedState ->
@@ -669,7 +951,18 @@ class SharedFixtureBridgeTest {
     /** The payload as JS receives it. `AppdnaBridge.toWritableMap` produced it; read it straight back. */
     private fun readableToJson(map: ReadableMap?): JSONObject {
         if (map == null) return JSONObject()
-        return JSONObject(map.toHashMap() as Map<*, *>)
+        // Recursively: a nested map/array inside a Java-only map is a `ReadableMap` / `ReadableArray`,
+        // not a `java.util.Map`, and `JSONObject(Map)` would silently drop it.
+        return JSONObject().also { o -> map.toHashMap().forEach { (k, v) -> o.put(k, jsonValue(v)) } }
+    }
+
+    private fun jsonValue(v: Any?): Any = when (v) {
+        null -> JSONObject.NULL
+        is ReadableMap -> readableToJson(v)
+        is com.facebook.react.bridge.ReadableArray -> JSONArray().also { a -> v.toArrayList().forEach { a.put(jsonValue(it)) } }
+        is Map<*, *> -> JSONObject().also { o -> v.forEach { (k, x) -> o.put(k.toString(), jsonValue(x)) } }
+        is List<*> -> JSONArray().also { a -> v.forEach { a.put(jsonValue(it)) } }
+        else -> v
     }
 
     /**

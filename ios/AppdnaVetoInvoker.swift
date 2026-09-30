@@ -24,8 +24,24 @@ final class AppdnaVetoInvoker {
     let timeout: TimeInterval
     private let emit: ([String: Any]) -> Void
 
-    init(timeout: TimeInterval, emit: @escaping ([String: Any]) -> Void) {
+    /// Schedules the give-up: `(seconds, fire)`. Production waits on the main queue; SPEC-497 §4.9 —
+    /// the XCTest injects a scheduler that records the requested interval and fires on demand, because
+    /// there is no virtual clock under `DispatchQueue.main.asyncAfter`.
+    typealias TimeoutScheduler = (TimeInterval, @escaping () -> Void) -> Void
+
+    static let mainQueueScheduler: TimeoutScheduler = { wait, fire in
+        DispatchQueue.main.asyncAfter(deadline: .now() + wait, execute: fire)
+    }
+
+    private let scheduleTimeout: TimeoutScheduler
+
+    init(
+        timeout: TimeInterval,
+        scheduleTimeout: @escaping TimeoutScheduler = AppdnaVetoInvoker.mainQueueScheduler,
+        emit: @escaping ([String: Any]) -> Void
+    ) {
         self.timeout = timeout
+        self.scheduleTimeout = scheduleTimeout
         self.emit = emit
     }
 
@@ -54,7 +70,7 @@ final class AppdnaVetoInvoker {
                 "argsJson": AppdnaJSON.encode(args),
             ])
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + wait) {
+            scheduleTimeout(wait) {
                 // `evict` returns true only for the caller that actually removed the resolver. If JS
                 // already answered, this is a no-op and the continuation has long since resumed.
                 if AppdnaHostCallbacks.shared.evict(callbackId: callbackId) {

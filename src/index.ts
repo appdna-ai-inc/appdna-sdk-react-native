@@ -19,7 +19,13 @@ import type {
   AppDNALogLevel,
   AppDNABillingProvider,
 } from './types';
-import { AppDNABilling, resetEntitlementObserver, resumeEntitlementObserver } from './billing';
+import {
+  AppDNABilling,
+  resetBillingDelegateReady,
+  resendBillingDelegateReady,
+  resetEntitlementObserver,
+  resumeEntitlementObserver,
+} from './billing';
 import type { Entitlement, TransactionInfo, ProductInfo } from './billing';
 import type {
   AppDNAOnboardingDelegate,
@@ -150,6 +156,9 @@ export class AppDNA {
     // the rest of the process. `resetEntitlementObserver()` only re-opened the latch for the NEXT
     // subscriber, and in the normal integration there is no next subscriber.
     resumeEntitlementObserver();
+    // Native builds a fresh billing forwarder at every configure, registered not delivering; tell it
+    // whether a JS `onPurchaseCompleted` is waiting (SPEC-497 D-R40-1).
+    resendBillingDelegateReady();
   }
 
   /** Set log verbosity level at runtime. Valid: 'none','error','warning','info','debug'. */
@@ -350,6 +359,26 @@ export class AppDNA {
     /** Get the current push token. */
     getToken: async (): Promise<string | null> =>
       parseNativeJson<string | null>(await AppdnaModule.getPushToken()),
+    /**
+     * Whether a push payload (e.g. `remoteMessage.data` from `@react-native-firebase/messaging`) is an
+     * AppDNA push — it carries the `appdna: "1"` marker. Use it to leave AppDNA pushes to AppDNA.
+     */
+    isAppDNAMessage: (data: Record<string, unknown>): Promise<boolean> =>
+      AppdnaModule.isAppDNAMessage(data),
+    /**
+     * Forward a received push. For an AppDNA push the SDK tracks delivery once and fires
+     * `onPushReceived`; it never displays anything (your app owns display). Resolves `false`, doing
+     * nothing, for any other push.
+     */
+    handleMessage: (data: Record<string, unknown>): Promise<boolean> =>
+      AppdnaModule.handlePushMessage(data),
+    /**
+     * Forward a notification tap, with the tapped action button's id when there is one. For an AppDNA
+     * push the SDK tracks the tap once, fires `onPushTapped` and routes the push's action. Resolves
+     * `false`, doing nothing, for any other push.
+     */
+    handleTap: (data: Record<string, unknown>, actionId?: string): Promise<boolean> =>
+      AppdnaModule.handlePushTap(data, actionId),
     /** Set a delegate to receive push notification callbacks. */
     setDelegate: (delegate: Partial<AppDNAPushDelegate> | null): void => {
       // Replaces the previous delegate's listeners rather than stacking a second set on top.
@@ -633,6 +662,10 @@ export class AppDNA {
    * The structured answer to an onboarding location field — `{formatted_address, city, state,
    * state_code, country, country_code, latitude, longitude, timezone, timezone_offset, postal_code,
    * raw_query}`. Resolves `null` when that field was never answered.
+   *
+   * Every key except `formatted_address` may be `null`: an address typed without picking a suggestion
+   * resolves `{formatted_address: <text>, raw_query: <text>}` with null coordinates, city, state and
+   * country; a picked suggestion fills what the lookup had.
    */
   static async getLocationData(fieldId: string): Promise<Record<string, unknown> | null> {
     return parseNativeJson<Record<string, unknown> | null>(await AppdnaModule.getLocationData(fieldId));
@@ -815,6 +848,9 @@ export class AppDNA {
     // The billing facade latches "observer started" and never retries, so without this reset a
     // shutdown → configure cycle leaves `onEntitlementsChanged` dead for the rest of the process.
     resetEntitlementObserver();
+    // The billing listeners went with removeAllDelegateListeners(): nothing is ready to receive a
+    // queued purchase, and the next configure() must not claim otherwise.
+    resetBillingDelegateReady();
     return AppdnaModule.shutdown();
   }
 

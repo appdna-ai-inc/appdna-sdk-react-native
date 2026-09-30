@@ -66,6 +66,11 @@ class MainActivity : ReactActivity() {
             "appdnaPlacement" to "placement",
             // SPEC-496 device pass: `items` | `empty` — sample host data for onBeforeStepRender.
             "appdnaHostDataDemo" to "hostDataDemo",
+            // SPEC-497 §4.10 — the sign-in timeout floor device rows.
+            "appdnaSignInDelaySeconds" to "signInDelaySeconds",
+            "appdnaVetoTimeout" to "vetoTimeout",
+            "appdnaStepAdvanceDelaySeconds" to "stepAdvanceDelaySeconds",
+            "appdnaStepAdvanceReply" to "stepAdvanceReply",
         )
   }
 }

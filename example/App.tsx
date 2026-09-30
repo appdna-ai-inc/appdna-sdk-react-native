@@ -70,6 +70,48 @@ type Props = {
    * override, as before.
    */
   hostDataDemo?: string;
+  /**
+   * SPEC-497 §4.10 — the sign-in timeout floor device rows (all optional; unset = no delay):
+   * `signInDelaySeconds` — `onBeforeStepAdvance` waits n s for the FIRST sign-in action of each
+   * presentation, then answers `proceed` (later attempts in that presentation proceed at once);
+   * `vetoTimeout` — passed to `AppDNAOptions.vetoTimeout`; `stepAdvanceDelaySeconds` +
+   * `stepAdvanceReply` (`proceed` | `stay`) — for a NON-sign-in step, wait n s, then answer.
+   */
+  signInDelaySeconds?: string;
+  vetoTimeout?: string;
+  stepAdvanceDelaySeconds?: string;
+  stepAdvanceReply?: string;
+};
+
+/** The sign-in actions a host must answer (the SDK's own list, SPEC-497 §4.2) — picks which delay applies. */
+const SIGN_IN_ACTIONS = new Set([
+  'social_login', 'login', 'register', 'reset_password', 'magic_link', 'verify_email',
+  'resend_verification', 'enable_biometric', 'email_login', 'request_otp', 'verify_otp',
+  'logout', 'change_password', 'set_new_password', 'delete_account', 'update_profile',
+]);
+
+/**
+ * Wait `seconds` WITHOUT `setTimeout`: RN Android pauses JS timers while the SDK's onboarding Activity
+ * is in front, so a timer-based wait never fires there. A clock loop over awaited `fetch` calls keeps
+ * the JS thread yielding (each `fetch` settles through native networking, which is not paused), and a
+ * failed fetch (offline) just loops again.
+ */
+const hostWait = async (seconds: number) => {
+  const end = Date.now() + seconds * 1000;
+  while (Date.now() < end) {
+    try {
+      await fetch('https://clients3.google.com/generate_204', { method: 'HEAD' });
+    } catch {
+      // offline — keep polling the clock
+    }
+  }
+};
+
+/** A synthetic AppDNA-marked push (SPEC-497 §9.2) for the forwarding API buttons. */
+const SAMPLE_PUSH = {
+  appdna: '1',
+  push_id: 'rn_e2e_push',
+  action: { type: 'deep_link', value: 'appdnaexample://push' },
 };
 
 /** SPEC-496 — sample host data for the `hostDataDemo` launch arg. Public placeholder images only. */
@@ -128,6 +170,10 @@ export default function App({
   experimentVariantId,
   placement,
   hostDataDemo,
+  signInDelaySeconds,
+  vetoTimeout,
+  stepAdvanceDelaySeconds,
+  stepAdvanceReply,
 }: Props) {
   const [status, setStatus] = useState(apiKey ? 'Configuring…' : 'No API key — pass -appdnaApiKey');
   const [log, setLog] = useState<string[]>([]);
@@ -138,6 +184,8 @@ export default function App({
   const subscriptions = useRef<Array<() => void>>([]);
   // `showmore` host: pages shown so far, per step. A revisit answers with the list the user last saw.
   const showMorePages = useRef<Record<string, number>>({});
+  // SPEC-497 §4.10 — whether this presentation's first sign-in action has been delayed yet.
+  const signInDelayed = useRef(false);
 
   // The log is what the device pass reads back: every delegate callback and every veto appends a
   // line, so a hook that never fires is visible as an ABSENCE, not inferred from a passing await.
@@ -162,7 +210,10 @@ export default function App({
     // Delegates BEFORE configure: native starts emitting during configure, and a delegate
     // registered after it silently misses the opening events.
     AppDNA.onboarding.setDelegate({
-      onOnboardingStarted: (flowId) => append(`onboarding started: ${flowId}`),
+      onOnboardingStarted: (flowId) => {
+        signInDelayed.current = false;
+        append(`onboarding started: ${flowId}`);
+      },
       onOnboardingStepChanged: (_f, stepId, i, total) =>
         append(`step ${i + 1}/${total}: ${stepId}`),
       onOnboardingCompleted: (flowId, responses) =>
@@ -176,7 +227,26 @@ export default function App({
       // fires and the hook's own default applies), which is why they cannot ride the event channel.
       // Three of them were never registered by this example, so their native round trip had never
       // once run on a device.
-      onBeforeStepAdvance: async (_flowId, fromStepId) => {
+      onBeforeStepAdvance: async (_flowId, fromStepId, _index, _type, _responses, stepData) => {
+        const action = typeof stepData?.action === 'string' ? stepData.action : undefined;
+        if (action && SIGN_IN_ACTIONS.has(action)) {
+          const delay = Number(signInDelaySeconds);
+          if (delay > 0 && !signInDelayed.current) {
+            signInDelayed.current = true;
+            append(`veto onBeforeStepAdvance(${fromStepId}, ${action}) — signing in for ${delay}s`);
+            await hostWait(delay);
+          }
+          append(`veto onBeforeStepAdvance(${fromStepId}, ${action}) → proceed`);
+          return { type: 'proceed' };
+        }
+        const delay = Number(stepAdvanceDelaySeconds);
+        if (delay > 0) {
+          const reply = stepAdvanceReply === 'stay' ? 'stay' : 'proceed';
+          append(`veto onBeforeStepAdvance(${fromStepId}) — waiting ${delay}s`);
+          await hostWait(delay);
+          append(`veto onBeforeStepAdvance(${fromStepId}) → ${reply}`);
+          return { type: reply };
+        }
         append(`veto onBeforeStepAdvance(${fromStepId}) → proceed`);
         return { type: 'proceed' };
       },
@@ -322,13 +392,14 @@ export default function App({
       AppDNAPush.onPushReceived((_p, inForeground) => append(`AppDNAPush.onPushReceived (fg=${inForeground})`)),
       AppDNAPush.onPushTapped((_p, actionId) => append(`AppDNAPush.onPushTapped (${actionId ?? 'default'})`)),
     ];
-  }, [append, hostDataDemo]);
+  }, [append, hostDataDemo, signInDelaySeconds, stepAdvanceDelaySeconds, stepAdvanceReply]);
 
   const boot = useCallback(async () => {
     if (!apiKey) return;
     registerDelegates();
 
-    await AppDNA.configure(apiKey, 'production', OPTIONS);
+    const veto = Number(vetoTimeout);
+    await AppDNA.configure(apiKey, 'production', veto > 0 ? { ...OPTIONS, vetoTimeout: veto } : OPTIONS);
     setStatus('Configured');
 
     await AppDNA.onReady();
@@ -544,6 +615,9 @@ export default function App({
           <Button label="Set permission (true)" onPress={() => run('push.setPermission()', () => AppDNA.push.setPermission(true))} />
           <Button label="Track delivered" onPress={() => run('push.trackDelivered()', () => AppDNA.push.trackDelivered('rn_e2e_push'))} />
           <Button label="Track tapped" onPress={() => run('push.trackTapped()', () => AppDNA.push.trackTapped('rn_e2e_push', 'open'))} />
+          <Button label="Is AppDNA message" onPress={() => run('push.isAppDNAMessage()', () => AppDNA.push.isAppDNAMessage(SAMPLE_PUSH))} />
+          <Button label="Forward message" onPress={() => run('push.handleMessage()', () => AppDNA.push.handleMessage(SAMPLE_PUSH))} />
+          <Button label="Forward tap" onPress={() => run('push.handleTap()', () => AppDNA.push.handleTap(SAMPLE_PUSH))} />
         </Section>
 
         <Section title="Experiments & flags">

@@ -82,7 +82,11 @@ final class OnboardingForwarder: NSObject, AppDNAOnboardingDelegate {
             "responses": responses,
         ]
         if let stepData { args["stepData"] = stepData }
-        let reply = await invoker.invoke("onBeforeStepAdvance", args)
+        // SPEC-497 §4.2 — a sign-in action spans OS UI the host cannot shorten (account pickers, 2FA,
+        // a code from email), so it waits at least the core floor (120 s); every other step keeps the
+        // configured vetoTimeout.
+        let timeout = max(invoker.timeout, StepAdvanceResult.minimumBridgeTimeout(stepData: stepData) ?? 0)
+        let reply = await invoker.invoke("onBeforeStepAdvance", args, timeout: timeout)
 
         // Native gates the AUTH actions on delegate presence — no delegate means nobody can sign the
         // user in, so it stays on the step and shows an error. But this wrapper ALWAYS attaches a

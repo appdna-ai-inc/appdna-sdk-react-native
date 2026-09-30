@@ -51,6 +51,11 @@
     @"appdnaPlacement" : @"placement",
     // SPEC-496 device pass: `items` | `empty` — sample host data for onBeforeStepRender (App.tsx).
     @"appdnaHostDataDemo" : @"hostDataDemo",
+    // SPEC-497 §4.10 — the sign-in timeout floor device rows (App.tsx).
+    @"appdnaSignInDelaySeconds" : @"signInDelaySeconds",
+    @"appdnaVetoTimeout" : @"vetoTimeout",
+    @"appdnaStepAdvanceDelaySeconds" : @"stepAdvanceDelaySeconds",
+    @"appdnaStepAdvanceReply" : @"stepAdvanceReply",
   };
   for (NSString *arg in launchKeys) {
     NSString *value = [[NSUserDefaults standardUserDefaults] stringForKey:arg];

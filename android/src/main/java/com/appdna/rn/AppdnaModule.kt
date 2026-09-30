@@ -79,6 +79,10 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
      */
     private var invoker: AppdnaVetoInvoker? = null
 
+    /** The billing forwarder registered at `configure` — `billingDelegateReady` flips its delivery flag. */
+    @Volatile
+    private var billingForwarder: BillingForwarder? = null
+
     /**
      * E6 — every promise a coroutine on [scope] owes an answer to.
      *
@@ -581,7 +585,14 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     }
 
     override fun restorePurchases(promise: Promise) {
-        launchSettling(promise, "RESTORE_ERROR") { p ->
+        // SPEC-497 §13b.2 restore error contract: reject with the `billingErrorType` code
+        // (`providerNotAvailable`, `networkError`, `serverError`, …), as `purchase()` does. It was a
+        // fixed "RESTORE_ERROR", so a host could not tell "restore through your provider" from "retry".
+        launchSettling(
+            promise,
+            "RESTORE_ERROR",
+            errorCodeFor = { ai.appdna.sdk.billing.billingErrorType(it) },
+        ) { p ->
             // `List<String>` — restored product ids, NOT entitlements.
             p.resolve(AppdnaBridge.toWritableArray(AppDNA.billing.restorePurchases()))
         }
@@ -628,6 +639,17 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
      * never called it. It also drains the pending-listener queue, so an observer registered before the
      * billing manager existed is dropped too, rather than being flushed in later behind our back.
      */
+    /**
+     * SPEC-497 D-R40-1 (R41) — INTERNAL. Whether a JS `onPurchaseCompleted` is registered: flips the
+     * billing forwarder's `deliversPurchases` (a flip to `true` drains the late-purchase queue into
+     * it). Before native `configure` there is no forwarder, so it is a no-op; the facade re-sends its
+     * latest value after `configure()`.
+     */
+    override fun billingDelegateReady(ready: Boolean) {
+        val forwarder = billingForwarder ?: return
+        AppDNA.billing.setDelegate(forwarder, deliversPurchases = ready)
+    }
+
     override fun startEntitlementObserver(promise: Promise) {
         entitlementListener?.let { AppDNA.billing.removeEntitlementsChangedListener(it) }
         val listener: (List<ai.appdna.sdk.billing.Entitlement>) -> Unit = { entitlements ->
@@ -674,6 +696,22 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     override fun trackPushTapped(pushId: String, action: String?, promise: Promise) {
         AppDNA.trackPushTapped(pushId, action)
         promise.resolve(null)
+    }
+
+    // SPEC-497 §9.2 (B2) — the forwarding API for a host that owns Firebase Messaging. The payload is
+    // read HERE, on the bridge thread (a ReadableMap is only valid on it), and converted natively;
+    // every entry point is marker-gated in the core.
+    override fun isAppDNAMessage(data: ReadableMap, promise: Promise) {
+        promise.resolve(AppDNA.push.isAppDNAMessage(AppdnaPushData.toStringMap(data)))
+    }
+
+    /** Never displays anything: a host that forwards owns display (`handleMessageData`, not `handleMessage`). */
+    override fun handlePushMessage(data: ReadableMap, promise: Promise) {
+        promise.resolve(AppDNA.push.handleMessageData(AppdnaPushData.toStringMap(data)))
+    }
+
+    override fun handlePushTap(data: ReadableMap, actionId: String?, promise: Promise) {
+        promise.resolve(AppDNA.push.handleTapData(AppdnaPushData.toStringMap(data), actionId))
     }
 
     // ── Deep links / web entitlements ─────────────────────────────────────────
@@ -741,7 +779,13 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         AppDNA.surveys.setDelegate(SurveyForwarder(emitter))
         AppDNA.inAppMessages.setDelegate(InAppMessageForwarder(emitter))
         AppDNA.push.setDelegate(PushForwarder(emitter))
-        AppDNA.billing.setDelegate(BillingForwarder(emitter))
+        // SPEC-497 D-R40-1 (R41): registered NOT delivering. The late-purchase queue drains into a
+        // delivering delegate, and a queued purchase handed to this forwarder while no JS
+        // `onPurchaseCompleted` exists is emitted into nothing — lost. JS says when it is ready
+        // (`billingDelegateReady`), and `configure()` re-sends the latest answer right after this.
+        val billing = BillingForwarder(emitter)
+        billingForwarder = billing
+        AppDNA.billing.setDelegate(billing, deliversPurchases = false)
         AppDNA.deepLinks.setDelegate(DeepLinkForwarder(emitter))
         // The 9th delegate. `AppDNA.screenDelegate` is a var whose setter forwards to
         // ScreenManager.setDelegate — the presented-screen path, which is what actually fires these.
@@ -874,6 +918,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         AppDNA.inAppMessages.setDelegate(null)
         AppDNA.push.setDelegate(null)
         AppDNA.billing.setDelegate(null)
+        billingForwarder = null
         AppDNA.deepLinks.setDelegate(null)
         AppDNA.setInitDelegate(null)
         AppDNA.setLifecycleDelegate(null)
@@ -925,7 +970,9 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
             // AC-21: Android gained billingProvider in 1.0.42, so the host's choice finally arrives.
             billingProvider = BillingProvider.fromWire(values["billingProvider"]) ?: defaults.billingProvider,
             requireConsent = values["requireConsent"] as? Boolean ?: defaults.requireConsent,
-            vetoTimeout = (values["vetoTimeout"] as? Number)?.toLong() ?: defaults.vetoTimeout,
+            // A zero / negative value is the native default (as on Flutter, SPEC-497 §4.2), so the
+            // invoker and diagnose() agree.
+            vetoTimeout = (values["vetoTimeout"] as? Number)?.toLong()?.takeIf { it > 0 } ?: defaults.vetoTimeout,
         )
     }
 

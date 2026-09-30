@@ -132,12 +132,16 @@ final class AppdnaHandlerPassTests: XCTestCase {
         drive("hasActiveSubscription", settles: true) { res, rej in impl.hasActiveSubscription(resolve: res, reject: rej) }
         drive("getEntitlements", settles: true) { res, rej in impl.getEntitlements(resolve: res, reject: rej) }
         drive("startEntitlementObserver", settles: true) { res, rej in impl.startEntitlementObserver(resolve: res, reject: rej) }
+        drive("billingDelegateReady", settles: false) { _, _ in impl.billingDelegateReady(false) }
         drive("requestPushPermission", settles: true) { res, rej in impl.requestPushPermission(resolve: res, reject: rej) }
         drive("getPushToken", settles: true) { res, rej in impl.getPushToken(resolve: res, reject: rej) }
         drive("setPushToken", settles: true) { res, rej in impl.setPushToken("handler_pass", resolve: res, reject: rej) }
         drive("setPushPermission", settles: true) { res, rej in impl.setPushPermission(true, resolve: res, reject: rej) }
         drive("trackPushDelivered", settles: true) { res, rej in impl.trackPushDelivered("handler_pass", resolve: res, reject: rej) }
         drive("trackPushTapped", settles: true) { res, rej in impl.trackPushTapped("handler_pass", action: "handler_pass" as NSString, resolve: res, reject: rej) }
+        drive("isAppDNAMessage", settles: true) { res, rej in impl.isAppDNAMessage(["push_id": "handler_pass"] as NSDictionary, resolve: res, reject: rej) }
+        drive("handlePushMessage", settles: true) { res, rej in impl.handlePushMessage(["push_id": "handler_pass"] as NSDictionary, resolve: res, reject: rej) }
+        drive("handlePushTap", settles: true) { res, rej in impl.handlePushTap(["push_id": "handler_pass"] as NSDictionary, actionId: "handler_pass" as NSString, resolve: res, reject: rej) }
         drive("handleDeepLink", settles: true) { res, rej in impl.handleDeepLink("handler_pass", resolve: res, reject: rej) }
         drive("checkDeferredDeepLink", settles: true) { res, rej in impl.checkDeferredDeepLink(resolve: res, reject: rej) }
         drive("getWebEntitlement", settles: true) { res, rej in impl.getWebEntitlement(resolve: res, reject: rej) }

@@ -2,7 +2,7 @@
 // Source: src/lib/sdk-delegates/sdk-methods.ts
 // Generator: scripts/sdk-codegen/emit-turbomodule-spec.ts
 // Regenerate: pnpm sdk-codegen
-// Last codegen commit: becec5bd534f3a891ae3ea7638d019d42a81b848
+// Last codegen commit: 32999f556a2b3c20856ac7ff56c2b2b793fa6762
 
 import type { TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
@@ -195,6 +195,12 @@ export interface Spec extends TurboModule {
   /** Begin emitting `onEntitlementsChanged`. */
   startEntitlementObserver(): Promise<void>;
 
+  /**
+   * INTERNAL (SPEC-497 D-R40-1): whether a JS onPurchaseCompleted is registered, so the native
+   * billing forwarder may take queued late-purchase deliveries. A flip to true drains the queue.
+   */
+  billingDelegateReady(ready: boolean): void;
+
   /** Request the OS notification permission. */
   requestPushPermission(): Promise<boolean>;
 
@@ -212,6 +218,21 @@ export interface Spec extends TurboModule {
 
   /** Attribute a tapped push. */
   trackPushTapped(pushId: string, action?: string): Promise<void>;
+
+  /** Whether a push payload is an AppDNA push (it carries the `appdna: "1"` marker). */
+  isAppDNAMessage(data: Object): Promise<boolean>;
+
+  /**
+   * Forward a received push. Tracks delivery once and fires onPushReceived for an AppDNA push;
+   * never displays anything. False for any other push.
+   */
+  handlePushMessage(data: Object): Promise<boolean>;
+
+  /**
+   * Forward a notification tap (and the tapped action button's id). Tracks the tap once, fires
+   * onPushTapped and routes the push's action for an AppDNA push. False for any other push.
+   */
+  handlePushTap(data: Object, actionId?: string): Promise<boolean>;
 
   /** Hand a deep link to the SDK (N15: `URL` on iOS, `String` on Android). */
   handleDeepLink(url: string): Promise<void>;

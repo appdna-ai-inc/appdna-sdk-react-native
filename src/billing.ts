@@ -171,6 +171,41 @@ export function resumeEntitlementObserver(): void {
 export function __resetEntitlementObserverForTesting(): void {
   entitlementObserverStarted = false;
   liveEntitlementSubscribers = 0;
+  purchaseDeliveryReady = false;
+}
+
+/**
+ * Whether a JS `onPurchaseCompleted` is registered — the latch behind the internal native
+ * `billingDelegateReady` (SPEC-497 D-R40-1).
+ *
+ * The native billing forwarder is registered NOT delivering: the SDK's late-purchase queue (a purchase
+ * reported at app start, after `identify`, an interrupted or Ask-to-Buy purchase…) drains only into a
+ * delegate that will really hand the purchase to the host, and a queued purchase emitted to JS with
+ * no `onPurchaseCompleted` listening would be lost. So `setDelegate` tells native, on every call,
+ * whether one is registered; a flip to true drains the queue. `configure()` re-sends the latest value
+ * (native drops the forwarder on shutdown and builds a new one at configure), and `shutdown()` resets
+ * it to false, as it drops the listeners.
+ */
+let purchaseDeliveryReady = false;
+
+function sendBillingDelegateReady(ready: boolean): void {
+  // A SYNC void native method: guard the get-trap's synchronous throw (module absent / torn down).
+  // Before native configure the call is a no-op on both platforms; configure() re-sends.
+  try {
+    AppdnaBillingModule.billingDelegateReady(ready);
+  } catch {
+    // No native module — nothing can be delivered either way.
+  }
+}
+
+/** Called by `configure()` once native is configured: re-send the latest answer. */
+export function resendBillingDelegateReady(): void {
+  sendBillingDelegateReady(purchaseDeliveryReady);
+}
+
+/** Called by `shutdown()`: the listeners are gone, so nothing is ready to receive a delivery. */
+export function resetBillingDelegateReady(): void {
+  purchaseDeliveryReady = false;
 }
 
 /**
@@ -281,6 +316,11 @@ export class AppDNABilling {
   static setDelegate(delegate: Partial<AppDNABillingDelegate> | null): void {
     // Replaces the previous delegate's listeners. Without this, a remount stacked another set and one
     // `onPurchaseCompleted` invoked every delegate ever registered — N entitlement grants for one buy.
+    //
+    // A purchase may be delivered LATER through `onPurchaseCompleted` — at app start, after
+    // `identify`, or right here, when a JS `onPurchaseCompleted` is registered. Grant idempotently by
+    // `transaction.transactionId`: delivery is at least once.
+    purchaseDeliveryReady = typeof delegate?.onPurchaseCompleted === 'function';
     setDelegateListeners('billing', () => {
       // `null` CLEARS the delegate: `setDelegateListeners` has already removed the previous slot's
       // subscriptions and host callbacks, so installing nothing is exactly "no delegate". An RN host
@@ -317,5 +357,7 @@ export class AppDNABilling {
       }
       return subs;
     });
+    // After the listeners exist, so a delivery the flip drains finds its `onPurchaseCompleted`.
+    sendBillingDelegateReady(purchaseDeliveryReady);
   }
 }

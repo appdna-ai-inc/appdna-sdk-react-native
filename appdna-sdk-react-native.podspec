@@ -43,6 +43,10 @@ Pod::Spec.new do |s|
     # `requires_app_host` because the tests exercise MainActor delivery and a DispatchQueue.main
     # timeout — both need a real run loop, which an app host provides and a bare logic bundle does not.
     test_spec.requires_app_host = true
+    # SPEC-497 §3.10 fallback: the StoreKit configuration the app-hosted `SKTestSession` tests load
+    # (`AppdnaStoreKitHostedTests`) — the same five test products as the core SDK's own test target.
+    test_spec.resources = ['ios/Tests/AppDNATestProducts.storekit']
+    test_spec.frameworks = 'StoreKit'
   end
 
   # SPEC-070-B P0 (AC-38 / W7): Apple merges the app's, the pod's, and every dependency's privacy
