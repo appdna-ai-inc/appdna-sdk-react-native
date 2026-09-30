@@ -471,11 +471,6 @@ enum AppdnaVetoDecoder {
         reply == nil || reply is NSNull || !(reply is [String: Any])
     }
 
-    /// The decision types `stepAdvanceResult` actually understands.
-    static let knownDecisions: Set<String> = [
-        "proceed", "proceedWithData", "block", "skipTo", "skipToWithData", "stay",
-    ]
-
     /// Did the host make an EXPLICIT, RECOGNISED decision?
     ///
     /// 🔴 `{}` IS A DICTIONARY, SO IT WAS NEITHER "unhandled" NOR "no opinion" — AND IT ADVANCED.
@@ -490,11 +485,11 @@ enum AppdnaVetoDecoder {
     /// question. On an auth action there is exactly one safe reading of "did not answer", and it is
     /// not "let them in". So the gate now demands a POSITIVE answer rather than enumerating the ways
     /// of saying nothing — there is always one more way of saying nothing.
+    ///
+    /// A `skipTo` without a usable `stepId` is not a decision either (it used to decode to
+    /// `skipTo("")`, which names no step and ADVANCED). One rule, in the core.
     static func isExplicitDecision(_ reply: Any?) -> Bool {
-        guard let map = reply as? [String: Any] else { return false }
-        if map["__appdna_unhandled"] as? Bool == true { return false }
-        guard let type = map["type"] as? String else { return false }
-        return knownDecisions.contains(type)
+        StepAdvanceResult.isExplicitBridgeDecision(reply)
     }
 
 
@@ -514,8 +509,13 @@ enum AppdnaVetoDecoder {
         case "block":
             return .block(message: (map["message"] as? String) ?? "")
         case "skipTo", "skipToWithData":
-            let stepId = (map["stepId"] as? String) ?? ""
-            if let data = anyMap(map["data"]), !data.isEmpty {
+            let data = anyMap(map["data"])
+            // A missing / blank `stepId` names no step: not a skip (it used to decode to `skipTo("")`).
+            guard let stepId = StepAdvanceResult.bridgeSkipTarget(reply: map) else {
+                if let data, !data.isEmpty { return .proceedWithData(data) }
+                return .proceed
+            }
+            if let data, !data.isEmpty {
                 return .skipToWithData(stepId: stepId, data: data)
             }
             return .skipTo(stepId: stepId)

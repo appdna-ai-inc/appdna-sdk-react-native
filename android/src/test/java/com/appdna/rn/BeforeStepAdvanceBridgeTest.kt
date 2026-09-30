@@ -98,6 +98,34 @@ class BeforeStepAdvanceBridgeTest {
         }
     }
 
+    /**
+     * The bridge half of `delegate_contracts/skip_to_without_step_id_is_not_a_decision`: each JSON
+     * reply goes through the REAL invoker, the REAL auth gate and the REAL decoder. NEGATIVE CONTROL:
+     * with the old decoder a `{"type":"skipTo"}` on a sign-in step returned `SkipTo("")` (which
+     * advances) instead of `Block`.
+     */
+    @Test
+    fun `the shared fixture's skipTo replies decode as the fixture says`() = runTest {
+        val cases = JSONObject(File(fixturesRoot(), "delegate_contracts/skip_to_without_step_id_is_not_a_decision.fixture.json").readText())
+            .getJSONObject("action").getJSONArray("cases")
+        assertTrue(cases.length() > 0)
+        for (i in 0 until cases.length()) {
+            val row = cases.getJSONObject(i)
+            val reply = row.opt("reply").let { if (it == null || it == JSONObject.NULL) "null" else it.toString() }
+            val result = forwarder(5_000L, 0L, reply).advance(if (row.getBoolean("auth_action")) "email_login" else "next")
+            val expected = row.getJSONObject("expect_result")
+            val (type, stepId) = when (result) {
+                is StepAdvanceResult.Proceed -> "proceed" to null
+                is StepAdvanceResult.ProceedWithData -> "proceedWithData" to null
+                is StepAdvanceResult.Block -> "block" to null
+                is StepAdvanceResult.SkipTo -> "skipTo" to result.stepId
+                is StepAdvanceResult.Stay -> "stay" to null
+            }
+            assertEquals("cases[$i] $reply type", expected.getString("type"), type)
+            assertEquals("cases[$i] step_id", if (expected.has("step_id")) expected.getString("step_id") else null, stepId)
+        }
+    }
+
     private fun fixturesRoot(): File {
         System.getenv("APPDNA_SDK_FIXTURES_DIR")?.let { if (File(it).isDirectory) return File(it) }
         var here: File? = File(".").canonicalFile

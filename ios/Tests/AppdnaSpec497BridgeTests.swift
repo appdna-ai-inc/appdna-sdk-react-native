@@ -160,6 +160,34 @@ final class AppdnaSpec497BridgeTests: XCTestCase {
         }
     }
 
+    /// The bridge half of `delegate_contracts/skip_to_without_step_id_is_not_a_decision`: each JSON reply
+    /// goes through the REAL invoker, auth gate and decoder. NEGATIVE CONTROL: with the old decoder a
+    /// `{"type":"skipTo"}` on a sign-in step returned `.skipTo("")` (which advances) instead of `.block`.
+    @MainActor
+    func testTheSharedFixtureSkipToReplies() async throws {
+        let fixture = try AppdnaElementInteractionBridgeTests.loadFixture("delegate_contracts/skip_to_without_step_id_is_not_a_decision.fixture.json")
+        let cases = try XCTUnwrap((fixture["action"] as? [String: Any])?["cases"] as? [[String: Any]])
+        XCTAssertFalse(cases.isEmpty)
+        for (i, row) in cases.enumerated() {
+            let replyObj = row["reply"] ?? NSNull()
+            let reply: String = replyObj is NSNull ? "null"
+                : String(data: try JSONSerialization.data(withJSONObject: replyObj), encoding: .utf8)!
+            let action = (row["auth_action"] as? Bool) == true ? "email_login" : "next"
+            let (result, _) = await advanceWithReply(configured: 5, replyAt: 0, reply: reply, action: action)
+            let expected = try XCTUnwrap(row["expect_result"] as? [String: Any])
+            let got: (String, String?)
+            switch result {
+            case .proceed: got = ("proceed", nil)
+            case .proceedWithData: got = ("proceedWithData", nil)
+            case .block: got = ("block", nil)
+            case .skipTo(let id), .skipToWithData(let id, _): got = ("skipTo", id)
+            case .stay: got = ("stay", nil)
+            }
+            XCTAssertEqual(got.0, expected["type"] as? String, "cases[\(i)] \(reply)")
+            XCTAssertEqual(got.1, expected["step_id"] as? String, "cases[\(i)] step_id")
+        }
+    }
+
     private func timeoutsObserved() -> Int {
         let report = AppDNA.diagnose()
         guard let r = report.range(of: #"timed out (\d+) time"#, options: .regularExpression) else { return -1 }

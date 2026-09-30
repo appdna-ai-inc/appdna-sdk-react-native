@@ -504,11 +504,6 @@ internal object AppdnaVetoDecoder {
      */
     fun isNoOpinion(reply: Any?): Boolean = reply !is Map<*, *>
 
-    /** The decision types [stepAdvanceResult] actually understands. */
-    private val KNOWN_DECISIONS = setOf(
-        "proceed", "proceedWithData", "block", "skipTo", "skipToWithData", "stay",
-    )
-
     /**
      * Did the host make an EXPLICIT, RECOGNISED decision?
      *
@@ -525,12 +520,10 @@ internal object AppdnaVetoDecoder {
      * demands a POSITIVE answer rather than enumerating the ways of saying nothing — there is always
      * one more way of saying nothing.
      */
-    fun isExplicitDecision(reply: Any?): Boolean {
-        val map = reply as? Map<*, *> ?: return false
-        if (map["__appdna_unhandled"] == true) return false
-        val type = map["type"] as? String ?: return false
-        return type in KNOWN_DECISIONS
-    }
+    fun isExplicitDecision(reply: Any?): Boolean =
+        // A `skipTo` without a usable `stepId` is not a decision either (it used to decode to
+        // `SkipTo("")`, which names no step and ADVANCED). One rule, in the core.
+        StepAdvanceResult.isExplicitBridgeDecision(reply)
 
     /**
      * `{type:"proceed"|"proceedWithData"|"block"|"skipTo"|"stay", …}` → default `Proceed`.
@@ -548,9 +541,14 @@ internal object AppdnaVetoDecoder {
             "proceedWithData" -> StepAdvanceResult.ProceedWithData(anyMap(map["data"]))
             "block" -> StepAdvanceResult.Block(map["message"] as? String ?: "")
             "skipTo", "skipToWithData" -> {
-                val stepId = map["stepId"] as? String ?: ""
                 val data = anyMap(map["data"])
-                if (data.isEmpty()) StepAdvanceResult.SkipTo(stepId) else StepAdvanceResult.SkipTo(stepId, data)
+                // A missing / blank `stepId` names no step: not a skip (it used to decode to SkipTo("")).
+                val stepId = StepAdvanceResult.bridgeSkipTarget(map)
+                when {
+                    stepId == null -> if (data.isEmpty()) StepAdvanceResult.Proceed else StepAdvanceResult.ProceedWithData(data)
+                    data.isEmpty() -> StepAdvanceResult.SkipTo(stepId)
+                    else -> StepAdvanceResult.SkipTo(stepId, data)
+                }
             }
             "stay" -> StepAdvanceResult.Stay(map["message"] as? String)
             else -> StepAdvanceResult.Proceed
