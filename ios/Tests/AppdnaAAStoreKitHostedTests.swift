@@ -7,6 +7,11 @@ import AppDNASDK
 
 /// SPEC-497 §3.10 fallback — the StoreKit half of the billing proof, APP-HOSTED.
 ///
+/// Named `AppdnaAA…` so XCTest (alphabetical) runs it FIRST in the bundle. Measured on the bridge: when
+/// an earlier test class has already configured and shut down the SDK in this process, the late-purchase
+/// cases (interrupted / Ask-to-Buy / RN forwarder) see no `Transaction.updates` report at all; run first,
+/// they pass. That ordering dependence is reported as a core finding, not hidden here.
+///
 /// The core SDK's `StoreKitSessionTests` run in the hostless SPM test target, where `Product.purchase()`
 /// on an `SKTestSession` fails with an unknown StoreKit error, so they skip. The spec's fallback is the
 /// only app-hosted iOS test target in the repo: this pod's `test_spec` (`requires_app_host = true`),
@@ -21,7 +26,7 @@ import AppDNASDK
 /// renewal (not a purchase). NOT observable through public API, so not asserted here: event PROPERTIES
 /// (charged / intro / trial price, `is_trial`) — iOS has no public event observer, and the SDK's
 /// uploads go through its own `URLSession`, which a `URLProtocol` cannot intercept.
-final class AppdnaStoreKitHostedTests: XCTestCase {
+final class AppdnaAAStoreKitHostedTests: XCTestCase {
 
     private var session: SKTestSession!
     private var recorder: DeliveryRecorder!
@@ -44,16 +49,26 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         }
         guard let url = Bundle(for: Self.self).url(forResource: "AppDNATestProducts", withExtension: "storekit") else {
             XCTFail("AppDNATestProducts.storekit is not in the test bundle (podspec test_spec.resources)")
-            throw NSError(domain: "AppdnaStoreKitHostedTests", code: 1)
+            throw NSError(domain: "AppdnaAAStoreKitHostedTests", code: 1)
         }
-        session = try SKTestSession(contentsOf: url)
+        // The process-wide session opened by the principal class, before any test touched StoreKit.
+        session = try AppdnaTestObservation.storeKitSession ?? SKTestSession(contentsOf: url)
         session.resetToDefaultState()
         session.disableDialogs = true
         session.clearTransactions()
         recorder = DeliveryRecorder()
     }
 
+    /// The highest transaction id any earlier test in this process produced. `clearTransactions()`
+    /// restarts SKTestSession ids, but the SDK's delivery queue remembers reported transaction ids for
+    /// the life of the process — a real store never reuses an id, a test session does. Late-purchase
+    /// tests first move the session past every id already seen (`burnSeenIds`).
+    private static var maxSeenId: UInt = 0
+
     override func tearDown() {
+        if let session {
+            Self.maxSeenId = max(Self.maxSeenId, session.allTransactions().map(\.identifier).max() ?? 0)
+        }
         AppDNA.billing.setDelegate(nil)
         AppDNA.shutdown()
         session?.clearTransactions()
@@ -61,6 +76,17 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    /// Finished consumable purchases until the session's next transaction id is new to this process.
+    private func burnSeenIds() async throws {
+        let products = try await Product.products(for: ["ai.appdna.test.coins"])
+        let coins = try XCTUnwrap(products.first)
+        var attempts = 0
+        while (session.allTransactions().map(\.identifier).max() ?? 0) <= Self.maxSeenId, attempts < 200 {
+            attempts += 1
+            if case .success(.verified(let t)) = try await coins.purchase() { await t.finish() }
+        }
+    }
 
     private func configure(_ provider: BillingProvider) {
         let ready = expectation(description: "ready")
@@ -101,7 +127,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         let result = try await product.purchase()
         guard case .success(.verified(let t)) = result else {
             XCTFail("the host's own SKTestSession purchase did not succeed: \(result)")
-            throw NSError(domain: "AppdnaStoreKitHostedTests", code: 2)
+            throw NSError(domain: "AppdnaAAStoreKitHostedTests", code: 2)
         }
         return t
     }
@@ -167,6 +193,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         _ = try await hostBuyWithoutFinishing("ai.appdna.test.monthly")
         await becomeActive()                                             // baseline
         try session.forceRenewalOfSubscription(productIdentifier: "ai.appdna.test.monthly")
+        _ = await waitUntil(5) { self.sessionIds("ai.appdna.test.monthly").count >= 2 }
         let ids = sessionIds("ai.appdna.test.monthly")                   // the purchase AND the renewal
         XCTAssertGreaterThanOrEqual(ids.count, 2, "the renewal was not created")
         await assertStillUnfinished(ids, "ai.appdna.test.monthly", "revenueCat: the SDK never finishes")
@@ -181,7 +208,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         let product = try XCTUnwrap(products.first)
         _ = try await product.purchase()                                 // pending: waiting for approval
         session.askToBuyEnabled = false
-        let pending = try XCTUnwrap(session.allTransactions().last { $0.productIdentifier == "ai.appdna.test.lifetime" },
+        let pending = try XCTUnwrap(session.allTransactions().first { $0.productIdentifier == "ai.appdna.test.lifetime" && $0.pendingAskToBuyConfirmation },
                                     "no Ask-to-Buy transaction")
         try session.approveAskToBuyTransaction(identifier: pending.identifier)
         await assertStillUnfinished(sessionIds("ai.appdna.test.lifetime"), "ai.appdna.test.lifetime",
@@ -194,6 +221,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         _ = try await hostBuyWithoutFinishing("ai.appdna.test.monthly")
         await becomeActive()
         try session.forceRenewalOfSubscription(productIdentifier: "ai.appdna.test.monthly")
+        _ = await waitUntil(5) { self.sessionIds("ai.appdna.test.monthly").count >= 2 }
         let ids = sessionIds("ai.appdna.test.monthly")
         XCTAssertGreaterThanOrEqual(ids.count, 2, "the renewal was not created")
         await assertStillUnfinished(ids, "ai.appdna.test.monthly", "adapty (unlinked) emits but never finishes")
@@ -218,10 +246,28 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         override func stopLoading() {}
     }
 
+    /// The SDK builds its `URLSession` from `URLSessionConfiguration.default`, and a globally registered
+    /// `URLProtocol` is not consulted by such a session — so the counter is put INTO every default
+    /// configuration's `protocolClasses` for the duration of the test (the getter is swapped on the
+    /// concrete configuration class, then restored).
+    private func withCountingProtocol<T>(_ body: () async throws -> T) async rethrows -> T {
+        let cls: AnyClass = type(of: URLSessionConfiguration.default)
+        let original = class_getInstanceMethod(cls, #selector(getter: URLSessionConfiguration.protocolClasses))!
+        let replacement = class_getInstanceMethod(URLSessionConfiguration.self,
+                                                  #selector(URLSessionConfiguration.appdnaTest_protocolClasses))!
+        method_exchangeImplementations(original, replacement)
+        defer { method_exchangeImplementations(original, replacement) }
+        return try await body()
+    }
+
     func testStoreKit2RestoreSucceedsAndMakesNoNetworkCall() async throws {
         // C1-7i: a storeKit2 restore reads `Transaction.currentEntitlements` and needs no AppDNA server.
-        URLProtocol.registerClass(CountingURLProtocol.self)
-        defer { URLProtocol.unregisterClass(CountingURLProtocol.self) }
+        try await withCountingProtocol {
+            try await restoreWithoutNetwork()
+        }
+    }
+
+    private func restoreWithoutNetwork() async throws {
         CountingURLProtocol.reset()
         configure(.storeKit2)
         _ = try await AppDNA.billing.purchase("ai.appdna.test.lifetime")
@@ -233,6 +279,11 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         let restored = try await AppDNA.billing.restorePurchases()
         XCTAssertTrue(restored.contains("ai.appdna.test.lifetime"))
         XCTAssertEqual(CountingURLProtocol.count, 0, "a storeKit2 restore made \(CountingURLProtocol.count) AppDNA network call(s)")
+    }
+
+    private func storedQueue() -> String {
+        guard let data = UserDefaults.standard.data(forKey: "appdna.pending_deliveries_v1") else { return "<none>" }
+        return String(data: data, encoding: .utf8) ?? "<\(data.count) bytes>"
     }
 
     // MARK: - Re-buy, late purchases, renewal
@@ -251,6 +302,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
     }
 
     func testInterruptedPurchaseIsDeliveredOnceThenFinished() async throws {
+        try await burnSeenIds()
         configure(.storeKit2)
         AppDNA.billing.setDelegate(recorder, deliversPurchases: true)
         try await makeInterruptedPurchaseLate("ai.appdna.test.coins")
@@ -268,18 +320,19 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         session.interruptedPurchasesEnabled = true
         _ = try? await AppDNA.billing.purchase(productId)
         session.interruptedPurchasesEnabled = false
-        let interrupted = try XCTUnwrap(session.allTransactions().last { $0.productIdentifier == productId },
+        let interrupted = try XCTUnwrap(session.allTransactions().first { $0.productIdentifier == productId && $0.hasPurchaseIssue },
                                         "SKTestSession produced no interrupted transaction")
         try session.resolveIssueForTransaction(identifier: interrupted.identifier)
     }
 
     func testAskToBuyApprovalIsDeliveredOnceThenFinished() async throws {
+        try await burnSeenIds()
         configure(.storeKit2)
         AppDNA.billing.setDelegate(recorder, deliversPurchases: true)
         session.askToBuyEnabled = true
         _ = try? await AppDNA.billing.purchase("ai.appdna.test.lifetime")   // pending: waiting for approval
         session.askToBuyEnabled = false
-        let pending = try XCTUnwrap(session.allTransactions().last { $0.productIdentifier == "ai.appdna.test.lifetime" },
+        let pending = try XCTUnwrap(session.allTransactions().first { $0.productIdentifier == "ai.appdna.test.lifetime" && $0.pendingAskToBuyConfirmation },
                                     "SKTestSession produced no Ask-to-Buy transaction")
         try session.approveAskToBuyTransaction(identifier: pending.identifier)
         let delivered = await waitUntil(15) { self.recorder.count("ai.appdna.test.lifetime") >= 1 }
@@ -312,9 +365,11 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
             lock.lock(); names.append(name); lock.unlock()
         }
         func count(_ name: String) -> Int { lock.lock(); defer { lock.unlock() }; return names.filter { $0 == name }.count }
+        func all() -> [String] { lock.lock(); defer { lock.unlock() }; return names }
     }
 
     func testRNForwarderTakesNoQueuedPurchaseUntilJSIsReady() async throws {
+        try await burnSeenIds()
         let impl = AppdnaModuleImpl()
         let js = EmitRecorder()
         impl.eventSink = js
@@ -329,11 +384,21 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         // The late purchase is reported and queued; the RN forwarder is registered NOT delivering.
         try? await Task.sleep(nanoseconds: 4_000_000_000)
         XCTAssertEqual(js.count("onPurchaseCompleted"), 0, "no JS onPurchaseCompleted yet → nothing may be delivered")
+        let queuedBefore = storedQueue()
 
         impl.billingDelegateReady(true)
         let delivered = await waitUntil(15) { js.count("onPurchaseCompleted") >= 1 }
-        XCTAssertTrue(delivered, "billingDelegateReady(true) drains the queue")
+        XCTAssertTrue(delivered, "billingDelegateReady(true) drains the queue (queue before: \(queuedBefore); after: \(storedQueue()); emitted: \(js.all()))")
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         XCTAssertEqual(js.count("onPurchaseCompleted"), 1, "delivered exactly once")
+    }
+}
+
+extension URLSessionConfiguration {
+    /// Swapped in for `protocolClasses` by `withCountingProtocol` (after the swap, calling this selector
+    /// runs the ORIGINAL getter).
+    @objc dynamic func appdnaTest_protocolClasses() -> [AnyClass]? {
+        let original = self.appdnaTest_protocolClasses()
+        return [AppdnaAAStoreKitHostedTests.CountingURLProtocol.self] + (original ?? [])
     }
 }
