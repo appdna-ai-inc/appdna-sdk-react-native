@@ -72,7 +72,13 @@ RCT_EXPORT_METHOD(hostBuy:(NSString *)productId
       resolve(@"refused: a hostBuy for this product is already in flight");
       return;
     }
-    [self->_deferred removeObject:productId];
+    // A deferred (Ask to Buy) buy of this product is still awaiting approval in the payment queue:
+    // refused the same way, so the product is never queued for payment a second time.
+    if ([self->_deferred containsObject:productId]) {
+      NSLog(@"AppDNA-E2E hostBuy %@ refused already deferred", productId);
+      resolve(@"refused: a hostBuy for this product is deferred, awaiting approval");
+      return;
+    }
     self->_pending[productId] = resolve;
     SKProductsRequest *request = [[SKProductsRequest alloc] initWithProductIdentifiers:[NSSet setWithObject:productId]];
     request.delegate = self;
