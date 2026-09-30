@@ -7,10 +7,12 @@ import AppDNASDK
 
 /// SPEC-497 §3.10 fallback — the StoreKit half of the billing proof, APP-HOSTED.
 ///
-/// Named `AppdnaAA…` so XCTest (alphabetical) runs it FIRST in the bundle. Measured on the bridge: when
-/// an earlier test class has already configured and shut down the SDK in this process, the late-purchase
-/// cases (interrupted / Ask-to-Buy / RN forwarder) see no `Transaction.updates` report at all; run first,
-/// they pass. That ordering dependence is reported as a core finding, not hidden here.
+/// Runs in whatever order XCTest picks — after other classes that configure and shut the SDK down in
+/// this process. That order once lost every late purchase: `SKTestSession` reuses transaction ids, and
+/// the core queue kept its reported set in memory across `shutdown()` → `configure()`, so an id the
+/// PREVIOUS run had reported was finished silently even though `setUp` had cleared the persisted store.
+/// Core now reloads the persisted store on every `configure()`; `testLatePurchaseAfterShutdownAndReconfigure…`
+/// covers the in-process restart itself.
 ///
 /// The core SDK's `StoreKitSessionTests` run in the hostless SPM test target, where `Product.purchase()`
 /// on an `SKTestSession` fails with an unknown StoreKit error, so they skip. The spec's fallback is the
@@ -26,7 +28,7 @@ import AppDNASDK
 /// renewal (not a purchase). NOT observable through public API, so not asserted here: event PROPERTIES
 /// (charged / intro / trial price, `is_trial`) — iOS has no public event observer, and the SDK's
 /// uploads go through its own `URLSession`, which a `URLProtocol` cannot intercept.
-final class AppdnaAAStoreKitHostedTests: XCTestCase {
+final class AppdnaStoreKitHostedTests: XCTestCase {
 
     private var session: SKTestSession!
     private var recorder: DeliveryRecorder!
@@ -49,7 +51,7 @@ final class AppdnaAAStoreKitHostedTests: XCTestCase {
         }
         guard let url = Bundle(for: Self.self).url(forResource: "AppDNATestProducts", withExtension: "storekit") else {
             XCTFail("AppDNATestProducts.storekit is not in the test bundle (podspec test_spec.resources)")
-            throw NSError(domain: "AppdnaAAStoreKitHostedTests", code: 1)
+            throw NSError(domain: "AppdnaStoreKitHostedTests", code: 1)
         }
         // The process-wide session opened by the principal class, before any test touched StoreKit.
         session = try AppdnaTestObservation.storeKitSession ?? SKTestSession(contentsOf: url)
@@ -59,16 +61,7 @@ final class AppdnaAAStoreKitHostedTests: XCTestCase {
         recorder = DeliveryRecorder()
     }
 
-    /// The highest transaction id any earlier test in this process produced. `clearTransactions()`
-    /// restarts SKTestSession ids, but the SDK's delivery queue remembers reported transaction ids for
-    /// the life of the process — a real store never reuses an id, a test session does. Late-purchase
-    /// tests first move the session past every id already seen (`burnSeenIds`).
-    private static var maxSeenId: UInt = 0
-
     override func tearDown() {
-        if let session {
-            Self.maxSeenId = max(Self.maxSeenId, session.allTransactions().map(\.identifier).max() ?? 0)
-        }
         AppDNA.billing.setDelegate(nil)
         AppDNA.shutdown()
         session?.clearTransactions()
@@ -76,17 +69,6 @@ final class AppdnaAAStoreKitHostedTests: XCTestCase {
     }
 
     // MARK: - Helpers
-
-    /// Finished consumable purchases until the session's next transaction id is new to this process.
-    private func burnSeenIds() async throws {
-        let products = try await Product.products(for: ["ai.appdna.test.coins"])
-        let coins = try XCTUnwrap(products.first)
-        var attempts = 0
-        while (session.allTransactions().map(\.identifier).max() ?? 0) <= Self.maxSeenId, attempts < 200 {
-            attempts += 1
-            if case .success(.verified(let t)) = try await coins.purchase() { await t.finish() }
-        }
-    }
 
     private func configure(_ provider: BillingProvider) {
         let ready = expectation(description: "ready")
@@ -127,7 +109,7 @@ final class AppdnaAAStoreKitHostedTests: XCTestCase {
         let result = try await product.purchase()
         guard case .success(.verified(let t)) = result else {
             XCTFail("the host's own SKTestSession purchase did not succeed: \(result)")
-            throw NSError(domain: "AppdnaAAStoreKitHostedTests", code: 2)
+            throw NSError(domain: "AppdnaStoreKitHostedTests", code: 2)
         }
         return t
     }
@@ -302,12 +284,27 @@ final class AppdnaAAStoreKitHostedTests: XCTestCase {
     }
 
     func testInterruptedPurchaseIsDeliveredOnceThenFinished() async throws {
-        try await burnSeenIds()
         configure(.storeKit2)
         AppDNA.billing.setDelegate(recorder, deliversPurchases: true)
         try await makeInterruptedPurchaseLate("ai.appdna.test.coins")
         let delivered = await waitUntil(15) { self.recorder.count("ai.appdna.test.coins") >= 1 }
         XCTAssertTrue(delivered, "the late purchase reaches onPurchaseCompleted")
+        let finished = await waitUntil { await self.unfinished("ai.appdna.test.coins").isEmpty }
+        XCTAssertTrue(finished, "…then it is finished")
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        XCTAssertEqual(recorder.count("ai.appdna.test.coins"), 1, "delivered exactly once")
+    }
+
+    /// A host that restarts the SDK in-process (`shutdown()` → `configure()`, e.g. sign-out → sign-in)
+    /// must still get exactly one delivery of a late purchase that completes afterwards.
+    func testLatePurchaseAfterShutdownAndReconfigureIsDeliveredOnce() async throws {
+        configure(.storeKit2)
+        AppDNA.shutdown()
+        configure(.storeKit2)
+        AppDNA.billing.setDelegate(recorder, deliversPurchases: true)
+        try await makeInterruptedPurchaseLate("ai.appdna.test.coins")
+        let delivered = await waitUntil(15) { self.recorder.count("ai.appdna.test.coins") >= 1 }
+        XCTAssertTrue(delivered, "the late purchase reaches onPurchaseCompleted after a restart (queue: \(storedQueue()))")
         let finished = await waitUntil { await self.unfinished("ai.appdna.test.coins").isEmpty }
         XCTAssertTrue(finished, "…then it is finished")
         try? await Task.sleep(nanoseconds: 1_000_000_000)
@@ -326,7 +323,6 @@ final class AppdnaAAStoreKitHostedTests: XCTestCase {
     }
 
     func testAskToBuyApprovalIsDeliveredOnceThenFinished() async throws {
-        try await burnSeenIds()
         configure(.storeKit2)
         AppDNA.billing.setDelegate(recorder, deliversPurchases: true)
         session.askToBuyEnabled = true
@@ -369,7 +365,6 @@ final class AppdnaAAStoreKitHostedTests: XCTestCase {
     }
 
     func testRNForwarderTakesNoQueuedPurchaseUntilJSIsReady() async throws {
-        try await burnSeenIds()
         let impl = AppdnaModuleImpl()
         let js = EmitRecorder()
         impl.eventSink = js
@@ -399,6 +394,6 @@ extension URLSessionConfiguration {
     /// runs the ORIGINAL getter).
     @objc dynamic func appdnaTest_protocolClasses() -> [AnyClass]? {
         let original = self.appdnaTest_protocolClasses()
-        return [AppdnaAAStoreKitHostedTests.CountingURLProtocol.self] + (original ?? [])
+        return [AppdnaStoreKitHostedTests.CountingURLProtocol.self] + (original ?? [])
     }
 }
