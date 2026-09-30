@@ -41,6 +41,10 @@ RCT_EXPORT_MODULE();
                                              selector:@selector(logUnfinished)
                                                  name:UIApplicationDidBecomeActiveNotification
                                                object:nil];
+    // Once at creation too: the module can be created after the first didBecomeActive has fired (a
+    // cold launch), so the relaunch rows would otherwise see no `unfinished=` line until the next
+    // foreground.
+    [self logUnfinished];
   }
   return self;
 }
@@ -89,14 +93,23 @@ RCT_EXPORT_METHOD(logTransactions:(RCTPromiseResolveBlock)resolve
 - (void)productsRequest:(SKProductsRequest *)request didReceiveResponse:(SKProductsResponse *)response
 {
   dispatch_async(dispatch_get_main_queue(), ^{
-    [self->_requestProducts removeObjectForKey:[NSValue valueWithNonretainedObject:request]];
+    NSValue *key = [NSValue valueWithNonretainedObject:request];
+    NSString *requested = self->_requestProducts[key];
+    [self->_requestProducts removeObjectForKey:key];
     [self->_requests removeObject:request];
     SKProduct *product = response.products.firstObject;
     if (product == nil) {
-      for (NSString *pid in response.invalidProductIdentifiers) {
+      // The invalid ids AND the id this request asked for: a response with no products and no invalid
+      // ids used to leave the promise pending forever.
+      NSMutableSet<NSString *> *unresolved = [NSMutableSet setWithArray:response.invalidProductIdentifiers];
+      if (requested != nil) [unresolved addObject:requested];
+      for (NSString *pid in unresolved) {
         RCTPromiseResolveBlock resolve = self->_pending[pid];
         [self->_pending removeObjectForKey:pid];
-        if (resolve) resolve(@"no such product");
+        if (resolve) {
+          NSLog(@"AppDNA-E2E hostBuy %@ failed no such product", pid);
+          resolve(@"no such product");
+        }
       }
       return;
     }

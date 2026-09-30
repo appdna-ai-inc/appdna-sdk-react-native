@@ -131,8 +131,8 @@ const SIGN_IN_ACTIONS = new Set([
  * The default endpoint is LOCAL: the Metro dev server that serves this example's bundle
  * (`localhost:8081` — with `adb reverse tcp:8081 tcp:8081` on Android), so nothing remote is hit. Pass
  * `appdnaWaitUrl` to point at a slow local route instead (e.g. a local server's delay endpoint).
- * Every non-OK answer or failure backs off with a short clock spin, so a fast endpoint cannot turn
- * into a tight request loop.
+ * Every request — OK, non-OK or failed — is followed by a 250 ms clock-spin back-off, so a fast
+ * endpoint cannot turn into a tight request loop.
  */
 const backOff = (ms: number) => {
   const until = Date.now() + ms;
@@ -144,11 +144,13 @@ const hostWait = async (seconds: number, waitUrl = 'http://localhost:8081/status
   const end = Date.now() + seconds * 1000;
   while (Date.now() < end) {
     try {
-      const res = await fetch(waitUrl, { method: 'GET' });
-      if (!res.ok) backOff(250);
+      await fetch(waitUrl, { method: 'GET' });
     } catch {
-      backOff(250);
+      // unreachable endpoint — the back-off below still paces the loop
     }
+    // After EVERY request, not only a failed one: a fast OK endpoint (Metro's `/status`) otherwise
+    // turns this into a tight request loop.
+    backOff(250);
   }
 };
 
@@ -259,8 +261,8 @@ export default function App({
 
   /**
    * SPEC-497 §3.11 / §13b.2 — a restore, with the lines the restore rows assert:
-   * `AppDNA-E2E onRestoreCompleted <ids>` or `AppDNA-E2E restoreFailed <code> <errorType>` (on React
-   * Native the rejection code IS the `billingErrorType`).
+   * `AppDNA-E2E onRestoreCompleted <ids>` or `AppDNA-E2E restoreFailed <errorType>` — one token, the
+   * native hosts' format (§3.11); on React Native the rejection code IS the `billingErrorType`.
    */
   const restoreE2E = useCallback(
     async (label: string, fn: () => Promise<string[]>) => {
@@ -271,7 +273,7 @@ export default function App({
         append(`${label} → ${line}`);
       } catch (e) {
         const code = (e as { code?: string }).code ?? 'unknown';
-        const line = `AppDNA-E2E restoreFailed ${code} ${code}`;
+        const line = `AppDNA-E2E restoreFailed ${code}`;
         console.log(line);
         append(`${label} ✗ ${line}`);
       }
