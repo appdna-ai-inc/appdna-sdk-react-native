@@ -50,6 +50,35 @@ class PushDataConversionTest {
     }
 
     @Test
+    fun `numbers cross in plain decimal - never scientific notation`() {
+        val out = AppdnaPushData.fromValues(mapOf(
+            "big" to 1e15, "bigger" to 1.5e20, "half" to 1e7 + 0.5, "small" to 0.0001,
+            "neg" to -3.0, "negFrac" to -2.25, "negZero" to -0.0, "zero" to 0.0,
+        ))
+        assertEquals("1000000000000000", out["big"])
+        assertEquals("150000000000000000000", out["bigger"])
+        assertEquals("10000000.5", out["half"])
+        assertEquals("0.0001", out["small"])
+        assertEquals("-3", out["neg"])
+        assertEquals("-2.25", out["negFrac"])
+        assertEquals("0", out["negZero"])
+        assertEquals("0", out["zero"])
+    }
+
+    @Test
+    fun `non-finite numbers are dropped, and nested ones become null instead of throwing`() {
+        val out = AppdnaPushData.fromValues(mapOf(
+            "appdna" to "1", "nan" to Double.NaN, "inf" to Double.POSITIVE_INFINITY,
+            "action" to mapOf("type" to "deep_link", "value" to "x://y", "weight" to Double.NaN),
+        ))
+        assertFalse(out.containsKey("nan"))
+        assertFalse(out.containsKey("inf"))
+        val action = JSONObject(out.getValue("action"))
+        assertTrue(action.isNull("weight"))
+        assertEquals("x://y", action.getString("value"))
+    }
+
+    @Test
     fun `a nested map and a list cross as valid JSON the parser reads`() {
         val out = AppdnaPushData.toStringMap(payload())
         val action = JSONObject(out.getValue("action"))

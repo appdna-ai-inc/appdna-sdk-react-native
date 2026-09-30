@@ -223,6 +223,9 @@ public final class AppdnaModuleImpl: NSObject {
     public func shutdown(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         // `AppDNA.shutdown()` exists and flushes the queue first. Both wrappers used to no-op it.
         AppDNA.shutdown()
+        // The native shutdown drops the billing delegate; a `billingDelegateReady` between here and the
+        // next `configure` must not re-register this stale forwarder (configure builds a new one).
+        billingForwarder = nil
         resolve(nil)
     }
 

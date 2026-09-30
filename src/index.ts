@@ -801,11 +801,18 @@ export class AppDNA {
       AppDNABilling.getProducts(productIds),
     /**
      * Purchase a product by its store product ID. Resolves the store `TransactionInfo`; a
-     * cancellation, a pending purchase, or a store error REJECTS (`PURCHASE_ERROR`).
+     * cancellation, a pending purchase, or a store error REJECTS, and the rejection's `code` is the
+     * `AppDNAPurchaseErrorCode` (`userCancelled`, `pending`, `productNotFound`, `verificationFailed`,
+     * `networkError`, `serverError`, `providerNotAvailable`, `unknown`; Android also `NO_ACTIVITY`).
      */
     purchase: (productId: string, offerToken?: string): Promise<TransactionInfo> =>
       AppDNABilling.purchase(productId, offerToken),
-    /** Restore previously purchased products. Resolves the restored product IDs, not entitlements. */
+    /**
+     * Restore previously purchased products. Resolves the restored product IDs, not entitlements.
+     * Rejects with an `AppDNAPurchaseErrorCode`: `providerNotAvailable` under `revenueCat`, Adapty or
+     * `none` (restore through your provider; do not retry), and on Android `storeKit2` `networkError`
+     * / `serverError` (offer a retry). Entitlements are unchanged by a failed restore.
+     */
     restorePurchases: (): Promise<string[]> => AppDNABilling.restorePurchases(),
     /** Check if the user has an active subscription. */
     hasActiveSubscription: (): Promise<boolean> => AppDNABilling.hasActiveSubscription(),

@@ -83,18 +83,87 @@ final class AppdnaSpec497BridgeTests: XCTestCase {
         XCTAssertEqual(s3.requested, [5])
     }
 
-    func testTheSharedFixtureBridgeWaits() throws {
+    /// A JS host whose reply is held until the test releases it — so "a reply at 6 s against a 5 s /
+    /// 10 s wait" is decided by ordering on the scripted clock: the give-up fires first when the wait is
+    /// shorter than the reply time, the reply lands first otherwise.
+    private final class HeldReply {
+        var callbackId: String?
+        func release(_ json: String) {
+            guard let id = callbackId else { return }
+            AppdnaHostCallbacks.shared.respond(callbackId: id, resultJson: json)
+        }
+    }
+
+    /// Drive the REAL forwarder + invoker with a JS reply "at `replyAt` seconds": whichever of the
+    /// requested wait and the reply comes first on the scripted clock wins.
+    @MainActor
+    private func advanceWithReply(configured: TimeInterval, replyAt: TimeInterval, reply: String,
+                                  action: String?) async -> (StepAdvanceResult, TimeInterval?) {
+        let scheduler = ScriptedScheduler()
+        let held = HeldReply()
+        let invoker = AppdnaVetoInvoker(timeout: configured, scheduleTimeout: scheduler.schedule) { payload in
+            held.callbackId = payload["callbackId"] as? String
+        }
+        let f = OnboardingForwarder(emit: { _, _ in }, invoker: invoker)
+        async let result = advance(f, action: action)
+        while scheduler.requested.isEmpty || held.callbackId == nil { await Task.yield() }
+        let wait = scheduler.requested.first
+        if let wait, replyAt < wait {
+            held.release(reply)         // the reply lands inside the wait…
+            await Task.yield()
+            scheduler.fireAll()         // …and the give-up is then a no-op
+        } else {
+            scheduler.fireAll()         // the wait expires first…
+            held.release(reply)         // …and the late reply is dropped
+        }
+        return (await result, wait)
+    }
+
+    @MainActor
+    func testASixSecondNonAuthReplyTimesOutAtFiveButIsDeliveredAtTen() async {
+        let before = timeoutsObserved()
+        let (at5, wait5) = await advanceWithReply(configured: 5, replyAt: 6, reply: #"{"type":"stay"}"#, action: "next")
+        XCTAssertEqual(wait5, 5)
+        guard case .proceed = at5 else { return XCTFail("a timed-out non-auth hook falls back to proceed, got \(at5)") }
+        XCTAssertEqual(timeoutsObserved(), before + 1, "the timeout reaches diagnose()")
+
+        let (at10, wait10) = await advanceWithReply(configured: 10, replyAt: 6, reply: #"{"type":"stay"}"#, action: "next")
+        XCTAssertEqual(wait10, 10)
+        guard case .stay = at10 else { return XCTFail("the 6 s reply is inside a 10 s wait, got \(at10)") }
+    }
+
+    @MainActor
+    func testSignInRepliesAtSixtyAndOneTwentyOne() async {
+        let (at60, _) = await advanceWithReply(configured: 5, replyAt: 60, reply: #"{"type":"proceed"}"#, action: "social_login")
+        guard case .proceed = at60 else { return XCTFail("a 60 s sign-in reply is inside the 120 s floor, got \(at60)") }
+        let (at121, wait) = await advanceWithReply(configured: 5, replyAt: 121, reply: #"{"type":"proceed"}"#, action: "social_login")
+        XCTAssertEqual(wait, 120)
+        guard case .block = at121 else { return XCTFail("a 121 s sign-in reply is past the floor → block, got \(at121)") }
+    }
+
+    /// The shared fixture's `bridge_waits`, through PRODUCTION code: the real forwarder computes the wait
+    /// and hands it to the invoker's scheduler; the test only reads what was requested.
+    @MainActor
+    func testTheSharedFixtureBridgeWaits() async throws {
         let fixture = try AppdnaElementInteractionBridgeTests.loadFixture("delegate_contracts/sign_in_bridge_timeout_floor.fixture.json")
         let action = try XCTUnwrap(fixture["action"] as? [String: Any])
         let waits = try XCTUnwrap(action["bridge_waits"] as? [[String: Any]])
         XCTAssertFalse(waits.isEmpty)
         for row in waits {
             let configured = try XCTUnwrap((row["configured_ms"] as? NSNumber)?.doubleValue) / 1000
-            let stepData = row["step_data"] as? [String: Any]
+            let stepAction = (row["step_data"] as? [String: Any])?["action"] as? String
             let expected = try XCTUnwrap((row["expect_wait_ms"] as? NSNumber)?.doubleValue) / 1000
-            // The call-site expression, verbatim (AppdnaDelegates.swift onBeforeStepAdvance).
-            XCTAssertEqual(max(configured, StepAdvanceResult.minimumBridgeTimeout(stepData: stepData) ?? 0), expected)
+            let scheduler = ScriptedScheduler()
+            let f = forwarder(timeout: configured, scheduler: scheduler, reply: #"{"type":"proceed"}"#)
+            _ = await advance(f, action: stepAction)
+            XCTAssertEqual(scheduler.requested, [expected], "bridge_waits row \(row)")
         }
+    }
+
+    private func timeoutsObserved() -> Int {
+        let report = AppDNA.diagnose()
+        guard let r = report.range(of: #"timed out (\d+) time"#, options: .regularExpression) else { return -1 }
+        return Int(report[r].filter(\.isNumber)) ?? -1
     }
 
     // MARK: - 2. push payload untouched

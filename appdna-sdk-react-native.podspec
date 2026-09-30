@@ -47,6 +47,9 @@ Pod::Spec.new do |s|
     # (`AppdnaStoreKitHostedTests`) — the same five test products as the core SDK's own test target.
     test_spec.resources = ['ios/Tests/AppDNATestProducts.storekit']
     test_spec.frameworks = 'StoreKit'
+    # SPEC-497 §9a.8 — the principal class installs the notification proxy explicitly before any test
+    # configures the SDK (install is once per process).
+    test_spec.info_plist = { 'NSPrincipalClass' => 'AppdnaTestObservation' }
   end
 
   # SPEC-070-B P0 (AC-38 / W7): Apple merges the app's, the pod's, and every dependency's privacy

@@ -6,9 +6,9 @@ import com.facebook.react.bridge.ReadableMap
  * SPEC-497 §9.2 "Nested values" — a JS push payload → the SDK's `Map<String, String>` for
  * `AppDNA.push.isAppDNAMessage` / `handleMessageData` / `handleTapData`.
  *
- * - a scalar crosses as its string. JS numbers arrive as `Double` on Android, so an INTEGRAL double is
- *   written without `.0` (`5.0` → `"5"`, R82) — what the host wrote in JS, and what Flutter produces
- *   for the same payload;
+ * - a scalar crosses as its string. JS numbers arrive as `Double` on Android, so a number is written in
+ *   plain decimal without a trailing `.0` (`5.0` → `"5"`, R82) — what the host wrote in JS, and what
+ *   Flutter produces for the same payload; NaN / ±Infinity are dropped;
  * - a nested object or array crosses as JSON text — never `toString()`, which yields `{type=deep_link,
  *   …}` that the SDK's `PushPayloadParser` cannot read;
  * - a `null` value is dropped (the SDK map has no null).
@@ -33,12 +33,29 @@ internal object AppdnaPushData {
     private fun stringify(value: Any?): String? = when (value) {
         null -> null
         is String -> value
-        is Double -> integral(value)?.toString() ?: value.toString()
-        is Float -> integral(value.toDouble())?.toString() ?: value.toString()
-        is Map<*, *>, is List<*> -> AppdnaBridge.toJson(value)
+        is Double -> plain(value)
+        is Float -> plain(value.toDouble())
+        is Map<*, *>, is List<*> -> AppdnaBridge.toJson(finiteOnly(value))
         else -> value.toString()
     }
 
-    private fun integral(d: Double): Long? =
-        if (d.isFinite() && d == Math.floor(d) && Math.abs(d) < 1e15) d.toLong() else null
+    /**
+     * A JS number as the host wrote it: `5.0` → `"5"`, `1e15` → `"1000000000000000"`, `0.0001` →
+     * `"0.0001"` (never scientific notation), `-0.0` → `"0"`. NaN / ±Infinity have no JSON or decimal
+     * form, so they are dropped (null), like a null value.
+     */
+    internal fun plain(d: Double): String? {
+        if (!d.isFinite()) return null
+        if (d == 0.0) return "0"
+        return java.math.BigDecimal.valueOf(d).stripTrailingZeros().toPlainString()
+    }
+
+    /** Nested values: non-finite numbers become null (org.json refuses them and would throw). */
+    private fun finiteOnly(v: Any?): Any? = when (v) {
+        is Double -> if (v.isFinite()) v else null
+        is Float -> if (v.isFinite()) v else null
+        is Map<*, *> -> v.entries.associate { (k, x) -> k.toString() to finiteOnly(x) }
+        is List<*> -> v.map { finiteOnly(it) }
+        else -> v
+    }
 }

@@ -543,7 +543,7 @@ class SharedFixtureBridgeTest {
                     module.respondToHostCallback(id, if (payload.optString("hook") == "shouldOpen") "true" else "null")
                 }
             }
-            val pushEvents = persistedEnvelopes().count { !it.optString("event_name").startsWith("screen_") }
+            val pushEvents = persistedEnvelopes().count { !isRoutedScreenDismissal(it) }
             if (pushEvents >= wantEvents && projectedPushCalls().size >= wantCalls) {
                 Thread.sleep(50); idle()
                 return
@@ -555,13 +555,16 @@ class SharedFixtureBridgeTest {
     /**
      * The §8.7 projection: `onHostCallback` dropped, `payload` unwrapped into the args, `push_id` →
      * `pushId`. (The RN push forwarders emit `{payload: {...}, …}`; the fixtures name the core's fields.)
-     * The routed destination's own screen-lifecycle callbacks (`onScreen*` — a `show_screen` route to a
-     * screen this runner's config does not have is dismissed at once) are left out for the same reason
-     * as its `screen_*` events: they are not the push path the fixture pins; the route is asserted
-     * through `state_after.routed`.
+     * The routed destination's own `onScreenDismissed` for the routed `show_screen` id (a screen this
+     * runner's config does not have is dismissed at once) is left out for the same reason as its
+     * `screen_dismissed` event; every other call still counts.
      */
     private fun projectedPushCalls(): List<Pair<String, Map<String, Any?>>> = emitted.toList()
-        .filter { it.first != "onHostCallback" && !it.first.startsWith("onScreen") }
+        .filter { (name, payload) ->
+            val r = routed
+            name != "onHostCallback" &&
+                !(r != null && r.first == "show_screen" && name == "onScreenDismissed" && payload.optString("screenId") == r.second)
+        }
         .map { (name, payload) ->
             val out = LinkedHashMap<String, Any?>()
             payload.toValue().forEach { (k, v) -> if (k != "payload") out[k] = v }
@@ -569,6 +572,12 @@ class SharedFixtureBridgeTest {
             if (out.containsKey("push_id") && !out.containsKey("pushId")) out["pushId"] = out.remove("push_id")
             name to out
         }
+
+    private fun isRoutedScreenDismissal(e: JSONObject): Boolean {
+        val r = routed ?: return false
+        return fixtureJson.optString("category") == "push_payload" && r.first == "show_screen" &&
+            e.optString("event_name") == "screen_dismissed" && e.optJSONObject("properties")?.optString("screen_id") == r.second
+    }
 
     private fun postedCount(): Int {
         val nm = RuntimeEnvironment.getApplication().getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -605,7 +614,7 @@ class SharedFixtureBridgeTest {
             // Every `purchase` fixture whose id ends in `_fails_loudly` — the §3.9 ruling's own
             // selector (check-fixture-coverage.ts `case 'purchase'`), so a new one joins by itself.
             val loud = failsLoudlyFixtures()
-            assertTrue("no `*_fails_loudly` purchase fixture found — this would assert nothing", loud.isNotEmpty())
+            assertEquals("§3.9 has exactly two refusing-provider purchase fixtures (none, revenueCat)", 2, loud.size)
             for ((id, fixture) in loud) {
                 val provider = fixture.getJSONObject("setup").getJSONObject("config").getString("billing_provider")
                 val args = fixture.getJSONObject("expect").getJSONArray("delegate_calls").getJSONObject(0).getJSONObject("args")
@@ -639,11 +648,74 @@ class SharedFixtureBridgeTest {
         idle()
         assertEquals("not ready → the drain may not", null, deliveringDelegate())
 
+        // A queued late purchase: nothing reaches JS while not ready; exactly one delivery after.
+        waitFor(20_000) { drainReady() }
+        assertTrue("the SDK never became ready to drain its delivery queue", drainReady())
+        seedDeliveryQueue(listOf("tok-rn-1"))
+        emitted.clear()
+        module.billingDelegateReady(false)
+        waitFor(1_500) { false }
+        assertEquals("not ready → no delivery", 0, emitted.count { it.first == "onPurchaseCompleted" })
+        assertEquals(listOf("tok-rn-1"), queuedDeliveryTokens())
+        module.billingDelegateReady(true)
+        waitFor(5_000) { emitted.any { it.first == "onPurchaseCompleted" } && queuedDeliveryTokens().isEmpty() }
+        assertEquals("ready → delivered exactly once", 1, emitted.count { it.first == "onPurchaseCompleted" })
+        assertEquals(emptyList<String>(), queuedDeliveryTokens())
+        module.billingDelegateReady(false)
+
         // A module that never configured has no forwarder: a no-op, not a crash, and it changes nothing.
         val before = billingListener()
         AppdnaModule(mock(ReactApplicationContext::class.java)).billingDelegateReady(true)
         assertTrue(billingListener() === before)
         assertEquals(null, deliveringDelegate())
+    }
+
+    private fun waitFor(ms: Long, cond: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + ms
+        while (!cond() && System.currentTimeMillis() < deadline) {
+            idle()
+            Thread.sleep(20)
+        }
+    }
+
+    private fun billingManager(): Any? = AppDNA.billing.let { b ->
+        b::class.java.declaredMethods.first { it.name.startsWith("getManager") }.apply { isAccessible = true }.invoke(b)
+    }
+
+    private fun drainReady(): Boolean {
+        val mgr = billingManager() ?: return false
+        val completion = mgr::class.java.getDeclaredField("completion").apply { isAccessible = true }.get(mgr)
+        return completion::class.java.getDeclaredField("drainReady").apply { isAccessible = true }.getBoolean(completion)
+    }
+
+    private fun localStorage(): Any = Class.forName("ai.appdna.sdk.storage.LocalStorage")
+        .getConstructor(android.content.Context::class.java).newInstance(RuntimeEnvironment.getApplication())
+
+    /** The core's persisted delivery queue (`appdna.pending_deliveries_v1`), as `PurchaseLedger` stores it. */
+    private fun seedDeliveryQueue(tokens: List<String>) {
+        val arr = JSONArray()
+        for (t in tokens) {
+            arr.put(JSONObject().apply {
+                put("purchaseToken", t)
+                put("transactionId", "GPA.$t")
+                put("productId", "coins_100")
+                put("purchaseTime", 1_700_000_000_000L)
+                put("quantity", 1)
+                put("ownerToken", JSONObject.NULL)
+                put("queuedAt", System.currentTimeMillis())
+            })
+        }
+        val s = localStorage()
+        s::class.java.getMethod("setString", String::class.java, String::class.java)
+            .invoke(s, "appdna.pending_deliveries_v1", arr.toString())
+    }
+
+    private fun queuedDeliveryTokens(): List<String> {
+        val s = localStorage()
+        val raw = s::class.java.getMethod("getString", String::class.java)
+            .invoke(s, "appdna.pending_deliveries_v1") as String? ?: return emptyList()
+        val arr = JSONArray(raw)
+        return (0 until arr.length()).map { arr.getJSONObject(it).getString("purchaseToken") }
     }
 
     /** `BillingModule.billingListener` / `deliveringDelegate()` — `internal`, so found by name prefix. */
@@ -659,12 +731,19 @@ class SharedFixtureBridgeTest {
         return m.apply { isAccessible = true }.invoke(billing)
     }
 
+    /**
+     * The §3.9 `*_fails_loudly` set, chosen by SHAPE (a `purchase` fixture whose setup provider is one
+     * that must refuse — `none` / `revenueCat`), never by id (`check:fixture-runner-skips`).
+     */
     private fun failsLoudlyFixtures(): List<Pair<String, JSONObject>> =
         File(fixturesRoot(), "billing").listFiles().orEmpty()
-            .filter { it.name.endsWith("_fails_loudly.fixture.json") }
+            .filter { it.name.endsWith(".fixture.json") }
             .sortedBy { it.name }
             .map { it.name.removeSuffix(".fixture.json") to JSONObject(it.readText()) }
-            .filter { (_, json) -> json.getJSONObject("action").getString("kind") == "purchase" }
+            .filter { (_, json) ->
+                json.getJSONObject("action").getString("kind") == "purchase" &&
+                    json.optJSONObject("setup")?.optJSONObject("config")?.optString("billing_provider") in REFUSING_PROVIDERS
+            }
 
     /** Shut the singleton down and configure it again through the module, with [provider]. */
     private fun reconfigure(provider: String) {
@@ -756,15 +835,11 @@ class SharedFixtureBridgeTest {
 
     private fun assertExpectations() {
         val expect = fixtureJson.getJSONObject("expect")
-        // A push tap routed to `show_screen` hands the id to the live SDK's ScreenManager, which — with
-        // no such screen in this runner's config — emits its own `screen_dismissed`. That event belongs
-        // to the routed destination, not to the push path the fixture pins (the core runners present
-        // nothing, so they never see it); the route itself is asserted through `state_after.routed`.
-        val envelopes = if (fixtureJson.optString("category") == "push_payload") {
-            persistedEnvelopes().filterNot { it.optString("event_name").startsWith("screen_") }
-        } else {
-            persistedEnvelopes()
-        }
+        // A push tap routed to `show_screen <id>` hands the id to the live SDK's ScreenManager, which —
+        // with no such screen in this runner's config — emits `screen_dismissed` for THAT id. Only that
+        // exact event (and the matching `onScreenDismissed`, below) belongs to the routed destination
+        // rather than the push path the fixture pins; the route is asserted via `state_after.routed`.
+        val envelopes = persistedEnvelopes().filterNot { isRoutedScreenDismissal(it) }
 
         // Wrapper-only invariant (SPEC-070-B §7). No other runner can assert it: on iOS/Android core
         // the tag is `native`. A wrapper that stops injecting it mis-attributes every RN event in
@@ -1009,3 +1084,6 @@ class SharedFixtureBridgeTest {
         error("Could not locate packages/sdk-shared-fixtures. Set APPDNA_SDK_FIXTURES_DIR.")
     }
 }
+
+/** Billing providers under which an SDK purchase must be refused (SPEC-497 §3.3). */
+private val REFUSING_PROVIDERS = setOf("none", "revenueCat")

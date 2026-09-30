@@ -308,6 +308,9 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
 
     override fun shutdown(promise: Promise) {
         AppDNA.shutdown()
+        // The native shutdown drops the billing delegate; a `billingDelegateReady` between here and the
+        // next `configure` must not re-register this stale forwarder (configure builds a new one).
+        billingForwarder = null
         promise.resolve(null)
     }
 

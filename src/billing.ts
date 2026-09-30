@@ -236,7 +236,11 @@ export type AppDNAPurchaseErrorCode =
   | 'verificationFailed'
   | 'networkError'
   | 'serverError'
-  /** The selected provider (RevenueCat / Adapty) was not on the classpath / in the binary. */
+  /**
+   * The SDK does not buy or restore under this `billingProvider`: `revenueCat`, Adapty (Android, and
+   * iOS without Adapty linked) and `none` leave transactions to your own billing SDK. On a paywall tap,
+   * start the purchase with your provider; for a restore, restore through it.
+   */
   | 'providerNotAvailable'
   | 'unknown';
 
@@ -258,7 +262,9 @@ export class AppDNABilling {
 
   /**
    * Restore previously purchased products.
-   * Syncs with the App Store / Google Play and returns the restored product IDs.
+   * Syncs with the App Store / Google Play and returns the restored product IDs. Rejects with an
+   * `AppDNAPurchaseErrorCode` — `providerNotAvailable` under `revenueCat` / Adapty / `none`, and on
+   * Android `storeKit2` `networkError` / `serverError`.
    */
   static async restorePurchases(): Promise<string[]> {
     return AppdnaBillingModule.restorePurchases() as Promise<string[]>;
