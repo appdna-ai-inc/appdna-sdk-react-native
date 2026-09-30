@@ -24,6 +24,9 @@
   NSMutableDictionary<NSString *, RCTPromiseResolveBlock> *_pending;
   NSMutableArray<SKProductsRequest *> *_requests;
   NSMutableDictionary<NSValue *, NSString *> *_requestProducts;
+  // Products whose host buy came back `deferred` (Ask to Buy): their promise is already resolved, but
+  // the later purchased / failed update is still THIS host's and is logged.
+  NSMutableSet<NSString *> *_deferred;
 }
 
 RCT_EXPORT_MODULE();
@@ -36,6 +39,7 @@ RCT_EXPORT_MODULE();
     _pending = [NSMutableDictionary new];
     _requests = [NSMutableArray new];
     _requestProducts = [NSMutableDictionary new];
+    _deferred = [NSMutableSet new];
     [[SKPaymentQueue defaultQueue] addTransactionObserver:self];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(logUnfinished)
@@ -60,6 +64,15 @@ RCT_EXPORT_METHOD(hostBuy:(NSString *)productId
                   reject:(RCTPromiseRejectBlock)reject)
 {
   dispatch_async(dispatch_get_main_queue(), ^{
+    // One host buy per product at a time: a second call while the first is in flight is REFUSED (its own
+    // promise resolves at once), so the first promise is never overwritten and stranded, and the
+    // product is never queued for payment twice.
+    if (self->_pending[productId] != nil) {
+      NSLog(@"AppDNA-E2E hostBuy %@ refused already in flight", productId);
+      resolve(@"refused: a hostBuy for this product is already in flight");
+      return;
+    }
+    [self->_deferred removeObject:productId];
     self->_pending[productId] = resolve;
     SKProductsRequest *request = [[SKProductsRequest alloc] initWithProductIdentifiers:[NSSet setWithObject:productId]];
     request.delegate = self;
@@ -122,19 +135,53 @@ RCT_EXPORT_METHOD(logTransactions:(RCTPromiseResolveBlock)resolve
   for (SKPaymentTransaction *t in transactions) {
     NSString *pid = t.payment.productIdentifier;
     RCTPromiseResolveBlock resolve = _pending[pid];
-    // Only a purchase THIS host started (the observer also sees the SDK's own purchases).
-    if (resolve == nil) continue;
-    if (t.transactionState == SKPaymentTransactionStatePurchased) {
-      // Deliberately NOT finished.
-      NSLog(@"AppDNA-E2E hostBuy %@ %@", pid, t.transactionIdentifier);
-      [_pending removeObjectForKey:pid];
-      resolve(t.transactionIdentifier ?: @"");
-      [self logUnfinished];
-    } else if (t.transactionState == SKPaymentTransactionStateFailed) {
-      NSLog(@"AppDNA-E2E hostBuy %@ failed %@", pid, t.error.localizedDescription);
-      [_pending removeObjectForKey:pid];
-      resolve([NSString stringWithFormat:@"failed: %@", t.error.localizedDescription]);
-      [queue finishTransaction:t]; // a failed transaction carries no purchase; clearing it keeps the list honest
+    if (resolve == nil) {
+      // The later outcome of a deferred (Ask to Buy) host buy: logged, never finished when purchased.
+      if ([_deferred containsObject:pid]) {
+        if (t.transactionState == SKPaymentTransactionStatePurchased) {
+          [_deferred removeObject:pid];
+          NSLog(@"AppDNA-E2E hostBuy %@ %@ (after deferred)", pid, t.transactionIdentifier);
+          [self logUnfinished];
+        } else if (t.transactionState == SKPaymentTransactionStateFailed) {
+          [_deferred removeObject:pid];
+          NSLog(@"AppDNA-E2E hostBuy %@ failed %@ (after deferred)", pid, t.error.localizedDescription);
+          [queue finishTransaction:t];
+        }
+      }
+      // Otherwise not a purchase THIS host started (the observer also sees the SDK's own purchases).
+      continue;
+    }
+    switch (t.transactionState) {
+      case SKPaymentTransactionStatePurchased:
+        // Deliberately NOT finished.
+        NSLog(@"AppDNA-E2E hostBuy %@ %@", pid, t.transactionIdentifier);
+        [_pending removeObjectForKey:pid];
+        resolve(t.transactionIdentifier ?: @"");
+        [self logUnfinished];
+        break;
+      case SKPaymentTransactionStateFailed:
+        NSLog(@"AppDNA-E2E hostBuy %@ failed %@", pid, t.error.localizedDescription);
+        [_pending removeObjectForKey:pid];
+        resolve([NSString stringWithFormat:@"failed: %@", t.error.localizedDescription]);
+        [queue finishTransaction:t]; // a failed transaction carries no purchase; clearing it keeps the list honest
+        break;
+      case SKPaymentTransactionStateDeferred:
+        // Ask to Buy: waiting on a parent's approval, possibly for days. Resolve now rather than leave
+        // the promise pending; the eventual purchased / failed update is logged above.
+        NSLog(@"AppDNA-E2E hostBuy %@ deferred", pid);
+        [_pending removeObjectForKey:pid];
+        [_deferred addObject:pid];
+        resolve(@"deferred");
+        break;
+      case SKPaymentTransactionStateRestored:
+        // Only `restoreCompletedTransactions` produces this, and this host never calls it (the SDK
+        // restores through StoreKit 2): it is not the outcome of this buy. Logged, left unfinished (the
+        // host never finishes a purchase), and the pending buy keeps waiting for its own update.
+        NSLog(@"AppDNA-E2E hostBuy %@ restored %@ (ignored, buy still pending)", pid,
+              t.originalTransaction.transactionIdentifier ?: t.transactionIdentifier);
+        break;
+      case SKPaymentTransactionStatePurchasing:
+        break;
     }
   }
 }
