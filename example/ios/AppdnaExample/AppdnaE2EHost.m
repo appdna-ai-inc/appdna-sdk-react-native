@@ -24,9 +24,16 @@
   NSMutableDictionary<NSString *, RCTPromiseResolveBlock> *_pending;
   NSMutableArray<SKProductsRequest *> *_requests;
   NSMutableDictionary<NSValue *, NSString *> *_requestProducts;
-  // Products whose host buy came back `deferred` (Ask to Buy): their promise is already resolved, but
-  // the later purchased / failed update is still THIS host's and is logged.
+  // Products whose host buy came back `deferred` (Ask to Buy) in THIS session: their promise is already
+  // resolved, but the later purchased / failed update is still this host's and is logged as a host buy.
   NSMutableSet<NSString *> *_deferred;
+  // Products with a deferred transaction this session did NOT start: rebuilt from the queue in `init`
+  // or re-delivered by `updatedTransactions`. StoreKit 1 does not say who queued a payment, so such a
+  // transaction may be an earlier session's host buy OR the SDK's own Ask-to-Buy purchase. It blocks a
+  // second `hostBuy` of the product (conservative), but its outcome is logged with a neutral prefix —
+  // never as a host buy — and is never finished: finishing an SDK-started transaction would take it
+  // away from the SDK.
+  NSMutableSet<NSString *> *_deferredInherited;
 }
 
 RCT_EXPORT_MODULE();
@@ -40,17 +47,22 @@ RCT_EXPORT_MODULE();
     _requests = [NSMutableArray new];
     _requestProducts = [NSMutableDictionary new];
     _deferred = [NSMutableSet new];
+    _deferredInherited = [NSMutableSet new];
     [[SKPaymentQueue defaultQueue] addTransactionObserver:self];
     // A deferred (Ask to Buy) transaction outlives the process: it stays in the payment queue until it
     // is approved or declined. Rebuild the set from the queue so the "refused already deferred" guard in
-    // `hostBuy` also holds after a relaunch, not only within one session. (A deferred SDK purchase of
-    // the same product would be counted too — conservative for the refusal; the device rows start no
-    // SDK Ask-to-Buy.) `SKPaymentQueue.transactions` is only valid while the queue has an observer, so
-    // this runs AFTER `addTransactionObserver:`; a deferred transaction the queue re-delivers through
-    // `updatedTransactions` later is added there too.
+    // `hostBuy` also holds after a relaunch, not only within one session. It goes into
+    // `_deferredInherited`: a deferred SDK purchase of the same product looks identical (conservative for
+    // the refusal; the device rows start no SDK Ask-to-Buy). `SKPaymentQueue.transactions` is only valid
+    // while the queue has an observer, so this runs AFTER `addTransactionObserver:`; a deferred
+    // transaction the queue re-delivers through `updatedTransactions` later is added there too.
+    //
+    // Known gap: a deferred buy APPROVED while the app was killed comes back as `purchased`, never as
+    // `deferred`, so it is in neither set and is not logged as an outcome here. It stays unfinished and
+    // `logUnfinished` still lists it.
     for (SKPaymentTransaction *t in [SKPaymentQueue defaultQueue].transactions) {
       if (t.transactionState == SKPaymentTransactionStateDeferred) {
-        [_deferred addObject:t.payment.productIdentifier];
+        [_deferredInherited addObject:t.payment.productIdentifier];
       }
     }
     [[NSNotificationCenter defaultCenter] addObserver:self
@@ -86,7 +98,7 @@ RCT_EXPORT_METHOD(hostBuy:(NSString *)productId
     }
     // A deferred (Ask to Buy) buy of this product is still awaiting approval in the payment queue:
     // refused the same way, so the product is never queued for payment a second time.
-    if ([self->_deferred containsObject:productId]) {
+    if ([self->_deferred containsObject:productId] || [self->_deferredInherited containsObject:productId]) {
       NSLog(@"AppDNA-E2E hostBuy %@ refused already deferred", productId);
       resolve(@"refused: a hostBuy for this product is deferred, awaiting approval");
       return;
@@ -155,10 +167,23 @@ RCT_EXPORT_METHOD(logTransactions:(RCTPromiseResolveBlock)resolve
     RCTPromiseResolveBlock resolve = _pending[pid];
     if (resolve == nil) {
       // A deferred (Ask to Buy) transaction with no pending buy — the queue re-delivering one from an
-      // earlier session: remember it, so `hostBuy` refuses a second buy of the product (same
-      // conservative rule as the rebuild in `init`).
+      // earlier session (or the SDK's own): remember it, so `hostBuy` refuses a second buy of the product
+      // (same conservative rule as the rebuild in `init`).
       if (t.transactionState == SKPaymentTransactionStateDeferred) {
-        [_deferred addObject:pid];
+        if (![_deferred containsObject:pid]) [_deferredInherited addObject:pid];
+        continue;
+      }
+      // The later outcome of a deferred transaction this session did not start: it may be the SDK's, so
+      // it is logged neutrally, not attributed to the host, and never finished.
+      if ([_deferredInherited containsObject:pid] && ![_deferred containsObject:pid]) {
+        if (t.transactionState == SKPaymentTransactionStatePurchased) {
+          [_deferredInherited removeObject:pid];
+          NSLog(@"AppDNA-E2E deferred-outcome %@ purchased %@ (origin unknown)", pid, t.transactionIdentifier);
+          [self logUnfinished];
+        } else if (t.transactionState == SKPaymentTransactionStateFailed) {
+          [_deferredInherited removeObject:pid];
+          NSLog(@"AppDNA-E2E deferred-outcome %@ failed %@ (origin unknown)", pid, t.error.localizedDescription);
+        }
         continue;
       }
       // The later outcome of a deferred (Ask to Buy) host buy: logged, never finished when purchased.
