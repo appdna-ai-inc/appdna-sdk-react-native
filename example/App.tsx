@@ -88,13 +88,16 @@ type Props = {
    * `billingProvider` — `storeKit2` (default) | `revenueCat` | `none` | `adapty:<publicKey>`;
    * `appdnaEnv` — `sandbox`, emitted natively only when the build carries the base-URL override
    * (never a hand-passed argument); `hostProductId` — what "Host buy (no finish)" buys (iOS);
-   * `locationFlowId` — the "Location flow" button's flow (`APPDNA_E2E_LOCATION_FLOW_ID`).
+   * `locationFlowId` — the "Location flow" button's flow (launch arg `appdnaLocationFlowId` or its alias
+   * `APPDNA_E2E_LOCATION_FLOW_ID`); `permissionsFlowId` — the "Permissions flow" button's flow
+   * (`appdnaPermissionsFlowId` / `APPDNA_E2E_PERMISSIONS_FLOW_ID`).
    */
   billingProvider?: string;
   appdnaEnv?: string;
   hostProductId?: string;
   locationFlowId?: string;
-  /** A slow endpoint for `hostWait` (e.g. a local server's delay route); defaults to a 1 s delay URL. */
+  permissionsFlowId?: string;
+  /** A slow local endpoint for `hostWait` (e.g. a local server's delay route); defaults to Metro's `/status`. */
   waitUrl?: string;
 };
 
@@ -123,22 +126,28 @@ const SIGN_IN_ACTIONS = new Set([
 /**
  * Wait `seconds` WITHOUT `setTimeout`: RN Android pauses JS timers while the SDK's onboarding Activity
  * is in front, so a timer-based wait never fires there. A clock loop over awaited `fetch` calls keeps
- * the JS thread yielding (each `fetch` settles through native networking, which is not paused), and a
- * failed fetch (offline) just loops again.
+ * the JS thread yielding (each `fetch` settles through native networking, which is not paused).
+ *
+ * The default endpoint is LOCAL: the Metro dev server that serves this example's bundle
+ * (`localhost:8081` — with `adb reverse tcp:8081 tcp:8081` on Android), so nothing remote is hit. Pass
+ * `appdnaWaitUrl` to point at a slow local route instead (e.g. a local server's delay endpoint).
+ * Every non-OK answer or failure backs off with a short clock spin, so a fast endpoint cannot turn
+ * into a tight request loop.
  */
-const hostWait = async (seconds: number, waitUrl = 'https://httpbin.org/delay/1') => {
+const backOff = (ms: number) => {
+  const until = Date.now() + ms;
+  while (Date.now() < until) {
+    // spin
+  }
+};
+const hostWait = async (seconds: number, waitUrl = 'http://localhost:8081/status') => {
   const end = Date.now() + seconds * 1000;
   while (Date.now() < end) {
     try {
-      // A SLOW endpoint (≈1 s per request), so this is a handful of requests, not a hammer.
-      await fetch(waitUrl, { method: 'GET' });
+      const res = await fetch(waitUrl, { method: 'GET' });
+      if (!res.ok) backOff(250);
     } catch {
-      // Offline or refused: back off with a short clock spin before the next attempt, so a fast
-      // failure cannot turn into a tight request loop.
-      const until = Date.now() + 250;
-      while (Date.now() < until) {
-        // spin
-      }
+      backOff(250);
     }
   }
 };
@@ -214,6 +223,7 @@ export default function App({
   appdnaEnv,
   hostProductId,
   locationFlowId,
+  permissionsFlowId,
   waitUrl,
 }: Props) {
   const [status, setStatus] = useState(apiKey ? 'Configuring…' : 'No API key — pass -appdnaApiKey');
@@ -242,6 +252,28 @@ export default function App({
         append(`${label} → ${result === undefined ? 'ok' : JSON.stringify(result)}`);
       } catch (e) {
         append(`${label} ✗ ${String(e)}`);
+      }
+    },
+    [append],
+  );
+
+  /**
+   * SPEC-497 §3.11 / §13b.2 — a restore, with the lines the restore rows assert:
+   * `AppDNA-E2E onRestoreCompleted <ids>` or `AppDNA-E2E restoreFailed <code> <errorType>` (on React
+   * Native the rejection code IS the `billingErrorType`).
+   */
+  const restoreE2E = useCallback(
+    async (label: string, fn: () => Promise<string[]>) => {
+      try {
+        const ids = await fn();
+        const line = `AppDNA-E2E onRestoreCompleted ${ids.join(',')}`;
+        console.log(line);
+        append(`${label} → ${line}`);
+      } catch (e) {
+        const code = (e as { code?: string }).code ?? 'unknown';
+        const line = `AppDNA-E2E restoreFailed ${code} ${code}`;
+        console.log(line);
+        append(`${label} ✗ ${line}`);
       }
     },
     [append],
@@ -462,6 +494,13 @@ export default function App({
       ...(provider ? { billingProvider: provider } : {}),
     });
     append(`configured env=${appdnaEnv === 'sandbox' ? 'sandbox' : 'production'} billingProvider=${billingProvider ?? 'default'}`);
+    // SPEC-497 §3.11 — the local-server precheck line: the base URL the SDK resolved, read from
+    // diagnose() (`base_url: <v>`), and the environment this host configured.
+    const report = await AppDNA.diagnose();
+    const baseUrl = /base_url: (\S+)/.exec(report ?? '')?.[1] ?? 'unknown';
+    const precheck = `AppDNA-E2E base_url=${baseUrl} env=${appdnaEnv === 'sandbox' ? 'sandbox' : 'production'}`;
+    console.log(precheck);
+    append(precheck);
     setStatus('Configured');
 
     await AppDNA.onReady();
@@ -543,6 +582,10 @@ export default function App({
           <Button
             label="Location flow"
             onPress={() => run('onboarding.present(location)', () => AppDNA.onboarding.present(locationFlowId ?? 'default'))}
+          />
+          <Button
+            label="Permissions flow"
+            onPress={() => run('onboarding.present(permissions)', () => AppDNA.onboarding.present(permissionsFlowId ?? 'default'))}
           />
           <Button
             label="Host buy (no finish, iOS)"
@@ -652,14 +695,14 @@ export default function App({
         <Section title="Billing">
           <Button label="Get products" onPress={() => run('billing.getProducts()', () => AppDNA.billing.getProducts([productId ?? 'rn_e2e_product']))} />
           <Button label="Purchase" onPress={() => run('billing.purchase()', () => AppDNA.billing.purchase(productId ?? 'rn_e2e_product'))} />
-          <Button label="Restore purchases" onPress={() => run('billing.restorePurchases()', () => AppDNA.billing.restorePurchases())} />
+          <Button label="Restore purchases" onPress={() => restoreE2E('billing.restorePurchases()', () => AppDNA.billing.restorePurchases())} />
           <Button label="Get entitlements" onPress={() => run('billing.getEntitlements()', () => AppDNA.billing.getEntitlements())} />
           <Button label="Has active subscription" onPress={() => run('billing.hasActiveSubscription()', () => AppDNA.billing.hasActiveSubscription())} />
           {/* The static facade, exercised separately: `AppDNABilling.*` and `AppDNA.billing.*` are the
               same implementation now, but they are two documented import paths and both must work. */}
           <Button label="AppDNABilling.getProducts" onPress={() => run('AppDNABilling.getProducts()', () => AppDNABilling.getProducts([productId ?? 'rn_e2e_product']))} />
           <Button label="AppDNABilling.purchase" onPress={() => run('AppDNABilling.purchase()', () => AppDNABilling.purchase(productId ?? 'rn_e2e_product'))} />
-          <Button label="AppDNABilling.restore" onPress={() => run('AppDNABilling.restorePurchases()', () => AppDNABilling.restorePurchases())} />
+          <Button label="AppDNABilling.restore" onPress={() => restoreE2E('AppDNABilling.restorePurchases()', () => AppDNABilling.restorePurchases())} />
           <Button label="AppDNABilling.entitlements" onPress={() => run('AppDNABilling.getEntitlements()', () => AppDNABilling.getEntitlements())} />
           <Button label="AppDNABilling.hasActiveSub" onPress={() => run('AppDNABilling.hasActiveSubscription()', () => AppDNABilling.hasActiveSubscription())} />
           {/* Re-register through the namespace. It must REPLACE the delegate, not stack a second one:

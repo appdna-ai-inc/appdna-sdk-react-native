@@ -1,18 +1,26 @@
+- (void)logUnfinished
+{
+  [AppdnaE2EStoreKit logTransactions:nil];
+}
+
 // SPEC-497 §3.11 — the example host's OWN StoreKit calls, for the billing-ownership device rows.
 //
 // `hostBuy(productId)` buys through the host's own StoreKit payment queue and deliberately NEVER
 // finishes the transaction — the shape of an app whose billing SDK (not AppDNA) owns transactions.
-// `logTransactions()` writes `AppDNA-E2E unfinished=<productId:transactionId,…>` to the host log, from
-// the payment queue's unfinished transactions; it also runs on every foreground. Under a non-owning
+// `logTransactions()` writes `AppDNA-E2E unfinished=<productId:transactionId,…>` and
+// `AppDNA-E2E all=<…>` to the host log from StoreKit 2's `Transaction.unfinished` / `Transaction.all`
+// (AppdnaE2EStoreKit.swift, the same lines the Flutter example writes); it also runs on every foreground. Under a non-owning
 // `billingProvider` the device rows assert the host's purchase is still listed after a relaunch.
 //
-// StoreKit 1 on purpose: it is callable from Objective-C, needs no Swift in this target, and shares the
-// transaction store with the SDK's StoreKit 2 calls (a StoreKit 2 `finish()` removes it from this
-// queue too). Example-only code: nothing here ships in the SDK.
+// The purchase itself uses StoreKit 1 (callable from Objective-C); it shares the transaction store with
+// the SDK's StoreKit 2 calls. Only transactions for products THIS host asked to buy are logged as a
+// host buy — the payment-queue observer also sees the SDK's own purchases. Example-only code: nothing
+// here ships in the SDK.
 
 #import <React/RCTBridgeModule.h>
 #import <StoreKit/StoreKit.h>
 #import <UIKit/UIKit.h>
+#import "AppdnaExample-Swift.h"
 
 @interface AppdnaE2EHost : NSObject <RCTBridgeModule, SKPaymentTransactionObserver, SKProductsRequestDelegate>
 @end
@@ -20,6 +28,7 @@
 @implementation AppdnaE2EHost {
   NSMutableDictionary<NSString *, RCTPromiseResolveBlock> *_pending;
   NSMutableArray<SKProductsRequest *> *_requests;
+  NSMutableDictionary<NSValue *, NSString *> *_requestProducts;
 }
 
 RCT_EXPORT_MODULE();
@@ -31,6 +40,7 @@ RCT_EXPORT_MODULE();
   if ((self = [super init])) {
     _pending = [NSMutableDictionary new];
     _requests = [NSMutableArray new];
+    _requestProducts = [NSMutableDictionary new];
     [[SKPaymentQueue defaultQueue] addTransactionObserver:self];
     [[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(logUnfinished)
@@ -55,6 +65,7 @@ RCT_EXPORT_METHOD(hostBuy:(NSString *)productId
     SKProductsRequest *request = [[SKProductsRequest alloc] initWithProductIdentifiers:[NSSet setWithObject:productId]];
     request.delegate = self;
     [self->_requests addObject:request];
+    self->_requestProducts[[NSValue valueWithNonretainedObject:request]] = productId;
     [request start];
   });
 }
@@ -62,15 +73,28 @@ RCT_EXPORT_METHOD(hostBuy:(NSString *)productId
 RCT_EXPORT_METHOD(logTransactions:(RCTPromiseResolveBlock)resolve
                   reject:(RCTPromiseRejectBlock)reject)
 {
+  [AppdnaE2EStoreKit logTransactions:^{ resolve([NSNull null]); }];
+}
+
+- (void)request:(SKRequest *)request didFailWithError:(NSError *)error
+{
   dispatch_async(dispatch_get_main_queue(), ^{
-    [self logUnfinished];
-    resolve([NSNull null]);
+    NSValue *key = [NSValue valueWithNonretainedObject:request];
+    NSString *pid = self->_requestProducts[key];
+    [self->_requestProducts removeObjectForKey:key];
+    [self->_requests removeObject:(SKProductsRequest *)request];
+    if (pid == nil) return;
+    NSLog(@"AppDNA-E2E hostBuy %@ failed %@", pid, error.localizedDescription);
+    RCTPromiseResolveBlock resolve = self->_pending[pid];
+    [self->_pending removeObjectForKey:pid];
+    if (resolve) resolve([NSString stringWithFormat:@"failed: %@", error.localizedDescription]);
   });
 }
 
 - (void)productsRequest:(SKProductsRequest *)request didReceiveResponse:(SKProductsResponse *)response
 {
   dispatch_async(dispatch_get_main_queue(), ^{
+    [self->_requestProducts removeObjectForKey:[NSValue valueWithNonretainedObject:request]];
     [self->_requests removeObject:request];
     SKProduct *product = response.products.firstObject;
     if (product == nil) {
@@ -90,14 +114,18 @@ RCT_EXPORT_METHOD(logTransactions:(RCTPromiseResolveBlock)resolve
   for (SKPaymentTransaction *t in transactions) {
     NSString *pid = t.payment.productIdentifier;
     RCTPromiseResolveBlock resolve = _pending[pid];
+    // Only a purchase THIS host started (the observer also sees the SDK's own purchases).
+    if (resolve == nil) continue;
     if (t.transactionState == SKPaymentTransactionStatePurchased) {
       // Deliberately NOT finished.
       NSLog(@"AppDNA-E2E hostBuy %@ %@", pid, t.transactionIdentifier);
-      if (resolve) { [_pending removeObjectForKey:pid]; resolve(t.transactionIdentifier ?: @""); }
+      [_pending removeObjectForKey:pid];
+      resolve(t.transactionIdentifier ?: @"");
       [self logUnfinished];
     } else if (t.transactionState == SKPaymentTransactionStateFailed) {
       NSLog(@"AppDNA-E2E hostBuy %@ failed %@", pid, t.error.localizedDescription);
-      if (resolve) { [_pending removeObjectForKey:pid]; resolve([NSString stringWithFormat:@"failed: %@", t.error.localizedDescription]); }
+      [_pending removeObjectForKey:pid];
+      resolve([NSString stringWithFormat:@"failed: %@", t.error.localizedDescription]);
       [queue finishTransaction:t]; // a failed transaction carries no purchase; clearing it keeps the list honest
     }
   }

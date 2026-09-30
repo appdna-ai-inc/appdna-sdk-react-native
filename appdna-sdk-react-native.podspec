@@ -37,14 +37,15 @@ Pod::Spec.new do |s|
   # `pod lib lint` runs test_specs by default (`--skip-tests` opts out).
   #
   # ⚠️ A test_spec LAUNCHES A SIMULATOR → macOS runner only. It also inherits P0's
-  # `--include-podspecs` requirement while AppDNASDK 1.0.73 is unpublished.
+  # `--include-podspecs` requirement whenever the AppDNASDK version it pins is not yet on trunk.
   s.test_spec 'Tests' do |test_spec|
     test_spec.source_files = "ios/Tests/**/*.{swift}"
     # `requires_app_host` because the tests exercise MainActor delivery and a DispatchQueue.main
     # timeout — both need a real run loop, which an app host provides and a bare logic bundle does not.
     test_spec.requires_app_host = true
-    # SPEC-497 §3.10 fallback: the StoreKit configuration the app-hosted `SKTestSession` tests load
-    # (`AppdnaStoreKitHostedTests`) — the same five test products as the core SDK's own test target.
+    # SPEC-497 §3.10 fallback: the app-hosted StoreKit tests (`AppdnaAAStoreKitHostedTests`, named to run
+    # first) load this StoreKit configuration into an `SKTestSession` — the same five test products as the
+    # core SDK's own test target — and need the StoreKit framework plus the principal class below.
     test_spec.resources = ['ios/Tests/AppDNATestProducts.storekit']
     test_spec.frameworks = 'StoreKit'
     # SPEC-497 §9a.8 — the principal class installs the notification proxy explicitly before any test

@@ -89,6 +89,9 @@ class MainActivity : ReactActivity() {
             "appdnaBillingProvider" to "billingProvider",
             "appdnaHostProductId" to "hostProductId",
             "appdnaLocationFlowId" to "locationFlowId",
+            "APPDNA_E2E_LOCATION_FLOW_ID" to "locationFlowId",
+            "appdnaPermissionsFlowId" to "permissionsFlowId",
+            "APPDNA_E2E_PERMISSIONS_FLOW_ID" to "permissionsFlowId",
             "appdnaWaitUrl" to "waitUrl",
         )
   }

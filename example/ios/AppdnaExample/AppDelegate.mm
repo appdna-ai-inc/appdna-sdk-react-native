@@ -60,6 +60,9 @@
     @"appdnaBillingProvider" : @"billingProvider",
     @"appdnaHostProductId" : @"hostProductId",
     @"appdnaLocationFlowId" : @"locationFlowId",
+    @"APPDNA_E2E_LOCATION_FLOW_ID" : @"locationFlowId",
+    @"appdnaPermissionsFlowId" : @"permissionsFlowId",
+    @"APPDNA_E2E_PERMISSIONS_FLOW_ID" : @"permissionsFlowId",
     @"appdnaWaitUrl" : @"waitUrl",
   };
   for (NSString *arg in launchKeys) {

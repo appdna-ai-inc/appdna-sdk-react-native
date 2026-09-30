@@ -94,7 +94,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
-        manifestPlaceholders = [appdnaBaseUrlOverride: appdnaBaseUrl]
+        // Release builds never carry the override: empty here, set for `debug` only below.
+        manifestPlaceholders = [appdnaBaseUrlOverride: ""]
     }
     signingConfigs {
         debug {
@@ -107,6 +108,7 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            manifestPlaceholders += [appdnaBaseUrlOverride: appdnaBaseUrl]
         }
         release {
             // Caution! In production, you need to generate your own keystore file.

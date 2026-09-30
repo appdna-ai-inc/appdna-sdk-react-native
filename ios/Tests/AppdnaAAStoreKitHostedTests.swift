@@ -23,9 +23,10 @@ import AppDNASDK
 /// Covered: ownership (storeKit2 finishes; revenueCat never; adapty-unlinked never), restore with no
 /// server, a lifetime re-buy (no second `onPurchaseCompleted`), an interrupted purchase and an
 /// Ask-to-Buy approval (each delivered ONCE through `onPurchaseCompleted`, then finished), and a forced
-/// renewal (not a purchase). NOT observable through public API, so not asserted here: event PROPERTIES
-/// (charged / intro / trial price, `is_trial`) — iOS has no public event observer, and the SDK's
-/// uploads go through its own `URLSession`, which a `URLProtocol` cannot intercept.
+/// renewal (not a purchase). The no-network restore counts the SDK's requests by putting a counting
+/// `URLProtocol` into every default `URLSessionConfiguration` (see `withCountingProtocol`). NOT asserted
+/// here: event PROPERTIES (charged / intro / trial price, `is_trial`) — iOS has no public event observer,
+/// and every counted request is failed, so no upload body is ever inspected.
 final class AppdnaAAStoreKitHostedTests: XCTestCase {
 
     private var session: SKTestSession!
@@ -176,6 +177,9 @@ final class AppdnaAAStoreKitHostedTests: XCTestCase {
         configure(.storeKit2)
         _ = try await AppDNA.billing.purchase("ai.appdna.test.monthly")
         try session.forceRenewalOfSubscription(productIdentifier: "ai.appdna.test.monthly")
+        _ = await waitUntil(5) { self.sessionIds("ai.appdna.test.monthly").count >= 2 }
+        XCTAssertGreaterThanOrEqual(sessionIds("ai.appdna.test.monthly").count, 2,
+                                    "the renewal was not created — the drain below would only prove the purchase")
         await becomeActive()
         let drained = await waitUntil { await self.unfinished("ai.appdna.test.monthly").isEmpty }
         XCTAssertTrue(drained, "storeKit2 owns transactions: the purchase and its renewal are finished")
@@ -230,15 +234,17 @@ final class AppdnaAAStoreKitHostedTests: XCTestCase {
 
     // MARK: - Restore without a server
 
-    /// Counts (and fails) every request the SDK's default-configuration session makes.
+    /// Fails every AppDNA request the SDK's default-configuration session makes, and counts those that are
+    /// not event uploads (`/events`): event traffic is batched on its own timer and may legitimately flush
+    /// during a restore, while a restore itself must call nothing.
     final class CountingURLProtocol: URLProtocol {
         private static let lock = NSLock()
         private static var _count = 0
         static var count: Int { lock.lock(); defer { lock.unlock() }; return _count }
         static func reset() { lock.lock(); _count = 0; lock.unlock() }
         override class func canInit(with request: URLRequest) -> Bool {
-            guard let host = request.url?.host, host.contains("appdna") else { return false }
-            lock.lock(); _count += 1; lock.unlock()
+            guard let url = request.url, let host = url.host, host.contains("appdna") else { return false }
+            if !url.path.contains("/events") { lock.lock(); _count += 1; lock.unlock() }
             return true
         }
         override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
@@ -272,7 +278,7 @@ final class AppdnaAAStoreKitHostedTests: XCTestCase {
         configure(.storeKit2)
         _ = try await AppDNA.billing.purchase("ai.appdna.test.lifetime")
         try? await Task.sleep(nanoseconds: 1_000_000_000)
-        // Control: the counter SEES the SDK's requests (the bootstrap / event traffic above), so a zero
+        // Control: the counter SEES the SDK's non-event requests (the bootstrap above), so a zero
         // below means "no call", not "a call it could not see".
         XCTAssertGreaterThan(CountingURLProtocol.count, 0, "the counter cannot see the SDK's session — the zero below would prove nothing")
         CountingURLProtocol.reset()
@@ -385,6 +391,8 @@ final class AppdnaAAStoreKitHostedTests: XCTestCase {
         try? await Task.sleep(nanoseconds: 4_000_000_000)
         XCTAssertEqual(js.count("onPurchaseCompleted"), 0, "no JS onPurchaseCompleted yet → nothing may be delivered")
         let queuedBefore = storedQueue()
+        XCTAssertTrue(queuedBefore.contains("ai.appdna.test.coins"),
+                      "the late purchase must be HELD in the delivery queue before JS is ready: \(queuedBefore)")
 
         impl.billingDelegateReady(true)
         let delivered = await waitUntil(15) { js.count("onPurchaseCompleted") >= 1 }
