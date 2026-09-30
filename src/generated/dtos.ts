@@ -2,7 +2,6 @@
 // Source: src/lib/sdk-codegen/dto-registry.ts
 // Generator: scripts/sdk-codegen/emit-dtos.ts
 // Regenerate: pnpm sdk-codegen
-// Last codegen commit: becec5bd534f3a891ae3ea7638d019d42a81b848
 
 /** AppDNAEnvironment — runtime config the SDK negotiates at boot time. Phase 0.1 demo DTO; serves as the canonical small example for codegen mechanism proof. */
 export interface AppDNAEnvironment {
