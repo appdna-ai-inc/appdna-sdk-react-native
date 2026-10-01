@@ -25,10 +25,11 @@ import AppDNASDK
 /// Covered: ownership (storeKit2 finishes; revenueCat never; adapty-unlinked never), restore with no
 /// server, a lifetime re-buy (no second `onPurchaseCompleted`), an interrupted purchase and an
 /// Ask-to-Buy approval (each delivered ONCE through `onPurchaseCompleted`, then finished), and a forced
-/// renewal (not a purchase). The no-network restore counts the SDK's requests by putting a counting
-/// `URLProtocol` into every default `URLSessionConfiguration` (see `withCountingProtocol`). NOT asserted
+/// renewal (not a purchase). The no-network restore records the SDK's requests by putting a recording
+/// `URLProtocol` into every default `URLSessionConfiguration` (see `withCountingProtocol`): its result needs
+/// no server, and its only call is the background `/billing/verify` of what it granted (§17-4). NOT asserted
 /// here: event PROPERTIES (charged / intro / trial price, `is_trial`) — iOS has no public event observer,
-/// and every counted request is failed, so no upload body is ever inspected.
+/// and no recorded request is ever answered, so no upload body is ever inspected.
 final class AppdnaStoreKitHostedTests: XCTestCase {
 
     private var session: SKTestSession!
@@ -216,21 +217,39 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
 
     // MARK: - Restore without a server
 
-    /// Fails every AppDNA request the SDK's default-configuration session makes, and counts those that are
-    /// not event uploads (`/events`): event traffic is batched on its own timer and may legitimately flush
-    /// during a restore, while a restore itself must call nothing.
+    /// Answers every AppDNA request the SDK's default-configuration session makes with a network error and
+    /// records the path of each one that is not an event upload (`/events`: event traffic is batched on its
+    /// own timer and may legitimately flush during a restore). While `stallsVerify` is on, a
+    /// `/billing/verify` request gets NO answer until `releaseStalled()` — a restore that waited for server
+    /// verification would then never return.
     final class CountingURLProtocol: URLProtocol {
         private static let lock = NSLock()
-        private static var _count = 0
-        static var count: Int { lock.lock(); defer { lock.unlock() }; return _count }
-        static func reset() { lock.lock(); _count = 0; lock.unlock() }
+        private static var _paths: [String] = []
+        private static var _stallsVerify = false
+        private static var _stalled: [CountingURLProtocol] = []
+        static var paths: [String] { lock.lock(); defer { lock.unlock() }; return _paths }
+        static var count: Int { paths.count }
+        static func reset() { lock.lock(); _paths = []; lock.unlock() }
+        static func stallVerify(_ on: Bool) { lock.lock(); _stallsVerify = on; lock.unlock() }
+        /// Fails every held `/billing/verify` request, so nothing is left in flight after the test.
+        static func releaseStalled() {
+            lock.lock(); let held = _stalled; _stalled = []; _stallsVerify = false; lock.unlock()
+            for p in held { p.fail() }
+        }
         override class func canInit(with request: URLRequest) -> Bool {
             guard let url = request.url, let host = url.host, host.contains("appdna") else { return false }
-            if !url.path.contains("/events") { lock.lock(); _count += 1; lock.unlock() }
+            if !url.path.contains("/events") { lock.lock(); _paths.append(url.path); lock.unlock() }
             return true
         }
         override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-        override func startLoading() { client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet)) }
+        override func startLoading() {
+            Self.lock.lock()
+            let hold = Self._stallsVerify && (request.url?.path.hasSuffix("/billing/verify") ?? false)
+            if hold { Self._stalled.append(self) }
+            Self.lock.unlock()
+            if !hold { fail() }
+        }
+        private func fail() { client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet)) }
         override func stopLoading() {}
     }
 
@@ -248,8 +267,12 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         return try await body()
     }
 
-    func testStoreKit2RestoreSucceedsAndMakesNoNetworkCall() async throws {
-        // C1-7i: a storeKit2 restore reads `Transaction.currentEntitlements` and needs no AppDNA server.
+    func testStoreKit2RestoreNeedsNoServerAndOnlyQueuesVerification() async throws {
+        // C1-7i + §17-4: a storeKit2 restore reads `Transaction.currentEntitlements`, so its result needs no
+        // AppDNA server. Every transaction it grants is ALSO queued for `POST /billing/verify` — in the
+        // background, never awaited (docs/sdks/ios/billing.mdx "verifies each transaction … on the AppDNA
+        // server"). So: the restore returns its products while `/billing/verify` is held unanswered and every
+        // other request fails, and `/billing/verify` is the only AppDNA call it causes.
         try await withCountingProtocol {
             try await restoreWithoutNetwork()
         }
@@ -257,16 +280,63 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
 
     private func restoreWithoutNetwork() async throws {
         CountingURLProtocol.reset()
+        defer { CountingURLProtocol.releaseStalled() }
         configure(.storeKit2)
         _ = try await AppDNA.billing.purchase("ai.appdna.test.lifetime")
-        try? await Task.sleep(nanoseconds: 1_000_000_000)
-        // Control: the counter SEES the SDK's non-event requests (the bootstrap above), so a zero
-        // below means "no call", not "a call it could not see".
-        XCTAssertGreaterThan(CountingURLProtocol.count, 0, "the counter cannot see the SDK's session — the zero below would prove nothing")
+        // The purchase's own background verification retries (the API client retries a failed request after
+        // 1, 2 and 4 s). Wait until the SDK has been quiet for 6 s — longer than the longest retry gap — so
+        // every request counted below is the restore's: while the purchase's send is in flight the queue skips
+        // a second send of the same transaction, and a retry of the purchase's send would pass for the restore's.
+        let quiet = await waitUntilQuiet(seconds: 6, timeout: 60)
+        XCTAssertTrue(quiet, "the SDK never went quiet after the purchase (calls: \(CountingURLProtocol.paths))")
+        // Control: the counter SEES the SDK's non-event requests (the bootstrap and the purchase's
+        // verification above), so an empty list below means "no call", not "a call it could not see".
+        XCTAssertTrue(CountingURLProtocol.paths.contains { $0.hasSuffix("/billing/verify") },
+                      "the counter did not see the purchase's /billing/verify — the checks below would prove nothing (calls: \(CountingURLProtocol.paths))")
         CountingURLProtocol.reset()
-        let restored = try await AppDNA.billing.restorePurchases()
-        XCTAssertTrue(restored.contains("ai.appdna.test.lifetime"))
-        XCTAssertEqual(CountingURLProtocol.count, 0, "a storeKit2 restore made \(CountingURLProtocol.count) AppDNA network call(s)")
+        CountingURLProtocol.stallVerify(true)
+
+        let done = Flag()
+        let restore = Task { () throws -> [String] in
+            defer { done.set() }
+            return try await AppDNA.billing.restorePurchases()
+        }
+        // A held request ends only at the API client's 30 s timeout, so a restore that waits for it takes > 30 s.
+        let returned = await waitUntil(15) { done.isSet }
+        if !returned {
+            XCTFail("restorePurchases() did not return while /billing/verify was unanswered — the restore waits for the server (calls: \(CountingURLProtocol.paths))")
+            CountingURLProtocol.releaseStalled()           // let it finish, so the test does not hang
+        }
+        let restored = try await restore.value
+        XCTAssertTrue(restored.contains("ai.appdna.test.lifetime"), "restored: \(restored)")
+
+        // The background verification of the restored transaction is sent (not awaited by the restore).
+        let verified = await waitUntil(10) { CountingURLProtocol.paths.contains { $0.hasSuffix("/billing/verify") } }
+        XCTAssertTrue(verified, "the restored transaction was not queued for /billing/verify (calls: \(CountingURLProtocol.paths))")
+        try? await Task.sleep(nanoseconds: 1_000_000_000)
+        let others = CountingURLProtocol.paths.filter { !$0.hasSuffix("/billing/verify") }
+        XCTAssertEqual(others, [], "a storeKit2 restore made AppDNA network call(s) other than the background /billing/verify")
+    }
+
+    /// True once no new request was counted for `seconds`.
+    private func waitUntilQuiet(seconds: TimeInterval, timeout: TimeInterval) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        var last = CountingURLProtocol.count
+        var since = Date()
+        while Date() < deadline {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            let now = CountingURLProtocol.count
+            if now != last { last = now; since = Date() } else if Date().timeIntervalSince(since) >= seconds { return true }
+        }
+        return false
+    }
+
+    /// Set once, read from any thread.
+    final class Flag: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value = false
+        func set() { lock.lock(); value = true; lock.unlock() }
+        var isSet: Bool { lock.lock(); defer { lock.unlock() }; return value }
     }
 
     private func storedQueue() -> String {

@@ -17,12 +17,20 @@ import AppDNASDK
 ///    non-positive `vetoTimeout` is the native default.
 final class AppdnaSpec497BridgeTests: XCTestCase {
 
+    // The session tests write the process-global session store, which is persisted (UserDefaults) and so
+    // outlives the process. It is cleared on both sides of every test:
+    // - in setUp, so each test starts empty whatever ran before it — including a previous run that crashed
+    //   part-way, which ends the process without running tearDown and leaves its values on disk;
+    // - in tearDown, so a test that stops early (a thrown error, or a failed assertion when
+    //   `continueAfterFailure` is false — XCTest runs tearDown in both cases) leaves nothing behind for the
+    //   test classes that run after it in this process.
+    override func setUp() {
+        super.setUp()
+        AppDNA.clearSessionData()
+    }
+
     override func tearDown() {
         AppdnaHostCallbacks.shared.invalidateAll()
-        // The session tests write the process-global, persisted session store. Cleared here, not as a test's
-        // last line, so a test that stops early still leaves nothing behind for the next test or the next run:
-        // a test method that throws, or a failed assertion when `continueAfterFailure` is false. XCTest runs
-        // tearDown in both cases. A crash ends the process and runs no tearDown at all — this does not cover it.
         AppDNA.clearSessionData()
         super.tearDown()
     }

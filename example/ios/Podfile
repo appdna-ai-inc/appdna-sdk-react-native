@@ -29,9 +29,10 @@ prepare_react_native_project!
 # (react-native-maps documents the same one) is to disable that specific validation.
 #
 # 🔴 The alternative was tried and rejected on evidence, not taste: `use_frameworks! :linkage =>
-# :static` is recorded below as wedging for 1800s inside BoringSSL-GRPC on this pod graph. Firebase
-# is not optional for this SDK, so dynamic linkage is not a preference here — it is the only
-# configuration that installs.
+# :static` is recorded below as wedging for 1800s inside BoringSSL-GRPC on this pod graph, so this
+# example stays dynamic. (Since then, with CocoaPods 1.17, static frameworks install and build
+# AppDNASDK — the `iOS extension host (pods-static)` CI leg — while static LIBRARIES cannot link it
+# at all: see the `none` branch of ci/ios-extension-host/Podfile.)
 #
 # Any RN or Flutter host that links dynamically needs these four lines too; the installation guides
 # say so. 🔴 CI DOES NOT COVER THE FLUTTER SIDE OF THIS — the Flutter job runs `pub get`, `analyze`
