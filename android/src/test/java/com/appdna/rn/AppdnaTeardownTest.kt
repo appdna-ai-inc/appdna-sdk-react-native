@@ -154,19 +154,47 @@ class AppdnaTeardownTest {
  * `session.set(k, null | undefined | NaN)` crosses as the JSON text "null". It stores nothing and
  * RESOLVES, as the Flutter bridge does. NEGATIVE CONTROL: the bridge rejected with INVALID_VALUE, so the
  * same call threw on React Native and did nothing on Flutter.
+ *
+ * The native session store is initialised here (`SessionDataStore.initialize`, what `configure` does): on an
+ * unconfigured SDK `AppDNA.getSessionData` is null for every key, so "stores nothing" held whatever the
+ * bridge did. The live-store control below proves a stored value IS read back.
  */
 @RunWith(RobolectricTestRunner::class)
 class AppdnaSessionNullTest {
+    private fun promise(settled: AtomicReference<String>): Promise = mock(Promise::class.java, Answer<Any?> { invocation ->
+        settled.compareAndSet(null, if (invocation.method.name == "resolve") "RESOLVED" else invocation.arguments.firstOrNull() as? String ?: "REJECTED")
+        null
+    })
+
+    @org.junit.Before
+    fun initStore() {
+        ai.appdna.sdk.core.SessionDataStore.initialize(org.robolectric.RuntimeEnvironment.getApplication())
+        ai.appdna.sdk.AppDNA.clearSessionData()
+    }
+
+    @Test
+    fun `the store is live - a non-null value is stored and read back`() {
+        val settled = AtomicReference<String>()
+        AppdnaModule(mock(ReactApplicationContext::class.java)).setSessionData("r19_live", "\"x\"", promise(settled))
+        assertEquals("RESOLVED", settled.get())
+        assertEquals("x", ai.appdna.sdk.AppDNA.getSessionData("r19_live"))
+    }
+
     @Test
     fun `a JSON null value resolves and stores nothing`() {
         val settled = AtomicReference<String>()
-        val answer = Answer<Any?> { invocation ->
-            settled.compareAndSet(null, if (invocation.method.name == "resolve") "RESOLVED" else invocation.arguments.firstOrNull() as? String ?: "REJECTED")
-            null
-        }
         val module = AppdnaModule(mock(ReactApplicationContext::class.java))
-        module.setSessionData("r18_null", "null", mock(Promise::class.java, answer))
+        module.setSessionData("r18_null", "null", promise(settled))
         assertEquals("RESOLVED", settled.get())
         assertEquals(null, ai.appdna.sdk.AppDNA.getSessionData("r18_null"))
+    }
+
+    @Test
+    fun `a JSON null value leaves an existing value as it was`() {
+        ai.appdna.sdk.AppDNA.setSessionData("r19_kept", "before")
+        val settled = AtomicReference<String>()
+        AppdnaModule(mock(ReactApplicationContext::class.java)).setSessionData("r19_kept", "null", promise(settled))
+        assertEquals("RESOLVED", settled.get())
+        assertEquals("before", ai.appdna.sdk.AppDNA.getSessionData("r19_kept"))
     }
 }
