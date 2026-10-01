@@ -19,6 +19,10 @@ final class AppdnaSpec497BridgeTests: XCTestCase {
 
     override func tearDown() {
         AppdnaHostCallbacks.shared.invalidateAll()
+        // The session tests write the process-global, persisted session store. Cleared here, not as a test's
+        // last line, so a test that stops early (a thrown error, a crash in an assertion's expression) still
+        // leaves nothing behind for the next test or the next run.
+        AppDNA.clearSessionData()
         super.tearDown()
     }
 
@@ -326,7 +330,6 @@ final class AppdnaSpec497BridgeTests: XCTestCase {
                             reject: { code, _, _ in outcome = "rejected: \(code ?? "?")" })
         XCTAssertEqual(outcome, "resolved")
         XCTAssertEqual(AppDNA.getSessionData(key: "r20_live") as? String, "x")
-        AppDNA.clearSessionData()
     }
 
     /// Round 20 — the existing-value control the Android bridge test has: a null over a stored value leaves the
@@ -341,6 +344,5 @@ final class AppdnaSpec497BridgeTests: XCTestCase {
                             reject: { code, _, _ in outcome = "rejected: \(code ?? "?")" })
         XCTAssertEqual(outcome, "resolved")
         XCTAssertEqual(AppDNA.getSessionData(key: "r20_kept") as? String, "before")
-        AppDNA.clearSessionData()
     }
 }
