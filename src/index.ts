@@ -644,7 +644,10 @@ export class AppDNA {
    * JSON-representable value round-trips.
    */
   static session = {
-    /** Store a value. Native rejects a null — "store nothing" is not an operation either SDK has. */
+    /**
+     * Store a value. A `null` / `undefined` / `NaN` value (JSON null) stores nothing and resolves —
+     * "store null" is not an operation either SDK has — as on Flutter.
+     */
     set: (key: string, value: unknown): Promise<void> =>
       AppdnaModule.setSessionData(key, JSON.stringify(value ?? null)),
     /** Read a value. Resolves `null` when unset. */

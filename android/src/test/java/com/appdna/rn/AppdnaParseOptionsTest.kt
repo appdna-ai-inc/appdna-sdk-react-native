@@ -106,4 +106,16 @@ class AppdnaParseOptionsTest {
         assertEquals(1L, module.parseOptions(JavaOnlyMap().apply { putDouble("vetoTimeout", 0.5) }).vetoTimeout)
         assertEquals(3L, module.parseOptions(JavaOnlyMap().apply { putDouble("vetoTimeout", 2.7) }).vetoTimeout)
     }
+
+    /**
+     * The exact value reaches the core, which diagnose() reports as given (core `DiagnoseVetoTimeoutTest`).
+     * NEGATIVE CONTROL: only the rounded-up whole seconds reached the core, so diagnose() said 1 for 0.5.
+     */
+    @Test
+    fun `the exact vetoTimeout reaches the core for diagnose`() {
+        assertEquals(0.5, module.parseOptions(JavaOnlyMap().apply { putDouble("vetoTimeout", 0.5) }).vetoTimeoutSeconds!!, 0.0)
+        assertEquals(8.0, module.parseOptions(JavaOnlyMap().apply { putDouble("vetoTimeout", 8.0) }).vetoTimeoutSeconds!!, 0.0)
+        assertEquals(null, module.parseOptions(JavaOnlyMap().apply { putDouble("vetoTimeout", -1.0) }).vetoTimeoutSeconds)
+        assertEquals(null, module.parseOptions(JavaOnlyMap()).vetoTimeoutSeconds)
+    }
 }

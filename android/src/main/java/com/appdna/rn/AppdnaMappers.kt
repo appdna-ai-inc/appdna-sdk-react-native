@@ -90,7 +90,8 @@ internal object AppdnaMappers {
                     put("id", btn.id)
                     put("label", btn.label)
                     put("action_type", btn.type)
-                    btn.value?.let { put("action_value", it) }
+                    // Only when non-empty, as iOS (`AppdnaMappers.swift`) and the Flutter plugin send it.
+                    btn.value?.takeIf { it.isNotEmpty() }?.let { put("action_value", it) }
                 }
             })
         }

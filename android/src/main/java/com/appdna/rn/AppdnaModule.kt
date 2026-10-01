@@ -469,10 +469,13 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     override fun setSessionData(key: String, valueJson: String, promise: Promise) {
         val value = AppdnaBridge.fromJson(valueJson)
         if (value == null) {
-            // `setSessionData(k, null)` is not "store null" — native's signature takes a non-null
-            // `Any`. Clearing one key is not an operation either SDK exposes, so refusing loudly
-            // beats silently storing a sentinel the host will never be able to distinguish.
-            promise.reject("INVALID_VALUE", "setSessionData requires a non-null JSON value")
+            // A JSON null — `session.set(k, null | undefined | NaN)` (JSON.stringify turns NaN into
+            // null). Native's signature takes a non-null `Any` and "store null" is no operation of
+            // either SDK, so nothing is stored — exactly what the Flutter bridge does — and the promise
+            // RESOLVES: it used to reject with INVALID_VALUE, so the same call threw on React Native
+            // and did nothing on Flutter.
+            android.util.Log.w("AppDNA", "session.set('$key'): the value is null (or NaN / undefined) — nothing stored")
+            promise.resolve(null)
             return
         }
         AppDNA.setSessionData(key, value)
@@ -957,6 +960,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     internal fun parseOptions(map: ReadableMap?): AppDNAOptions {
         val values = AppdnaBridge.toValueMap(map) ?: emptyMap()
         val defaults = AppDNAOptions()
+        val exactVetoTimeout = vetoTimeoutSeconds(values)
 
         val logLevel = when (values["logLevel"] as? String) {
             "none" -> LogLevel.NONE
@@ -985,7 +989,10 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
             // The core field is whole seconds (it only feeds diagnose()); rounded UP so 0.5 s reads 1,
             // not 0 → the default. The bridge's own wait uses the exact value (`parseVetoTimeoutMs`).
             vetoTimeout = vetoTimeoutSeconds(values)?.let { kotlin.math.ceil(it).toLong() } ?: defaults.vetoTimeout,
-        )
+        ).apply {
+            // The exact value (0.5 s stays 0.5), which diagnose() reports as given.
+            vetoTimeoutSeconds = exactVetoTimeout
+        }
     }
 
     /** The host's `vetoTimeout` in seconds when it is a positive number; `null` means the native default. */

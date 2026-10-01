@@ -149,3 +149,24 @@ class AppdnaTeardownTest {
         assertEquals(listOf(false), answers)
     }
 }
+
+/**
+ * `session.set(k, null | undefined | NaN)` crosses as the JSON text "null". It stores nothing and
+ * RESOLVES, as the Flutter bridge does. NEGATIVE CONTROL: the bridge rejected with INVALID_VALUE, so the
+ * same call threw on React Native and did nothing on Flutter.
+ */
+@RunWith(RobolectricTestRunner::class)
+class AppdnaSessionNullTest {
+    @Test
+    fun `a JSON null value resolves and stores nothing`() {
+        val settled = AtomicReference<String>()
+        val answer = Answer<Any?> { invocation ->
+            settled.compareAndSet(null, if (invocation.method.name == "resolve") "RESOLVED" else invocation.arguments.firstOrNull() as? String ?: "REJECTED")
+            null
+        }
+        val module = AppdnaModule(mock(ReactApplicationContext::class.java))
+        module.setSessionData("r18_null", "null", mock(Promise::class.java, answer))
+        assertEquals("RESOLVED", settled.get())
+        assertEquals(null, ai.appdna.sdk.AppDNA.getSessionData("r18_null"))
+    }
+}

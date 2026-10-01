@@ -303,4 +303,16 @@ final class AppdnaSpec497BridgeTests: XCTestCase {
         AppDNA.onReady { ready.fulfill() }
         wait(for: [ready], timeout: 120)
     }
+
+    /// `session.set(k, null | undefined | NaN)` crosses as "null": it stores nothing and RESOLVES, as the
+    /// Flutter bridge does. NEGATIVE CONTROL: it rejected with INVALID_VALUE.
+    func testSessionSetWithANullValueResolvesAndStoresNothing() {
+        let impl = AppdnaModuleImpl()
+        var outcome: String?
+        impl.setSessionData("r18_null", valueJson: "null",
+                            resolve: { _ in outcome = "resolved" },
+                            reject: { code, _, _ in outcome = "rejected: \(code ?? "?")" })
+        XCTAssertEqual(outcome, "resolved")
+        XCTAssertNil(AppDNA.getSessionData(key: "r18_null"))
+    }
 }

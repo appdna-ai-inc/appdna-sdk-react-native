@@ -397,9 +397,13 @@ public final class AppdnaModuleImpl: NSObject {
     @objc(setSessionData:valueJson:resolve:reject:)
     public func setSessionData(_ key: String, valueJson: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         guard let value = AppdnaJSON.decode(valueJson) else {
-            // Native's signature takes a non-optional `Any`; "store null" is not an operation either
-            // SDK exposes. Refusing loudly beats storing a sentinel the host can never distinguish.
-            reject("INVALID_VALUE", "setSessionData requires a non-null JSON value", nil)
+            // A JSON null — `session.set(k, null | undefined | NaN)` (JSON.stringify turns NaN into null)
+            // — or text that is not JSON. Native's signature takes a non-optional `Any` and "store null"
+            // is no operation of either SDK, so nothing is stored — exactly what the Flutter bridge does —
+            // and the promise RESOLVES: it used to reject with INVALID_VALUE, so the same call threw on
+            // React Native and did nothing on Flutter.
+            NSLog("[AppDNA] session.set('%@'): the value is null (or NaN / undefined) — nothing stored", key)
+            resolve(nil)
             return
         }
         AppDNA.setSessionData(key: key, value: value)
