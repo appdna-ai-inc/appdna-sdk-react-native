@@ -20,8 +20,9 @@ final class AppdnaSpec497BridgeTests: XCTestCase {
     override func tearDown() {
         AppdnaHostCallbacks.shared.invalidateAll()
         // The session tests write the process-global, persisted session store. Cleared here, not as a test's
-        // last line, so a test that stops early (a thrown error, a crash in an assertion's expression) still
-        // leaves nothing behind for the next test or the next run.
+        // last line, so a test that stops early still leaves nothing behind for the next test or the next run:
+        // a test method that throws, or a failed assertion when `continueAfterFailure` is false. XCTest runs
+        // tearDown in both cases. A crash ends the process and runs no tearDown at all — this does not cover it.
         AppDNA.clearSessionData()
         super.tearDown()
     }
