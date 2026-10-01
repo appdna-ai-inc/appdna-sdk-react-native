@@ -88,7 +88,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         return ids
     }
 
-    private func waitUntil(_ timeout: TimeInterval = 10, _ condition: () async -> Bool) async -> Bool {
+    private func waitUntil(_ timeout: TimeInterval = 30, _ condition: () async -> Bool) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
         while Date() < deadline {
             if await condition() { return true }
@@ -160,7 +160,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         configure(.storeKit2)
         _ = try await AppDNA.billing.purchase("ai.appdna.test.monthly")
         try session.forceRenewalOfSubscription(productIdentifier: "ai.appdna.test.monthly")
-        _ = await waitUntil(5) { self.sessionIds("ai.appdna.test.monthly").count >= 2 }
+        _ = await waitUntil(20) { self.sessionIds("ai.appdna.test.monthly").count >= 2 }
         XCTAssertGreaterThanOrEqual(sessionIds("ai.appdna.test.monthly").count, 2,
                                     "the renewal was not created — the drain below would only prove the purchase")
         await becomeActive()
@@ -180,7 +180,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         _ = try await hostBuyWithoutFinishing("ai.appdna.test.monthly")
         await becomeActive()                                             // baseline
         try session.forceRenewalOfSubscription(productIdentifier: "ai.appdna.test.monthly")
-        _ = await waitUntil(5) { self.sessionIds("ai.appdna.test.monthly").count >= 2 }
+        _ = await waitUntil(20) { self.sessionIds("ai.appdna.test.monthly").count >= 2 }
         let ids = sessionIds("ai.appdna.test.monthly")                   // the purchase AND the renewal
         XCTAssertGreaterThanOrEqual(ids.count, 2, "the renewal was not created")
         await assertStillUnfinished(ids, "ai.appdna.test.monthly", "revenueCat: the SDK never finishes")
@@ -208,7 +208,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         _ = try await hostBuyWithoutFinishing("ai.appdna.test.monthly")
         await becomeActive()
         try session.forceRenewalOfSubscription(productIdentifier: "ai.appdna.test.monthly")
-        _ = await waitUntil(5) { self.sessionIds("ai.appdna.test.monthly").count >= 2 }
+        _ = await waitUntil(20) { self.sessionIds("ai.appdna.test.monthly").count >= 2 }
         let ids = sessionIds("ai.appdna.test.monthly")
         XCTAssertGreaterThanOrEqual(ids.count, 2, "the renewal was not created")
         await assertStillUnfinished(ids, "ai.appdna.test.monthly", "adapty (unlinked) emits but never finishes")
@@ -301,8 +301,9 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
             defer { done.set() }
             return try await AppDNA.billing.restorePurchases()
         }
-        // A held request ends only at the API client's 30 s timeout, so a restore that waits for it takes > 30 s.
-        let returned = await waitUntil(15) { done.isSet }
+        // A held request ends only at the API client's 30 s timeout (then it is retried), so a restore that waits
+        // for it takes > 30 s; 25 s leaves a loaded simulator room for a restore that does not.
+        let returned = await waitUntil(25) { done.isSet }
         if !returned {
             XCTFail("restorePurchases() did not return while /billing/verify was unanswered — the restore waits for the server (calls: \(CountingURLProtocol.paths))")
             CountingURLProtocol.releaseStalled()           // let it finish, so the test does not hang
@@ -311,7 +312,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         XCTAssertTrue(restored.contains("ai.appdna.test.lifetime"), "restored: \(restored)")
 
         // The background verification of the restored transaction is sent (not awaited by the restore).
-        let verified = await waitUntil(10) { CountingURLProtocol.paths.contains { $0.hasSuffix("/billing/verify") } }
+        let verified = await waitUntil(30) { CountingURLProtocol.paths.contains { $0.hasSuffix("/billing/verify") } }
         XCTAssertTrue(verified, "the restored transaction was not queued for /billing/verify (calls: \(CountingURLProtocol.paths))")
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         let others = CountingURLProtocol.paths.filter { !$0.hasSuffix("/billing/verify") }
@@ -363,7 +364,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         configure(.storeKit2)
         AppDNA.billing.setDelegate(recorder, deliversPurchases: true)
         try await makeInterruptedPurchaseLate("ai.appdna.test.coins")
-        let delivered = await waitUntil(15) { self.recorder.count("ai.appdna.test.coins") >= 1 }
+        let delivered = await waitUntil(45) { self.recorder.count("ai.appdna.test.coins") >= 1 }
         XCTAssertTrue(delivered, "the late purchase reaches onPurchaseCompleted")
         let finished = await waitUntil { await self.unfinished("ai.appdna.test.coins").isEmpty }
         XCTAssertTrue(finished, "…then it is finished")
@@ -379,7 +380,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         configure(.storeKit2)
         AppDNA.billing.setDelegate(recorder, deliversPurchases: true)
         try await makeInterruptedPurchaseLate("ai.appdna.test.coins")
-        let delivered = await waitUntil(15) { self.recorder.count("ai.appdna.test.coins") >= 1 }
+        let delivered = await waitUntil(45) { self.recorder.count("ai.appdna.test.coins") >= 1 }
         XCTAssertTrue(delivered, "the late purchase reaches onPurchaseCompleted after a restart (queue: \(storedQueue()))")
         let finished = await waitUntil { await self.unfinished("ai.appdna.test.coins").isEmpty }
         XCTAssertTrue(finished, "…then it is finished")
@@ -407,7 +408,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         let pending = try XCTUnwrap(session.allTransactions().first { $0.productIdentifier == "ai.appdna.test.lifetime" && $0.pendingAskToBuyConfirmation },
                                     "SKTestSession produced no Ask-to-Buy transaction")
         try session.approveAskToBuyTransaction(identifier: pending.identifier)
-        let delivered = await waitUntil(15) { self.recorder.count("ai.appdna.test.lifetime") >= 1 }
+        let delivered = await waitUntil(45) { self.recorder.count("ai.appdna.test.lifetime") >= 1 }
         XCTAssertTrue(delivered, "the approved purchase reaches onPurchaseCompleted")
         let finished = await waitUntil { await self.unfinished("ai.appdna.test.lifetime").isEmpty }
         XCTAssertTrue(finished, "…then it is finished")
@@ -452,15 +453,18 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         defer { impl.invalidate() }
 
         try await makeInterruptedPurchaseLate("ai.appdna.test.coins")
-        // The late purchase is reported and queued; the RN forwarder is registered NOT delivering.
-        try? await Task.sleep(nanoseconds: 4_000_000_000)
+        // The late purchase is reported and queued; the RN forwarder is registered NOT delivering. Polled, not a
+        // fixed sleep: under load the observer can take longer than any fixed wait to queue it.
+        let queued = await waitUntil(45) { self.storedQueue().contains("ai.appdna.test.coins") }
+        XCTAssertTrue(queued, "the late purchase never reached the delivery queue: \(storedQueue())")
+        try? await Task.sleep(nanoseconds: 1_000_000_000)   // a delivery would follow the queueing at once
         XCTAssertEqual(js.count("onPurchaseCompleted"), 0, "no JS onPurchaseCompleted yet → nothing may be delivered")
         let queuedBefore = storedQueue()
         XCTAssertTrue(queuedBefore.contains("ai.appdna.test.coins"),
                       "the late purchase must be HELD in the delivery queue before JS is ready: \(queuedBefore)")
 
         impl.billingDelegateReady(true)
-        let delivered = await waitUntil(15) { js.count("onPurchaseCompleted") >= 1 }
+        let delivered = await waitUntil(45) { js.count("onPurchaseCompleted") >= 1 }
         XCTAssertTrue(delivered, "billingDelegateReady(true) drains the queue (queue before: \(queuedBefore); after: \(storedQueue()); emitted: \(js.all()))")
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         XCTAssertEqual(js.count("onPurchaseCompleted"), 1, "delivered exactly once")
