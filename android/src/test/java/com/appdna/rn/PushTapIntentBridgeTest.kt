@@ -1,0 +1,187 @@
+package com.appdna.rn
+
+import ai.appdna.sdk.AppDNA
+import android.app.Activity
+import android.content.Intent
+import android.os.Looper
+import com.facebook.react.bridge.Arguments
+import com.facebook.react.bridge.CxxCallbackImpl
+import com.facebook.react.bridge.JavaOnlyArray
+import com.facebook.react.bridge.JavaOnlyMap
+import com.facebook.react.bridge.Promise
+import com.facebook.react.bridge.ReactApplicationContext
+import com.facebook.react.bridge.WritableArray
+import com.facebook.react.bridge.WritableMap
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.mockito.MockedStatic
+import org.mockito.Mockito
+import org.mockito.Mockito.mock
+import org.mockito.stubbing.Answer
+import org.robolectric.Robolectric
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CountDownLatch
+
+/**
+ * A tap on a notification the native SDK displayed opens the launch activity with the tap in its
+ * intent — through `onNewIntent` while the app runs, or as the launch intent on a cold start. Nothing on
+ * the JS side sees that intent (RNFirebase reports only notifications FCM displayed) and the module
+ * listened to no activity event, so on Android these button, body and reply taps were never tracked or
+ * routed and JS `onPushTapped` never fired.
+ *
+ * Drives the REAL module (its activity-event listener and its bridged `configure`) into the live native
+ * SDK, and asserts native OUTPUTS: the route the core push-tap router took, the intent made inert after
+ * a handled tap, and the `onPushTapped` the module pushed across the bridge.
+ *
+ * NEGATIVE CONTROL: with `routePushTap` reduced to `return` (no hand-off to native) the last three tests fail;
+ * without the `addActivityEventListener` call in `init` the first one does.
+ */
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [33])
+class PushTapIntentBridgeTest {
+
+    private lateinit var reactContext: ReactApplicationContext
+    private lateinit var module: AppdnaModule
+    private val emitted = ConcurrentLinkedQueue<String>()
+    private val routes = mutableListOf<Pair<String, String>>()
+    private var argumentsMock: MockedStatic<Arguments>? = null
+
+    private fun idle() = shadowOf(Looper.getMainLooper()).idle()
+
+    private fun tapIntent(pushId: String, deliveryId: String) = Intent(Intent.ACTION_MAIN).apply {
+        putExtra("appdna", "1")
+        putExtra("push_id", pushId)
+        putExtra("delivery_id", deliveryId)
+    }
+
+    /** Builds the module with [launchIntent] as the foreground activity's intent. */
+    private fun newModule(launchIntent: Intent) {
+        val activity: Activity = Robolectric.buildActivity(Activity::class.java, launchIntent).setup().get()
+        reactContext = mock(ReactApplicationContext::class.java)
+        Mockito.`when`(reactContext.applicationContext).thenReturn(RuntimeEnvironment.getApplication())
+        Mockito.`when`(reactContext.currentActivity).thenReturn(activity)
+        module = AppdnaModule(reactContext)
+        val recorder = mock(CxxCallbackImpl::class.java, Answer<Any?> { invocation ->
+            val raw = invocation.arguments
+            val args: Array<*> = if (raw.size == 1 && raw[0] is Array<*>) raw[0] as Array<*> else raw
+            (args.getOrNull(0) as? String)?.let { emitted += it }
+            null
+        })
+        com.facebook.react.bridge.BaseJavaModule::class.java.getDeclaredField("mEventEmitterCallback")
+            .apply { isAccessible = true }.set(module, recorder)
+    }
+
+    private fun configureAndWait() {
+        val options = JavaOnlyMap().apply {
+            putInt("batchSize", 0)
+            putDouble("flushInterval", 86_400.0)
+            putString("logLevel", "none")
+        }
+        val ready = CountDownLatch(1)
+        module.configure("adn_test_placeholder", "sandbox", options, mock(Promise::class.java, Answer { null }))
+        AppDNA.onReady { ready.countDown() }
+        val deadline = System.currentTimeMillis() + 20_000
+        while (ready.count > 0L && System.currentTimeMillis() < deadline) {
+            idle()
+            Thread.sleep(20)
+        }
+        assertTrue("the SDK never reached READY in 20 s", ready.count == 0L)
+        settle()
+    }
+
+    private fun settle() {
+        repeat(5) {
+            idle()
+            Thread.sleep(50)
+        }
+        idle()
+    }
+
+    @Before
+    fun setUp() {
+        argumentsMock = Mockito.mockStatic(Arguments::class.java, Mockito.CALLS_REAL_METHODS).also { m ->
+            m.`when`<WritableMap> { Arguments.createMap() }.thenAnswer { JavaOnlyMap() }
+            m.`when`<WritableArray> { Arguments.createArray() }.thenAnswer { JavaOnlyArray() }
+        }
+        runCatching { AppDNA.shutdown() }
+        idle()
+        val idem = Class.forName("ai.appdna.sdk.integrations.PushIdempotency")
+        idem.getDeclaredMethod("resetForTesting").apply { isAccessible = true }
+            .invoke(idem.getDeclaredField("INSTANCE").get(null))
+        Class.forName("ai.appdna.sdk.integrations.PushTapRouter").getDeclaredField("routeSink")
+            .apply { isAccessible = true }
+            .set(null, { type: String, value: String -> routes += type to value })
+    }
+
+    @After
+    fun tearDown() {
+        Class.forName("ai.appdna.sdk.integrations.PushTapRouter").getDeclaredField("routeSink")
+            .apply { isAccessible = true }.set(null, null)
+        if (::module.isInitialized) runCatching { module.invalidate() }
+        runCatching { AppDNA.shutdown() }
+        argumentsMock?.close()
+        idle()
+    }
+
+    @Test
+    fun `the module listens to activity intents and stops on invalidate`() {
+        newModule(Intent(Intent.ACTION_MAIN))
+        Mockito.verify(reactContext).addActivityEventListener(module.pushTapIntentListener)
+        runCatching { module.invalidate() }
+        Mockito.verify(reactContext).removeActivityEventListener(module.pushTapIntentListener)
+    }
+
+    @Test
+    fun `a tap that arrives through onNewIntent is handled natively and reaches JS`() {
+        newModule(Intent(Intent.ACTION_MAIN))
+        configureAndWait()
+        val intent = tapIntent("p-new", "d-new").apply {
+            putExtra("action_id", "btn_open")
+            putExtra("action_type", "open_url")
+            putExtra("action_value", "https://example.com/button")
+        }
+
+        module.pushTapIntentListener.onNewIntent(intent)
+        settle()
+
+        assertEquals(listOf("deep_link" to "https://example.com/button"), routes)
+        assertNull("a handled tap is made inert", intent.getStringExtra("appdna"))
+        assertEquals(1, emitted.count { it == "onPushTapped" })
+    }
+
+    @Test
+    fun `a cold start from a tap - the launch intent is handled at configure`() {
+        val launch = tapIntent("p-cold", "d-cold").apply {
+            putExtra("action_type", "deep_link")
+            putExtra("action_value", "https://example.com/cold")
+        }
+        newModule(launch)
+        configureAndWait()
+
+        assertEquals(listOf("deep_link" to "https://example.com/cold"), routes)
+        assertNull("a handled tap is made inert", launch.getStringExtra("appdna"))
+        assertEquals(1, emitted.count { it == "onPushTapped" })
+    }
+
+    @Test
+    fun `a tap that arrives before configure waits for it`() {
+        newModule(Intent(Intent.ACTION_MAIN))
+        val intent = tapIntent("p-early", "d-early")
+        module.pushTapIntentListener.onNewIntent(intent)
+        settle()
+        assertEquals("routed before the SDK was configured", "1", intent.getStringExtra("appdna"))
+
+        configureAndWait()
+        assertNull("handled once the SDK is ready", intent.getStringExtra("appdna"))
+        assertEquals(1, emitted.count { it == "onPushTapped" })
+    }
+}
