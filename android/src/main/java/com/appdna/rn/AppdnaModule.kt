@@ -7,6 +7,7 @@ import ai.appdna.sdk.BillingProvider
 import ai.appdna.sdk.Environment
 import ai.appdna.sdk.LogLevel
 import ai.appdna.sdk.paywalls.PaywallContext
+import android.content.Intent
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.WritableMap
 import com.facebook.react.bridge.ReactApplicationContext
@@ -78,6 +79,25 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
      * would use the wrong timer.
      */
     private var invoker: AppdnaVetoInvoker? = null
+
+    /**
+     * Push taps on notifications the native SDK displayed. Such a tap opens the launch activity with
+     * the tap in its intent, and nothing on the JS side sees that intent (RNFirebase reports only the
+     * notifications FCM displayed). Every new intent, and the activity's intent at `configure` (a cold
+     * start from a tap), is handed to the native `AppDNA.handlePushTap(intent)` once the SDK is ready.
+     * Native ignores an intent that is not an AppDNA tap and tracks / routes a tap once, so this is safe
+     * for every intent and next to `AppDNA.push.handleTap(data)` for the same tap.
+     */
+    internal val pushTapIntentListener = AppdnaPushTapIntents { intent -> routePushTap(intent) }
+
+    internal fun routePushTap(intent: Intent?) {
+        if (intent == null) return
+        AppDNA.onReady { AppDNA.handlePushTap(intent) }
+    }
+
+    init {
+        reactContext.addActivityEventListener(pushTapIntentListener)
+    }
 
     /** The billing forwarder registered at `configure` — `billingDelegateReady` flips its delivery flag. */
     @Volatile
@@ -245,6 +265,8 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         launchSettling(promise, "CONFIGURE_ERROR", Dispatchers.Default) { p ->
             AppDNA.configure(reactContext, apiKey, environment, parsed)
             registerDelegates(vetoTimeoutMs)
+            // A cold start from a tap on a notification the SDK displayed: the tap is the launch intent.
+            routePushTap(reactContext.currentActivity?.intent)
             p.resolve(null)
         }
     }
@@ -919,6 +941,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         // reload mid-purchase used to leave the host's checkout spinner turning with no error to
         // explain it.
         rejectPending()
+        reactContext.removeActivityEventListener(pushTapIntentListener)
 
         entitlementListener?.let { AppDNA.billing.removeEntitlementsChangedListener(it) }
         entitlementListener = null
