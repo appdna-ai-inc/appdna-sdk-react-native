@@ -315,4 +315,32 @@ final class AppdnaSpec497BridgeTests: XCTestCase {
         XCTAssertEqual(outcome, "resolved")
         XCTAssertNil(AppDNA.getSessionData(key: "r18_null"))
     }
+
+    /// Control for the test above: the native store is live, so a non-null value crosses, is stored and
+    /// is read back — "stores nothing" is an answer, not a store that never holds anything.
+    func testSessionSetWithAValueStoresIt() {
+        let impl = AppdnaModuleImpl()
+        var outcome: String?
+        impl.setSessionData("r20_live", valueJson: "\"x\"",
+                            resolve: { _ in outcome = "resolved" },
+                            reject: { code, _, _ in outcome = "rejected: \(code ?? "?")" })
+        XCTAssertEqual(outcome, "resolved")
+        XCTAssertEqual(AppDNA.getSessionData(key: "r20_live") as? String, "x")
+        AppDNA.clearSessionData()
+    }
+
+    /// Round 20 — the existing-value control the Android bridge test has: a null over a stored value leaves the
+    /// value as it was. NEGATIVE CONTROL: a bridge that stored the null (`NSNull()`) or removed the key passed
+    /// the test above (a nil read) and fails this one.
+    func testSessionSetWithANullValueLeavesAnExistingValueAsItWas() {
+        AppDNA.setSessionData(key: "r20_kept", value: "before")
+        let impl = AppdnaModuleImpl()
+        var outcome: String?
+        impl.setSessionData("r20_kept", valueJson: "null",
+                            resolve: { _ in outcome = "resolved" },
+                            reject: { code, _, _ in outcome = "rejected: \(code ?? "?")" })
+        XCTAssertEqual(outcome, "resolved")
+        XCTAssertEqual(AppDNA.getSessionData(key: "r20_kept") as? String, "before")
+        AppDNA.clearSessionData()
+    }
 }
