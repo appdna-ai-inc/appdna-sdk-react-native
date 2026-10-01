@@ -166,8 +166,8 @@ describe('the Fabric screen slot under dynamic frameworks', () => {
   });
 
   it('degrades gracefully on a Swift AppDelegate (Expo 53+): warns + skips, does NOT hard-block', () => {
-    // Expo 53+ ships a Swift AppDelegate. Throwing here hard-blocked every new Expo-53 app (Firebase
-    // forces dynamic frameworks, so static linking is not always an escape). Instead the plugin warns
+    // Expo 53+ ships a Swift AppDelegate. Throwing here hard-blocked every new Expo-53 app on the
+    // default dynamic frameworks (static frameworks are an escape, but not one to force). Instead the plugin warns
     // and skips the ScreenSlot Fabric registration — the SDK still installs; the slot needs a manual
     // override on Expo 53 (a native Swift path is a follow-up).
     withAppDNA({});
@@ -178,6 +178,13 @@ describe('the Fabric screen slot under dynamic frameworks', () => {
     }).not.toThrow();
     expect(appDelegate.contents).toBe(SWIFT_APPDELEGATE); // untouched — registration skipped, not blind-patched
     expect(warn).toHaveBeenCalledWith(expect.stringMatching(/SWIFT AppDelegate/));
+    // Round 24: the message said FirebaseFirestore REQUIRES dynamic frameworks and called the static option
+    // "link statically". Static frameworks work (sdk-ci's pods-static leg); only static LIBRARIES fail.
+    const message = String(warn.mock.calls[0]?.[0]);
+    expect(message).toMatch(/Use static frameworks/);
+    expect(message).toMatch(/not static libraries/);
+    expect(message).toContain('{ "useFrameworks": "static" }');
+    expect(message).not.toMatch(/requires it|forces it|Link statically/);
     warn.mockRestore();
   });
 

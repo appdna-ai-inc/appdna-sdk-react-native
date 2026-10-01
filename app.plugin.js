@@ -5,7 +5,7 @@
  * Android module's Compose config is version-gated (see android/build.gradle). ⚠ On Expo SDK 53+
  * (a Swift AppDelegate) this plugin cannot auto-register the Fabric screen-slot under dynamic
  * frameworks: it WARNS and skips (the SDK still installs; the slot needs a manual override or static
- * linking). A native Swift Fabric-registration path is a follow-up.
+ * frameworks). A native Swift Fabric-registration path is a follow-up.
  *
  * ## What this plugin must do, and what it must not
  *
@@ -22,11 +22,14 @@
  * **iOS: four things**, none of which Expo's defaults give you:
  *   1. `deploymentTarget → 16.0`. The core pod requires it (`AppDNASDK.podspec:15`); Expo 52
  *      defaults to 15.1, and CocoaPods resolves the floor, so the build fails at `pod install`.
- *   2. Firebase's linkage. The SDK depends on FirebaseFirestore; the linkage is settled in
- *      `example/ios/Podfile` by having run all three candidates — dynamic frameworks is the only one
- *      that installs. `ios.useFrameworks: 'dynamic'` matches it.
+ *   2. Frameworks, not static libraries. The SDK depends on FirebaseFirestore, and pods built as
+ *      static libraries (Expo's default, no `use_frameworks!`) cannot build it: `pod install` refuses
+ *      a Swift Firebase pod whose dependency defines no modules, and the modular-header workarounds
+ *      fail later (see the `none` branch of `ci/ios-extension-host/Podfile`). Dynamic and static
+ *      frameworks both work. The default is `ios.useFrameworks: 'dynamic'`, the linkage
+ *      `example/ios/Podfile` builds and tests; `'static'` is the `pods-static` CI leg's.
  *   3. **The Fabric screen-slot registration that dynamic frameworks compiles out.** See below —
- *      this is the whole reason (2) cannot be set and forgotten.
+ *      this is why the default in (2) cannot be set and forgotten.
  *   4. Push entitlements — **only if the app uses push**. `AppDNA.swift:642` calls
  *      `registerForRemoteNotifications()`, so an app without `aps-environment` gets a runtime
  *      registration failure rather than a build error.
@@ -34,7 +37,7 @@
  * ## Why (3) exists, and why it is an AppDelegate mod
  *
  * React Native's codegen'd `RCTThirdPartyFabricComponentsProvider` wraps its whole component map in
- * `#ifndef RCT_DYNAMIC_FRAMEWORKS`. Under `use_frameworks!` — which (2) forces — nothing registers
+ * `#ifndef RCT_DYNAMIC_FRAMEWORKS`. Under dynamic frameworks — (2)'s default — nothing registers
  * `AppdnaScreenSlotView`, and `<AppDNAScreenSlot>` renders React's placeholder,
  * `Unimplemented component: <AppdnaScreenSlotView>`. No throw. No warning. The bare example carries
  * the override by hand (`example/ios/AppdnaExample/AppDelegate.mm`); an Expo app cannot, because
@@ -71,9 +74,10 @@ const FABRIC_IMPORT = '#import <appdna_sdk_react_native/AppdnaFabricComponents.h
 
 const FABRIC_OVERRIDE = `
 // Added by @appdna-ai/react-native-sdk's config plugin. Required because this app links pods as
-// DYNAMIC frameworks (Firebase forces it): codegen's RCTThirdPartyFabricComponentsProvider is
-// wrapped in \`#ifndef RCT_DYNAMIC_FRAMEWORKS\`, so nothing registers AppdnaScreenSlotView and
-// <AppDNAScreenSlot> silently renders React's "Unimplemented component" placeholder.
+// DYNAMIC frameworks (the plugin's default useFrameworks): codegen's
+// RCTThirdPartyFabricComponentsProvider is wrapped in \`#ifndef RCT_DYNAMIC_FRAMEWORKS\`, so nothing
+// registers AppdnaScreenSlotView and <AppDNAScreenSlot> silently renders React's "Unimplemented
+// component" placeholder.
 - (NSDictionary<NSString *, Class<RCTComponentViewProtocol>> *)thirdPartyFabricComponents
 {
   NSMutableDictionary *components = [[super thirdPartyFabricComponents] mutableCopy];
@@ -86,15 +90,16 @@ const SWIFT_APPDELEGATE_WARNING =
   '[@appdna-ai/react-native-sdk] This project has a SWIFT AppDelegate (Expo SDK 53+), so the\n' +
   'AppDNA plugin is SKIPPING the Fabric screen-slot registration (the rest of the SDK installs normally).\n' +
   '\n' +
-  'Why it matters: the plugin links pods as dynamic frameworks (FirebaseFirestore requires it), and\n' +
-  "under dynamic frameworks React Native compiles its third-party component registry OUT. Without a\n" +
-  'registration, <AppDNAScreenSlot> renders "Unimplemented component: <AppdnaScreenSlotView>" —\n' +
-  'with no error and no warning. Everything else in the SDK works.\n' +
+  'Why it matters: this app links pods as dynamic frameworks (the plugin\'s default; the AppDNA iOS\n' +
+  'SDK needs use_frameworks!, dynamic or static), and under dynamic frameworks React Native compiles\n' +
+  'its third-party component registry OUT. Without a registration, <AppDNAScreenSlot> renders\n' +
+  '"Unimplemented component: <AppdnaScreenSlotView>" — with no error and no warning. Everything\n' +
+  'else in the SDK works.\n' +
   '\n' +
   'Pick one:\n' +
-  '  1. Link statically — the codegen registry is then compiled IN and nothing else is needed:\n' +
+  '  1. Use static frameworks — the codegen registry is then compiled IN and nothing else is needed:\n' +
   '       ["@appdna-ai/react-native-sdk", { "useFrameworks": "static" }]\n' +
-  '     (Slower `pod install` on some pod graphs; see the Podfile notes in the SDK repo.)\n' +
+  '     (Static frameworks, not static libraries: without use_frameworks! the iOS SDK does not build.)\n' +
   '  2. Acknowledge that <AppDNAScreenSlot> will not render, and keep everything else:\n' +
   '       ["@appdna-ai/react-native-sdk", { "screenSlot": "skip" }]\n' +
   '\n' +
@@ -129,10 +134,11 @@ const withAppDNA = (config, props = {}) => {
   // this — not a hand-set env var — is how the pod install gets it.
   config = withPodfileProperties(config, (cfg) => {
     cfg.modResults['ios.deploymentTarget'] = deploymentTarget;
-    // `dynamic`, not `static`. AppDNASDK pulls FirebaseFirestore → gRPC → BoringSSL-GRPC, and
-    // `pod install` wedges inside that target under static frameworks — measured, not assumed
-    // (example/ios/Podfile records all three attempts). The example's Podfile uses the same
-    // linkage; the two must agree or the example builds a target no Expo consumer can reproduce.
+    // Frameworks either way: pods built as static libraries cannot build AppDNASDK's Firebase graph.
+    // `dynamic` by default because example/ios/Podfile uses it, so the default is the linkage the
+    // example builds and tests. `static` frameworks also install and build AppDNASDK with CocoaPods
+    // 1.17 (sdk-ci's `pods-static` leg); an older CocoaPods wedged in BoringSSL-GRPC with them
+    // (recorded in example/ios/Podfile).
     cfg.modResults['ios.useFrameworks'] = useFrameworks;
     cfg.modResults.newArchEnabled = 'true';
     return cfg;
@@ -202,10 +208,10 @@ const addFabricRegistration = (contents, language) => {
     // Expo SDK 53+ ships a Swift AppDelegate. Injecting the ObjC thirdPartyFabricComponents override
     // into Swift is not something we can do safely without validating it against a real Expo-53
     // project, and a blind patch is worse than none. Rather than THROW (which hard-blocks a new
-    // Expo-53 app — Firebase forces dynamic frameworks, so "just link statically" is not always an
-    // out), WARN and skip: the whole SDK still installs and works on Expo 53; only the
+    // Expo-53 app that wants to keep dynamic frameworks), WARN and skip: the whole SDK still
+    // installs and works on Expo 53; only the
     // dynamic-frameworks <AppDNAScreenSlot> auto-registration is skipped. The warning explains how to
-    // restore it (static linking, a hand override, or screenSlot:"skip" to silence this). A native
+    // restore it (static frameworks, a hand override, or screenSlot:"skip" to silence this). A native
     // Swift Fabric-registration path is a follow-up gated on an Expo-53 validation env.
     console.warn(SWIFT_APPDELEGATE_WARNING);
     return contents;

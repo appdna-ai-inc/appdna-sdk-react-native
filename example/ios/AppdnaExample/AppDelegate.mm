@@ -5,9 +5,10 @@
 
 @implementation AppDelegate
 
-// Required because this app links pods as DYNAMIC frameworks (see the Podfile — Firebase forces it).
+// Required because this app links pods as DYNAMIC frameworks (see the Podfile; the iOS SDK needs
+// use_frameworks!, and static frameworks would need no override).
 // Codegen's `RCTThirdPartyFabricComponentsProvider` wraps its whole component map in
-// `#ifndef RCT_DYNAMIC_FRAMEWORKS`, so under `use_frameworks!` nothing registers AppdnaScreenSlotView
+// `#ifndef RCT_DYNAMIC_FRAMEWORKS`, so under dynamic frameworks nothing registers AppdnaScreenSlotView
 // and React silently renders "Unimplemented component: <AppdnaScreenSlotView>" — no throw, no log.
 - (NSDictionary<NSString *, Class<RCTComponentViewProtocol>> *)thirdPartyFabricComponents
 {

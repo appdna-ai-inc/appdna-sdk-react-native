@@ -61,10 +61,11 @@ There is no codegen type for "any JSON value", so `getRemoteConfig`, `getFeature
 `Record<string, unknown>` is codegen-**illegal** (`UnsupportedGenericParserError`) — general TS
 unions are fine.
 
-**6. Under `use_frameworks!`, the Fabric component does not register itself.**
+**6. Under dynamic frameworks, the Fabric component does not register itself.**
 Codegen's `RCTThirdPartyFabricComponentsProvider` wraps its component map in
-`#ifndef RCT_DYNAMIC_FRAMEWORKS`. With dynamic frameworks — which Firebase forces, and the core SDK
-depends on Firebase — the registration is compiled out and `<AppDNAScreenSlot>` renders React's
+`#ifndef RCT_DYNAMIC_FRAMEWORKS`. The core SDK needs `use_frameworks!` (its Firebase graph does not
+build from static libraries); with dynamic frameworks — the example's and the Expo plugin's default;
+static frameworks need nothing — the registration is compiled out and `<AppDNAScreenSlot>` renders React's
 `Unimplemented component` placeholder. No throw, no log. The pod exports `AppdnaFabricComponents()`
 and the host merges it into `RCTAppDelegate`'s `thirdPartyFabricComponents`. The example does this;
 so must the docs' install steps.
