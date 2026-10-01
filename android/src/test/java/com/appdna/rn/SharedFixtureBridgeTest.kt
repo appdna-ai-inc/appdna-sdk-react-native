@@ -199,8 +199,13 @@ class SharedFixtureBridgeTest {
         )
     }
 
+    /** The JVM default zone before a `setup.device_timezone` fixture replaced it (restored in tearDown). */
+    private var savedZone: java.util.TimeZone? = null
+
     @After
     fun tearDown() {
+        savedZone?.let { java.util.TimeZone.setDefault(it) }
+        savedZone = null
         argumentsMock?.close()
         argumentsMock = null
         runCatching { setRouteSink(null) }
@@ -411,6 +416,16 @@ class SharedFixtureBridgeTest {
             manager::class.java
                 .getMethod("loadBundledConfig", Map::class.java)
                 .invoke(manager, bundled)
+        }
+
+        // `setup.device_timezone` — installed as the JVM default zone (what native's
+        // `TimeZone.getDefault()` reports) and restored in tearDown. Native reads it through the
+        // platform API; nothing here hands it to the SDK or the wrapper.
+        setup.optString("device_timezone", "").takeIf { it.isNotEmpty() }?.let { id ->
+            val zone = java.util.TimeZone.getTimeZone(id)
+            assertEquals("[$fixtureName] setup.device_timezone '$id' is not an IANA zone", id, zone.id)
+            if (savedZone == null) savedZone = java.util.TimeZone.getDefault()
+            java.util.TimeZone.setDefault(zone)
         }
 
         val traits = setup.optJSONObject("user_traits")
@@ -867,9 +882,11 @@ class SharedFixtureBridgeTest {
             val name = envelope.optString("event_name")
             assertEquals("[$fixtureName] event[$i].name", expected.getString("name"), name)
             val expectedProps = expected.optJSONObject("properties") ?: continue
-            // `properties.context.*` resolves against the envelope's own context block.
+            // `properties.context.*` resolves against the envelope's own context block…
             val actual = (envelope.optJSONObject("properties") ?: JSONObject()).toValue().toMutableMap()
             actual["context"] = envelope.optJSONObject("context")?.toValue()
+            // …and `properties.device.*` against its device block.
+            actual["device"] = envelope.optJSONObject("device")?.toValue()
             for (key in expectedProps.keys()) {
                 assertValue("[$fixtureName] event[$i]($name).properties.$key", expectedProps.opt(key), actual[key])
             }
