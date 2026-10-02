@@ -44,10 +44,11 @@
  * `expo prebuild` REGENERATES the AppDelegate and destroys any hand edit. So the plugin has to write
  * it on every prebuild, which is exactly what a mod is for.
  *
- * A **Swift** AppDelegate (Expo SDK 53+) is refused rather than blind-patched: the override's Swift
- * signature is not the ObjC one, and shipping an unverified patch that silently fails to compile —
- * or silently fails to register — would rebuild the defect this mod exists to close. Such a host
- * gets a directed prebuild error with two real ways out.
+ * A **Swift** AppDelegate (Expo SDK 53+) is not patched: the override's Swift signature is not the
+ * ObjC one, and shipping an unverified patch that silently fails to compile — or silently fails to
+ * register — would rebuild the defect this mod exists to close. The mod leaves it untouched and the
+ * prebuild prints `SWIFT_APPDELEGATE_WARNING`, naming the two real ways out (static frameworks, or
+ * `screenSlot: "skip"`); the prebuild still succeeds.
  *
  * @param {import('@expo/config-types').ExpoConfig} config
  * @param {{
