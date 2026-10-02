@@ -311,10 +311,11 @@ export class AppDNA {
   // MARK: - Ready
 
   /**
-   * Returns a Promise that resolves when the SDK is fully initialized
-   * (config fetched, managers ready). If already ready, resolves immediately.
-   * Call after `configure()` to gate any logic that depends on remote config,
-   * experiments, feature flags, or deep links.
+   * Returns a Promise that resolves once the bootstrap has succeeded or failed and
+   * the modules are ready; if already ready, resolves immediately. The cached and
+   * bundled config are applied first. The remote config fetch is started at that
+   * point but not awaited, so values read right after can still be the cached
+   * ones — use `remoteConfig.onChanged` for fresh values.
    */
   static async onReady(): Promise<void> {
     await AppdnaModule.onReady();
