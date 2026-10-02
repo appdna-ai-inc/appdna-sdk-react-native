@@ -58,8 +58,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
  *
  *   - **events** — the envelopes the native `EventQueue` actually persisted, read out of the SDK's OWN
  *     `EventDatabase` (the one its queue is writing to — asked for, never guessed at). The wrapper
- *     configures with `batchSize = 0` (its own bridged option), so nothing is uploaded and the store
- *     is the truth-of-record.
+ *     configures through its own bridged options; nothing is uploaded (Robolectric reports no active
+ *     network, so the network-sized batch is 0 — `batchSize = 0` itself is ignored by the SDK, as any value
+ *     below 1 is), and the store is the truth-of-record.
  *   - **delegate_calls** — captured at the JS BOUNDARY. The generated `NativeAppdnaModuleSpec`'s
  *     `emitOnX` methods all funnel into `BaseJavaModule.mEventEmitterCallback`, and that field is
  *     replaced here with a recorder. So the path native-SDK-delegate → forwarder → `emitEventNamed` →
@@ -173,9 +174,10 @@ class SharedFixtureBridgeTest {
 
         // CONFIGURE THROUGH THE WRAPPER — its own bridged method, its own options parsing.
         //
-        // `batchSize = 0` is not a test hook; it is a real, host-settable option (`AppDNAOptions`),
-        // and EventQueue.kt:123 only flushes when `currentBatchSize > 0`. So no event ever leaves the
-        // device and the SQLite store stays the truth-of-record for the whole run.
+        // No event leaves the device: Robolectric reports no active network, so the network-sized batch is
+        // 0 and the queue never uploads (`batchSize = 0` is passed through but ignored — the SDK ignores any
+        // value below 1), and `flushInterval` keeps the timer away. The SQLite store stays the
+        // truth-of-record for the whole run.
         val options = JavaOnlyMap().apply {
             putInt("batchSize", 0)
             putDouble("flushInterval", 86_400.0)
