@@ -341,7 +341,7 @@ final class AppdnaSpec497BridgeTests: XCTestCase {
         XCTAssertEqual(AppDNA.getSessionData(key: "r20_live") as? String, "x")
     }
 
-    /// Round 20 — the existing-value control the Android bridge test has: a null over a stored value leaves the
+    /// The existing-value control the Android bridge test has: a null over a stored value leaves the
     /// value as it was. NEGATIVE CONTROL: a bridge that stored the null (`NSNull()`) or removed the key passed
     /// the test above (a nil read) and fails this one.
     func testSessionSetWithANullValueLeavesAnExistingValueAsItWas() {

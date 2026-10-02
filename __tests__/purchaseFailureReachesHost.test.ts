@@ -123,7 +123,7 @@ describe('a failed purchase reaches the JS host with its reason and its product'
   });
 
   it('an undefined productId (iOS nil-optional boxing) is coalesced to null, never passed through', () => {
-    // R22: iOS boxed a nil `productId` via `as Any` → the RCTTurboModule bridge could not represent it,
+    // iOS boxed a nil `productId` via `as Any` → the RCTTurboModule bridge could not represent it,
     // so the host saw `undefined` on iOS while Android sent `null`. Native now emits NSNull, and the
     // facade also coalesces `?? null`, so the delegate NEVER sees `undefined` (contract: `string | null`).
     const seen: unknown[][] = [];

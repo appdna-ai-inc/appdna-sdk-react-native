@@ -178,7 +178,7 @@ describe('the Fabric screen slot under dynamic frameworks', () => {
     }).not.toThrow();
     expect(appDelegate.contents).toBe(SWIFT_APPDELEGATE); // untouched — registration skipped, not blind-patched
     expect(warn).toHaveBeenCalledWith(expect.stringMatching(/SWIFT AppDelegate/));
-    // Round 24: the message said FirebaseFirestore REQUIRES dynamic frameworks and called the static option
+    // The message said FirebaseFirestore REQUIRES dynamic frameworks and called the static option
     // "link statically". Static frameworks work (sdk-ci's pods-static leg); only static LIBRARIES fail.
     const message = String(warn.mock.calls[0]?.[0]);
     expect(message).toMatch(/Use static frameworks/);

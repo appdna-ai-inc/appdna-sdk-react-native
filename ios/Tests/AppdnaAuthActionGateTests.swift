@@ -147,7 +147,7 @@ final class AppdnaAuthActionGateTests: XCTestCase {
         }
     }
 
-    /// R20 — a JSON null inside a veto-reply object must be STRIPPED, not kept as `NSNull`. Android's
+    /// A JSON null inside a veto-reply object must be STRIPPED, not kept as `NSNull`. Android's
     /// `AppdnaVetoDecoder.anyMap` drops it ("an absent key is exactly what the no-delegate path
     /// produces"), so iOS must too, via the same `anyMap`. Otherwise a null in `proceedWithData.data`
     /// (and, through the same helper, in `StepConfigOverride`/`ElementInteractionResult`) reaches the

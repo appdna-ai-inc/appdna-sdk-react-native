@@ -142,7 +142,7 @@ class PushTapIntentBridgeTest {
     }
 
     /**
-     * Round 27 (7): a React instance that outlives its activity (the activity finished with Back while the
+     * A React instance that outlives its activity (the activity finished with Back while the
      * process lived). A tap starts a NEW activity whose launch intent carries it — no `onNewIntent`, and
      * `configure` already ran — and nothing handed it over. Now the host resume hands the current
      * activity's intent over; resuming again (and a re-`configure`) does not hand it over twice.
@@ -208,7 +208,7 @@ class PushTapIntentBridgeTest {
     }
 
     /**
-     * Round 25: host JS that reads the launch intent's extras and branches on `handleTap` must see
+     * Host JS that reads the launch intent's extras and branches on `handleTap` must see
      * the tap as AppDNA's (`true`), never route it a second time — and a re-run (the next `configure`)
      * is deduplicated by the persisted claim.
      * NEGATIVE CONTROL: with `routePushTap` handing native the activity's own intent (no copy) the
@@ -244,7 +244,7 @@ class PushTapIntentBridgeTest {
     }
 
     /**
-     * Round 26 (1): native handles a copy, so the launch intent stays a live tap, and only the persisted
+     * Native handles a copy, so the launch intent stays a live tap, and only the persisted
      * claim (the last 32 tap keys) kept a re-`configure` from routing it again — after 33 later taps it
      * fired again. NEGATIVE CONTROL: without the [PushTapIntentLedger] check in `routePushTap` the launch
      * tap is routed twice.
@@ -273,7 +273,7 @@ class PushTapIntentBridgeTest {
     }
 
     /**
-     * Round 26 (2): a tap on a notification the previous SDK version posted (no marker, no key) cannot be
+     * A tap on a notification the previous SDK version posted (no marker, no key) cannot be
      * deduplicated by native, and the module strips only the copy, so every re-`configure` routed the
      * launch intent again. NEGATIVE CONTROL: without the ledger check in `routePushTap` it is routed twice.
      */
