@@ -113,6 +113,7 @@ class PushTapIntentBridgeTest {
         }
         runCatching { AppDNA.shutdown() }
         idle()
+        PendingPushTaps.resetForTest()
         val idem = Class.forName("ai.appdna.sdk.integrations.PushIdempotency")
         idem.getDeclaredMethod("resetForTesting").apply { isAccessible = true }
             .invoke(idem.getDeclaredField("INSTANCE").get(null))
@@ -126,6 +127,7 @@ class PushTapIntentBridgeTest {
         Class.forName("ai.appdna.sdk.integrations.PushTapRouter").getDeclaredField("routeSink")
             .apply { isAccessible = true }.set(null, null)
         if (::module.isInitialized) runCatching { module.invalidate() }
+        PendingPushTaps.resetForTest()
         runCatching { AppDNA.shutdown() }
         argumentsMock?.close()
         idle()
@@ -301,6 +303,52 @@ class PushTapIntentBridgeTest {
         configureAndWait()
         assertEquals("nor does a re-created module", 1, legacyRoutes())
     }
+
+    /**
+     * Round 28 — before `configure`, each intent the module handed over (each `onHostResume` of a new
+     * activity, each `onNewIntent`) used to leave its own closure in native's `onReady` list, kept until
+     * ready, so the list grew. Now non-taps never wait and the taps wait behind ONE native callback; every
+     * tap is still handled once at configure.
+     * NEGATIVE CONTROL: with `routePushTap` registering `AppDNA.onReady` per intent again, the list grows by 40.
+     */
+    @Test
+    fun `before configure the native ready list stays bounded and every tap is still handled once`() {
+        newModule(Intent(Intent.ACTION_MAIN))
+        val before = nativeReadyCallbackCount()
+        repeat(20) { i ->
+            val tap = tapIntent("p-pre-$i", "d-pre-$i")
+            val other = Intent(Intent.ACTION_VIEW).apply { putExtra("k", "v$i") }
+            for (intent in listOf(tap, other)) {
+                val next: Activity = Robolectric.buildActivity(Activity::class.java, intent).setup().get()
+                Mockito.`when`(reactContext.currentActivity).thenReturn(next)
+                module.pushTapIntentListener.onHostResume()
+            }
+        }
+        idle()
+        assertTrue("native kept ${nativeReadyCallbackCount() - before} closures", nativeReadyCallbackCount() - before <= 1)
+        assertEquals(20, PendingPushTaps.pendingCountForTest())
+
+        configureAndWait()
+        assertEquals("each tap handled once", 20, emitted.count { it == "onPushTapped" })
+        assertEquals(0, PendingPushTaps.pendingCountForTest())
+    }
+
+    /**
+     * Round 28 — native throwing while it handles a waiting tap threw out of an `onReady` closure on the
+     * main thread, which crashes the app. NEGATIVE CONTROL: without the catch in `PendingPushTaps.drain`
+     * the exception reaches the looper and this test fails.
+     */
+    @Test
+    fun `a tap native throws on does not crash the main thread`() {
+        newModule(Intent(Intent.ACTION_MAIN))
+        PendingPushTaps.handle = { throw IllegalStateException("native threw") }
+        module.pushTapIntentListener.onNewIntent(tapIntent("p-throw", "d-throw"))
+        configureAndWait()
+        assertEquals(0, PendingPushTaps.pendingCountForTest())
+    }
+
+    private fun nativeReadyCallbackCount(): Int =
+        (AppDNA::class.java.getDeclaredField("readyCallbacks").apply { isAccessible = true }.get(AppDNA) as List<*>).size
 
     @Test
     fun `a tap that arrives before configure waits for it`() {

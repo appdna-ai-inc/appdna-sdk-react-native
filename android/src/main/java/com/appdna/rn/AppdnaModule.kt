@@ -102,10 +102,19 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         route = { intent -> routePushTap(intent) },
     )
 
+    /**
+     * Hands [intent] over once per intent object. One that is not an AppDNA tap ([AppDNA.isPushTapIntent],
+     * read from its extras — also before `configure`) is dropped at once: native would answer `false` and do
+     * nothing. A tap waits in [PendingPushTaps] (at most [PendingPushTaps.MAX_PENDING], behind one native
+     * `onReady` callback for the process) — before, every intent added its own `onReady` closure, which
+     * native kept until ready, so an app that had not configured yet grew the list on each `onHostResume`
+     * and `onNewIntent`.
+     */
     internal fun routePushTap(intent: Intent?) {
         if (intent == null || !PushTapIntentLedger.claim(intent)) return
         val copy = Intent(intent)
-        AppDNA.onReady { AppDNA.handlePushTap(copy) }
+        if (!AppDNA.isPushTapIntent(copy)) return
+        PendingPushTaps.add(intent, copy)
     }
 
     init {
