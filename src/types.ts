@@ -73,7 +73,7 @@ export interface AppDNAOptions {
    * A cap on the events one upload sends and the queue length that triggers a flush; the batch is sized
    * by the network (100 on Wi-Fi or wired, 50 on cellular, 20 on an expensive / metered connection) and
    * never exceeds this. When omitted, the server's value from the bootstrap request (if positive) is the
-   * cap, else there is none. 0 holds every event on the device. Passed to native only when set.
+   * cap, else there is none. Below 1 is ignored (as if not set). Passed to native only when set.
    */
   batchSize?: number;
   /**
