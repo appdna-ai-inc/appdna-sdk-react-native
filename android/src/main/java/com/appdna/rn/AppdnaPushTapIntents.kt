@@ -84,6 +84,14 @@ internal object PushTapIntentLedger {
  *    persisted, `onPushTapped` does not fire): host JS that reads the intent and calls
  *    `AppDNA.push.isAppDNAMessage` / `handleTap` sees an unhandled AppDNA tap, and `handleTap` handles it then
  *    — tracked and routed once, in the session that is running.
+ *  - JS `shutdown()` runs on the native-modules thread, a tap arrives on the main thread, and the drain runs
+ *    on the main thread — it is posted there by `AppDNA.onReady` the moment the SDK is ready, so a drain
+ *    posted before a `shutdown()` runs after it. Two rules close that window:
+ *    (1) the clear and the native `shutdown()` run under [handoverLock] ([shutdownNative]), and every
+ *        hand-over to native takes the same lock, so no tap is handed over while the SDK is being shut down;
+ *    (2) [shutdownGeneration] counts shutdowns. A drain registered before a shutdown hands nothing over: it
+ *        may have been posted while the SDK was ready, and now runs on a shut-down SDK, which would drop the
+ *        tap. It registers a fresh drain instead, which runs when the SDK is ready again (at once if it is).
  */
 internal object PendingPushTaps {
     internal const val MAX_PENDING = 64
@@ -94,35 +102,82 @@ internal object PendingPushTaps {
     /** (the activity's intent, the copy native gets), oldest first. */
     private val pending = ArrayDeque<Pair<Intent, Intent>>()
     private var drainRegistered = false
+    /** Bumped by every [shutdownNative]; a drain registered under an older value hands nothing over. */
+    private var shutdownGeneration = 0
+    /** Held while native is shut down and while a tap is handed to native. */
+    private val handoverLock = Any()
 
     fun add(original: Intent, copy: Intent) {
         var dropped: Intent? = null
-        val register: Boolean
+        val register: Int?
         synchronized(this) {
             pending.addLast(original to copy)
             if (pending.size > MAX_PENDING) dropped = pending.removeFirst().first
-            register = !drainRegistered
+            register = if (drainRegistered) null else shutdownGeneration
             drainRegistered = true
         }
         dropped?.let {
             PushTapIntentLedger.forget(it)
             Log.w("AppDNA", "More than $MAX_PENDING push taps wait for configure(); the oldest was dropped")
         }
-        if (register) AppDNA.onReady { drain() }
+        if (register != null) registerDrain(register)
     }
 
-    private fun drain() {
+    private fun registerDrain(generation: Int) {
+        onReady { drain(generation) }
+    }
+
+    /** Native's `AppDNA.onReady`. `internal var` — a test seam (hold the posted drain). */
+    internal var onReady: (() -> Unit) -> Unit = { AppDNA.onReady(it) }
+
+    private fun drain(registeredAt: Int) {
         val batch = synchronized(this) {
-            drainRegistered = false
-            ArrayList(pending).also { pending.clear() }
-        }
-        for ((_, copy) in batch) {
-            // A throw here ran on the main thread, unguarded, and crashed the app.
-            try {
-                handle(copy)
-            } catch (t: Throwable) {
-                Log.w("AppDNA", "handlePushTap threw: ${t.message}")
+            if (registeredAt != shutdownGeneration) {
+                // Registered before a shutdown: this may be a drain posted while the old session was ready,
+                // running now on a shut-down SDK. Hand nothing over; wait for the SDK to be ready again.
+                if (pending.isEmpty()) { drainRegistered = false; return }
+                null
+            } else {
+                drainRegistered = false
+                ArrayList(pending).also { pending.clear() }
             }
+        }
+        if (batch == null) {
+            registerDrain(synchronized(this) { shutdownGeneration })
+            return
+        }
+        for ((index, entry) in batch.withIndex()) {
+            val handedOver = synchronized(handoverLock) {
+                // A shutdown between taking the batch and this tap: give the rest back to the queue (unless the
+                // shutdown cleared it — then they were cleared too, as waiting taps of the ended session).
+                if (registeredAt != synchronized(this) { shutdownGeneration }) false else {
+                    // A throw here ran on the main thread, unguarded, and crashed the app.
+                    try {
+                        handle(entry.second)
+                    } catch (t: Throwable) {
+                        Log.w("AppDNA", "handlePushTap threw: ${t.message}")
+                    }
+                    true
+                }
+            }
+            if (!handedOver) {
+                val rest = batch.subList(index, batch.size).size
+                Log.d("AppDNA", "shutdown(): $rest push tap(s) taken for hand-over were dropped")
+                return
+            }
+        }
+    }
+
+    /**
+     * The wrapper's `shutdown()`: forget every waiting tap ([clearOnShutdown]) and run [nativeShutdown] — both
+     * under [handoverLock], so no tap is handed to native while it shuts down, and with [shutdownGeneration]
+     * bumped, so a drain registered before this hands nothing to the shut-down SDK.
+     */
+    fun shutdownNative(nativeShutdown: () -> Unit) {
+        synchronized(handoverLock) {
+            synchronized(this) { shutdownGeneration += 1 }
+            clearOnShutdown()
+            nativeShutdown()
         }
     }
 
@@ -142,7 +197,9 @@ internal object PendingPushTaps {
         synchronized(this) {
             pending.clear()
             drainRegistered = false
+            shutdownGeneration = 0
         }
         handle = { AppDNA.handlePushTap(it) }
+        onReady = { AppDNA.onReady(it) }
     }
 }

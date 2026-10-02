@@ -403,6 +403,66 @@ class PushTapIntentBridgeTest {
         assertEquals("a tap queued after the reset registered no drain", 1, nativeReadyCallbacks().size)
     }
 
+    /**
+     * Round 30 (minor 5) — a drain posted to the main thread while the SDK was ready (`AppDNA.onReady` posts at
+     * once) runs AFTER a JS `shutdown()` that came in on the native-modules thread. It used to hand the tap that
+     * arrived after the shutdown to the shut-down SDK, which dropped it: never tracked, never routed. Now a drain
+     * registered before a shutdown hands nothing over and waits for the next ready.
+     * NEGATIVE CONTROL: without the `shutdownGeneration` check in `drain`, the held drain hands `p-after` to the
+     * shut-down SDK — the first assertion fails (one hand-over) and the tap never reaches JS.
+     */
+    @Test
+    fun `a drain posted before shutdown hands nothing to the shut-down SDK`() {
+        newModule(Intent(Intent.ACTION_MAIN))
+        configureAndWait()
+        var held: (() -> Unit)? = null
+        PendingPushTaps.onReady = { cb -> if (held == null) held = cb else AppDNA.onReady(cb) }
+        var handedOver = 0
+        PendingPushTaps.handle = { handedOver++; AppDNA.handlePushTap(it) }
+
+        module.pushTapIntentListener.onNewIntent(tapIntent("p-before", "d-before"))   // its drain is "posted"
+        module.shutdown(mock(Promise::class.java, Answer { null }))
+        module.pushTapIntentListener.onNewIntent(tapIntent("p-after", "d-after").apply {
+            putExtra("action_type", "deep_link")
+            putExtra("action_value", "https://example.com/after")
+        })
+        assertEquals(1, PendingPushTaps.pendingCountForTest())
+
+        held!!.invoke()   // the posted drain runs now, after the shutdown
+        idle()
+        assertEquals("a tap was handed to the shut-down SDK", 0, handedOver)
+        assertEquals("the tap that arrived after the shutdown still waits", 1, PendingPushTaps.pendingCountForTest())
+
+        configureAndWait()
+        val deadline = System.currentTimeMillis() + 10_000
+        while (routes.isEmpty() && System.currentTimeMillis() < deadline) { idle(); Thread.sleep(20) }
+        assertEquals(listOf("deep_link" to "https://example.com/after"), routes)
+        assertEquals(1, emitted.count { it == "onPushTapped" })
+    }
+
+    /**
+     * Round 30 (minor 5) — JS `shutdown()` (native-modules thread) while the main thread hands a tap to native:
+     * the native shutdown waits for that hand-over. NEGATIVE CONTROL: without `handoverLock` in
+     * `shutdownNative`, `shutdown()` completes while the tap is being handed over.
+     */
+    @Test
+    fun `shutdown waits for a tap being handed to native`() {
+        newModule(Intent(Intent.ACTION_MAIN))
+        configureAndWait()
+        val shutdownDone = CountDownLatch(1)
+        var shutdownRanDuringHandover: Boolean? = null
+        PendingPushTaps.handle = {
+            // The main thread is handing this tap to native; JS calls shutdown() on its own thread now.
+            Thread { module.shutdown(mock(Promise::class.java, Answer { null })); shutdownDone.countDown() }.start()
+            shutdownRanDuringHandover = shutdownDone.await(300, java.util.concurrent.TimeUnit.MILLISECONDS)
+            true
+        }
+        module.pushTapIntentListener.onNewIntent(tapIntent("p-race", "d-race"))
+        idle()   // the posted drain runs on the main thread
+        assertEquals("shutdown() ran while a tap was being handed to native", false, shutdownRanDuringHandover)
+        assertTrue("shutdown() never finished", shutdownDone.await(10, java.util.concurrent.TimeUnit.SECONDS))
+    }
+
     @Suppress("UNCHECKED_CAST")
     private fun nativeReadyCallbacks(): MutableList<Any?> =
         AppDNA::class.java.getDeclaredField("readyCallbacks").apply { isAccessible = true }.get(AppDNA) as MutableList<Any?>
