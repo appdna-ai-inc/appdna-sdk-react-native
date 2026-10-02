@@ -347,6 +347,52 @@ class PushTapIntentBridgeTest {
         assertEquals(0, PendingPushTaps.pendingCountForTest())
     }
 
+    /**
+     * Round 29 — a tap that waited for `configure`, then JS `shutdown()` and a new `configure` (another user,
+     * after a sign-out): the tap belonged to the session that ended. The native `onReady` closure outlives
+     * `shutdown()` and drained it into the new session; the iOS SDK clears its own buffer at `shutdown()`.
+     * A tap that arrives after the `shutdown()` is still delivered. NEGATIVE CONTROL: without
+     * `PendingPushTaps.clearOnShutdown()` in `shutdown`, two taps reach JS — the assertion fails.
+     */
+    @Test
+    fun `a tap waiting for configure is dropped by shutdown, not delivered to the next session`() {
+        newModule(Intent(Intent.ACTION_MAIN))
+        val old = tapIntent("p-old", "d-old")
+        module.pushTapIntentListener.onNewIntent(old)
+        idle()
+        assertEquals(1, PendingPushTaps.pendingCountForTest())
+
+        module.shutdown(mock(Promise::class.java, Answer { null }))
+        assertEquals("shutdown() empties the queue", 0, PendingPushTaps.pendingCountForTest())
+        module.pushTapIntentListener.onNewIntent(tapIntent("p-new", "d-new"))
+        idle()
+
+        configureAndWait()
+        assertEquals("only the tap of the new session reached JS", 1, emitted.count { it == "onPushTapped" })
+        module.pushTapIntentListener.onNewIntent(old)   // never handed over again
+        settle()
+        assertEquals(1, emitted.count { it == "onPushTapped" })
+    }
+
+    /**
+     * Round 29 (minor 5) — `resetForTest` cleared the queue but not `drainRegistered`, so after a test that queued
+     * a tap and never reached ready, a queued tap registered no drain. NEGATIVE CONTROL: without
+     * `drainRegistered = false` in `resetForTest`, no closure is registered and the assertion fails.
+     */
+    @Test
+    fun `resetForTest re-arms the drain registration`() {
+        newModule(Intent(Intent.ACTION_MAIN))
+        module.pushTapIntentListener.onNewIntent(tapIntent("p-a", "d-a"))
+        PendingPushTaps.resetForTest()
+        nativeReadyCallbacks().clear()
+        module.pushTapIntentListener.onNewIntent(tapIntent("p-b", "d-b"))
+        assertEquals("a tap queued after the reset registered no drain", 1, nativeReadyCallbacks().size)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun nativeReadyCallbacks(): MutableList<Any?> =
+        AppDNA::class.java.getDeclaredField("readyCallbacks").apply { isAccessible = true }.get(AppDNA) as MutableList<Any?>
+
     private fun nativeReadyCallbackCount(): Int =
         (AppDNA::class.java.getDeclaredField("readyCallbacks").apply { isAccessible = true }.get(AppDNA) as List<*>).size
 

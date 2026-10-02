@@ -359,6 +359,8 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     }
 
     override fun shutdown(promise: Promise) {
+        // Taps that waited for the ending session are not delivered to the next one.
+        PendingPushTaps.clearOnShutdown()
         AppDNA.shutdown()
         // The native shutdown drops the billing delegate; a `billingDelegateReady` between here and the
         // next `configure` must not re-register this stale forwarder (configure builds a new one).
