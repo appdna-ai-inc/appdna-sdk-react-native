@@ -372,6 +372,20 @@ class PushTapIntentBridgeTest {
         module.pushTapIntentListener.onNewIntent(old)   // never handed over again
         settle()
         assertEquals(1, emitted.count { it == "onPushTapped" })
+
+        // The dropped tap is NOT reported as handled: host JS that forwards its extras through
+        // `AppDNA.push.handleTap` gets it tracked and routed now, once — the tap is not lost.
+        val oldData = JavaOnlyMap().apply {
+            putString("appdna", "1"); putString("push_id", "p-old"); putString("delivery_id", "d-old")
+            putString("action_type", "deep_link"); putString("action_value", "https://example.com/old")
+        }
+        var answer: Any? = null
+        module.handlePushTap(oldData, null, mock(Promise::class.java, Answer { inv ->
+            if (inv.method.name == "resolve") answer = inv.arguments[0]; null }))
+        settle()
+        assertEquals("the host's handleTap handles the dropped tap now", true, answer)
+        assertEquals(listOf("deep_link" to "https://example.com/old"), routes)
+        assertEquals(2, emitted.count { it == "onPushTapped" })
     }
 
     /**

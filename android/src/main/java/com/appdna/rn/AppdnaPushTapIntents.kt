@@ -80,7 +80,10 @@ internal object PushTapIntentLedger {
  *    for the session that ended is not delivered to the next `configure` (possibly another user, after a
  *    sign-out) — as the iOS SDK clears its own launch buffer at `shutdown()`. It used to be: the closure
  *    survives `shutdown()` and drained the old taps into the new session. A cleared intent stays claimed in
- *    [PushTapIntentLedger], so it is never handed over again.
+ *    [PushTapIntentLedger], so it is never handed over again. Nothing records it as handled (no tap claim is
+ *    persisted, `onPushTapped` does not fire): host JS that reads the intent and calls
+ *    `AppDNA.push.isAppDNAMessage` / `handleTap` sees an unhandled AppDNA tap, and `handleTap` handles it then
+ *    — tracked and routed once, in the session that is running.
  */
 internal object PendingPushTaps {
     internal const val MAX_PENDING = 64
