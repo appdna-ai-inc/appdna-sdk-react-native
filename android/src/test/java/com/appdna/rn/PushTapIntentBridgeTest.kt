@@ -14,7 +14,6 @@ import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -39,8 +38,8 @@ import java.util.concurrent.CountDownLatch
  * routed and JS `onPushTapped` never fired.
  *
  * Drives the REAL module (its activity-event listener and its bridged `configure`) into the live native
- * SDK, and asserts native OUTPUTS: the route the core push-tap router took, the intent made inert after
- * a handled tap, and the `onPushTapped` the module pushed across the bridge.
+ * SDK, and asserts native OUTPUTS: the route the core push-tap router took, the activity's intent left
+ * recognisable to host JS (native handles a copy), and the `onPushTapped` the module pushed across the bridge.
  *
  * NEGATIVE CONTROL: with `routePushTap` reduced to `return` (no hand-off to native) the last three tests fail;
  * without the `addActivityEventListener` call in `init` the first one does.
@@ -154,7 +153,7 @@ class PushTapIntentBridgeTest {
         settle()
 
         assertEquals(listOf("deep_link" to "https://example.com/button"), routes)
-        assertNull("a handled tap is made inert", intent.getStringExtra("appdna"))
+        assertEquals("the activity's intent keeps the marker", "1", intent.getStringExtra("appdna"))
         assertEquals(1, emitted.count { it == "onPushTapped" })
     }
 
@@ -168,8 +167,44 @@ class PushTapIntentBridgeTest {
         configureAndWait()
 
         assertEquals(listOf("deep_link" to "https://example.com/cold"), routes)
-        assertNull("a handled tap is made inert", launch.getStringExtra("appdna"))
+        assertEquals("the launch intent keeps the marker", "1", launch.getStringExtra("appdna"))
         assertEquals(1, emitted.count { it == "onPushTapped" })
+    }
+
+    /**
+     * Round 25: host JS that reads the launch intent's extras and branches on `handleTap` must see
+     * the tap as AppDNA's (`true`), never route it a second time — and a re-run (the next `configure`)
+     * is deduplicated by the persisted claim.
+     * NEGATIVE CONTROL: with `routePushTap` handing native the activity's own intent (no copy) the
+     * marker is gone, `isAppDNAMessage` and `handlePushTap` answer `false`, and the host would route twice.
+     */
+    @Test
+    fun `a cold-start tap stays recognisable to host JS and is routed once`() {
+        val launch = tapIntent("p-host", "d-host").apply {
+            putExtra("action_type", "deep_link")
+            putExtra("action_value", "https://example.com/host")
+        }
+        newModule(launch)
+        configureAndWait()
+        assertEquals(listOf("deep_link" to "https://example.com/host"), routes)
+
+        val fromIntent = JavaOnlyMap().apply {
+            for (k in launch.extras!!.keySet()) launch.getStringExtra(k)?.let { putString(k, it) }
+        }
+        val answers = mutableListOf<Any?>()
+        val recorder = mock(Promise::class.java, Answer<Any?> { inv ->
+            if (inv.method.name == "resolve") answers += inv.arguments[0]
+            null
+        })
+        module.isAppDNAMessage(fromIntent, recorder)
+        module.handlePushTap(fromIntent, null, recorder)
+        settle()
+        assertEquals("host JS sees an AppDNA tap, already handled", listOf<Any?>(true, true), answers)
+
+        module.routePushTap(launch) // the next configure re-runs the launch intent
+        settle()
+        assertEquals("routed once", 1, routes.size)
+        assertEquals("onPushTapped once", 1, emitted.count { it == "onPushTapped" })
     }
 
     @Test
@@ -181,7 +216,6 @@ class PushTapIntentBridgeTest {
         assertEquals("routed before the SDK was configured", "1", intent.getStringExtra("appdna"))
 
         configureAndWait()
-        assertNull("handled once the SDK is ready", intent.getStringExtra("appdna"))
-        assertEquals(1, emitted.count { it == "onPushTapped" })
+        assertEquals("handled once the SDK is ready", 1, emitted.count { it == "onPushTapped" })
     }
 }

@@ -52,6 +52,19 @@ android {
         consumerProguardFiles "consumer-rules.pro"
     }
 
+    // NewApi is a CI gate here as in the native SDK (sdk-ci.yml, `:appdna-ai_react-native-sdk:lintDebug
+    // -PlintCheckOnly=NewApi`): minSdk is 24, and a call above its API guard compiles against
+    // compileSdk and crashes only on an old device. CI runs this one check only; it stays an error so a
+    // local `lintDebug` reports it too.
+    lint {
+        error.add("NewApi")
+        abortOnError true
+        checkDependencies false
+        if (project.hasProperty("lintCheckOnly")) {
+            checkOnly.addAll(project.property("lintCheckOnly").toString().split(",").collect { it.trim() }.findAll { it })
+        }
+    }
+
     buildFeatures {
         // SPEC-070-B P4: AppdnaScreenSlotView hosts a ComposeView and invokes the native
         // @Composable `AppDNAScreenSlot(name)`, so this module compiles Composable-calling code

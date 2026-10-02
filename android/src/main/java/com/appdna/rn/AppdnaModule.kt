@@ -87,12 +87,21 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
      * start from a tap), is handed to the native `AppDNA.handlePushTap(intent)` once the SDK is ready.
      * Native ignores an intent that is not an AppDNA tap and tracks / routes a tap once, so this is safe
      * for every intent and next to `AppDNA.push.handleTap(data)` for the same tap.
+     *
+     * Native gets a COPY: `handlePushTap` makes the intent it handles inert (removes `appdna`,
+     * `push_id`, `delivery_id`), and on the activity's own intent that hid the tap from host JS — a
+     * host that reads the launch / new intent's extras and calls `isAppDNAMessage` / `handleTap` got
+     * `false` and routed the tap a second time. The activity's intent keeps its extras; the persisted
+     * tap claim (`delivery_id ?: push_id`, the last 32 taps) is what makes every later sight of the tap —
+     * the host's `handleTap`, a re-run at the next `configure` — return `true` without tracking or
+     * routing it again.
      */
     internal val pushTapIntentListener = AppdnaPushTapIntents { intent -> routePushTap(intent) }
 
     internal fun routePushTap(intent: Intent?) {
         if (intent == null) return
-        AppDNA.onReady { AppDNA.handlePushTap(intent) }
+        val copy = Intent(intent)
+        AppDNA.onReady { AppDNA.handlePushTap(copy) }
     }
 
     init {
