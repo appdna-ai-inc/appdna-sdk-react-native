@@ -2,15 +2,33 @@ package com.appdna.rn
 
 import android.content.Intent
 import com.facebook.react.bridge.BaseActivityEventListener
+import com.facebook.react.bridge.LifecycleEventListener
 import java.util.Collections
 import java.util.WeakHashMap
 
 /**
- * Hands every intent the React Native activity receives (`onNewIntent`) to [route]. Kept out of
- * `AppdnaModule` so the module's own methods stay exactly the bridged surface.
+ * Hands every intent the React Native activity receives (`onNewIntent`) to [route], and the current
+ * activity's own intent each time the host resumes. Kept out of `AppdnaModule` so the module's own methods
+ * stay exactly the bridged surface.
+ *
+ * The resume hand-over is for a React instance that outlives its activity (the activity finished with
+ * Back while the process lived): a tap then starts a NEW activity whose launch intent carries it — not
+ * through `onNewIntent`, and not at a `configure` that already ran. [route] hands each intent object over
+ * once ([PushTapIntentLedger]), so resuming the same activity again hands nothing over twice.
  */
-internal class AppdnaPushTapIntents(private val route: (Intent) -> Unit) : BaseActivityEventListener() {
+internal class AppdnaPushTapIntents(
+    private val currentIntent: () -> Intent?,
+    private val route: (Intent) -> Unit,
+) : BaseActivityEventListener(), LifecycleEventListener {
     override fun onNewIntent(intent: Intent) = route(intent)
+
+    override fun onHostResume() {
+        currentIntent()?.let(route)
+    }
+
+    override fun onHostPause() {}
+
+    override fun onHostDestroy() {}
 }
 
 /**

@@ -135,8 +135,44 @@ class PushTapIntentBridgeTest {
     fun `the module listens to activity intents and stops on invalidate`() {
         newModule(Intent(Intent.ACTION_MAIN))
         Mockito.verify(reactContext).addActivityEventListener(module.pushTapIntentListener)
+        Mockito.verify(reactContext).addLifecycleEventListener(module.pushTapIntentListener)
         runCatching { module.invalidate() }
         Mockito.verify(reactContext).removeActivityEventListener(module.pushTapIntentListener)
+        Mockito.verify(reactContext).removeLifecycleEventListener(module.pushTapIntentListener)
+    }
+
+    /**
+     * Round 27 (7): a React instance that outlives its activity (the activity finished with Back while the
+     * process lived). A tap starts a NEW activity whose launch intent carries it — no `onNewIntent`, and
+     * `configure` already ran — and nothing handed it over. Now the host resume hands the current
+     * activity's intent over; resuming again (and a re-`configure`) does not hand it over twice.
+     * NEGATIVE CONTROL: with `onHostResume` empty nothing is routed.
+     */
+    @Test
+    fun `warm start - a new activity's tap is handed over on host resume, once`() {
+        newModule(Intent(Intent.ACTION_MAIN))
+        configureAndWait()
+        assertTrue(routes.isEmpty())
+
+        val tap = tapIntent("p-warm", "d-warm").apply {
+            putExtra("action_type", "deep_link")
+            putExtra("action_value", "https://example.com/warm")
+        }
+        val next: Activity = Robolectric.buildActivity(Activity::class.java, tap).setup().get()
+        Mockito.`when`(reactContext.currentActivity).thenReturn(next)
+        module.pushTapIntentListener.onHostResume()
+        settle()
+        assertEquals(listOf("deep_link" to "https://example.com/warm"), routes)
+        assertEquals(1, emitted.count { it == "onPushTapped" })
+
+        module.pushTapIntentListener.onHostPause()
+        module.pushTapIntentListener.onHostResume()
+        AppDNA.shutdown()
+        idle()
+        configureAndWait()
+        assertEquals("routed once", 1, routes.size)
+        assertEquals("onPushTapped once", 1, emitted.count { it == "onPushTapped" })
+        assertEquals("the activity's intent keeps the marker", "1", tap.getStringExtra("appdna"))
     }
 
     @Test

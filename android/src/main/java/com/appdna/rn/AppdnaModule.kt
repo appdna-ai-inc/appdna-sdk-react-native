@@ -97,7 +97,10 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
      * ([PushTapIntentLedger]), so the next `configure` does not re-run the launch intent — not after 32
      * later taps, and not for a tap with no key (a notification the previous SDK version posted).
      */
-    internal val pushTapIntentListener = AppdnaPushTapIntents { intent -> routePushTap(intent) }
+    internal val pushTapIntentListener = AppdnaPushTapIntents(
+        currentIntent = { reactContext.currentActivity?.intent },
+        route = { intent -> routePushTap(intent) },
+    )
 
     internal fun routePushTap(intent: Intent?) {
         if (intent == null || !PushTapIntentLedger.claim(intent)) return
@@ -107,6 +110,8 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
 
     init {
         reactContext.addActivityEventListener(pushTapIntentListener)
+        // A new activity's launch intent (a tap that started it while the React instance lived on).
+        reactContext.addLifecycleEventListener(pushTapIntentListener)
     }
 
     /** The billing forwarder registered at `configure` — `billingDelegateReady` flips its delivery flag. */
@@ -952,6 +957,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         // explain it.
         rejectPending()
         reactContext.removeActivityEventListener(pushTapIntentListener)
+        reactContext.removeLifecycleEventListener(pushTapIntentListener)
 
         entitlementListener?.let { AppDNA.billing.removeEntitlementsChangedListener(it) }
         entitlementListener = null
