@@ -1022,10 +1022,11 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         }
 
         return AppDNAOptions(
-            // E7: never a literal. `?? 300` was how the wrappers drifted 12× off the native TTL.
-            flushInterval = (values["flushInterval"] as? Number)?.toLong() ?: defaults.flushInterval,
-            batchSize = (values["batchSize"] as? Number)?.toInt() ?: defaults.batchSize,
-            configTTL = (values["configTTL"] as? Number)?.toLong() ?: defaults.configTTL,
+            // Passed only when the host set them (never a literal, never native's default): a value filled
+            // in here would read as the host's own choice and beat the bootstrap's `settings`.
+            flushInterval = (values["flushInterval"] as? Number)?.toLong(),
+            batchSize = (values["batchSize"] as? Number)?.toInt(),
+            configTTL = (values["configTTL"] as? Number)?.toLong(),
             logLevel = logLevel,
             notificationIcon = (values["notificationIcon"] as? Number)?.toInt() ?: defaults.notificationIcon,
             // §7 rule 1: injected unconditionally, NOT read from `values`. A host cannot spoof it.

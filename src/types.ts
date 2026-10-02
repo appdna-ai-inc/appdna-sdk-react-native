@@ -64,11 +64,22 @@ export type AppDNABillingProvider =
   | { type: 'adapty'; apiKey: string };
 
 export interface AppDNAOptions {
-  /** Automatic flush interval in seconds. Default: 30. */
+  /**
+   * Automatic flush interval in seconds. When omitted, the server's value from the SDK's bootstrap
+   * request (if positive), else 30. Passed to native only when set.
+   */
   flushInterval?: number;
-  /** Number of events per flush batch. Default: 20. */
+  /**
+   * A cap on the events one upload sends and the queue length that triggers a flush; the batch is sized
+   * by the network (100 on Wi-Fi or wired, 50 on cellular, 20 on an expensive / metered connection) and
+   * never exceeds this. When omitted, the server's value from the bootstrap request (if positive) is the
+   * cap, else there is none. 0 holds every event on the device. Passed to native only when set.
+   */
   batchSize?: number;
-  /** Remote config cache TTL in seconds. Default: 3600 (1 hour), set natively. */
+  /**
+   * Remote config cache TTL in seconds. When omitted, the server's value from the bootstrap request (if
+   * positive), else 3600 (1 hour). Passed to native only when set.
+   */
   configTTL?: number;
   /** Log verbosity. Default: 'warning'. */
   logLevel?: AppDNALogLevel;

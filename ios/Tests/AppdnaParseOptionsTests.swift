@@ -114,6 +114,26 @@ final class AppdnaParseOptionsTests: XCTestCase {
         XCTAssertTrue(set.requireConsent)
     }
 
+    /// The three runtime settings reach native only when the host set them: native resolves host option >
+    /// bootstrap `settings` > default, so a value the wrapper filled in would beat the server's.
+    func testRuntimeSettingsAreUnsetUnlessTheHostSetThem() {
+        let unset = module.parseOptions(nil)
+        XCTAssertNil(unset.requestedFlushInterval)
+        XCTAssertNil(unset.requestedBatchSize)
+        XCTAssertNil(unset.requestedConfigTTL)
+
+        let some = module.parseOptions(["batchSize": NSNumber(value: 7)])
+        XCTAssertEqual(some.requestedBatchSize, 7)
+        XCTAssertNil(some.requestedFlushInterval)
+        XCTAssertNil(some.requestedConfigTTL)
+
+        let all = module.parseOptions(["flushInterval": NSNumber(value: 5), "batchSize": NSNumber(value: 0),
+                                       "configTTL": NSNumber(value: 120)])
+        XCTAssertEqual(all.requestedFlushInterval, 5)
+        XCTAssertEqual(all.requestedBatchSize, 0)
+        XCTAssertEqual(all.requestedConfigTTL, 120)
+    }
+
     // MARK: - AC-11 leg 3 / AC-21: `billingProvider`
 
     func testBillingProviderBareStrings() {

@@ -888,10 +888,11 @@ public final class AppdnaModuleImpl: NSObject {
         }()
 
         return AppDNAOptions(
-            // E7: never a literal. `?? 300` is how the wrappers drifted 12× off the native TTL.
-            flushInterval: values["flushInterval"] as? TimeInterval ?? defaults.flushInterval,
-            batchSize: values["batchSize"] as? Int ?? defaults.batchSize,
-            configTTL: values["configTTL"] as? TimeInterval ?? defaults.configTTL,
+            // Passed only when the host set them (never a literal, never native's default): a value filled
+            // in here would read as the host's own choice and beat the bootstrap's `settings`.
+            flushInterval: values["flushInterval"] as? TimeInterval,
+            batchSize: values["batchSize"] as? Int,
+            configTTL: values["configTTL"] as? TimeInterval,
             logLevel: logLevel,
             billingProvider: billingProvider,
             // §7 rule 1: injected unconditionally, NOT read from `values`. A host cannot spoof it.

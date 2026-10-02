@@ -39,10 +39,56 @@ class AppdnaParseOptionsTest {
     }
 
     @Test
-    fun `configTTL defaults to the native 3600, not a wrapper literal`() {
+    fun `configTTL is left unset, never a wrapper literal`() {
         // The bug this guards: a `?? 300` in the wrapper drifted 12× off the native default. When the
-        // host says nothing, the value MUST come from AppDNAOptions() — 3600 — not a hardcoded number.
-        assertEquals(3600L, module.parseOptions(JavaOnlyMap()).configTTL)
+        // host says nothing, the bridge passes nothing: native resolves bootstrap `settings.configTTL`,
+        // else its own 3600 (`RuntimeSettings`).
+        org.junit.Assert.assertNull(module.parseOptions(JavaOnlyMap()).configTTL)
+    }
+
+    /**
+     * The runtime settings reach native only when the host set them — native resolves host option >
+     * bootstrap `settings` > default, so a value this bridge filled in (it used `?: defaults.x`) would read as
+     * the host's own and beat the server's. Driven by the shared fixture `runtime_settings_precedence`.
+     */
+    @Test
+    fun `runtime settings reach native only when the host set them (shared fixture)`() {
+        val w = wrapperOptionsFixture()
+        val hostSets = w.getJSONObject("host_sets")
+        val map = JavaOnlyMap().apply { for (k in hostSets.keys()) putDouble(k, hostSets.getDouble(k)) }
+        val parsed = module.parseOptions(map)
+        val receives = w.getJSONObject("native_receives")
+        for (key in receives.keys()) assertEquals(key, receives.getInt(key), nativeValue(parsed, key)?.toInt())
+        val unset = w.getJSONArray("native_unset")
+        for (i in 0 until unset.length()) org.junit.Assert.assertNull(unset.getString(i), nativeValue(parsed, unset.getString(i)))
+        val none = module.parseOptions(JavaOnlyMap())
+        for (key in listOf("flushInterval", "batchSize", "configTTL")) org.junit.Assert.assertNull(key, nativeValue(none, key))
+    }
+
+    /** The shared fixture's `wrapper_options` — the options a host passes and what native must receive. */
+    private fun wrapperOptionsFixture(): org.json.JSONObject {
+        fun root(): java.io.File {
+            System.getenv("APPDNA_SDK_FIXTURES_DIR")?.let { if (java.io.File(it).isDirectory) return java.io.File(it) }
+            var here: java.io.File? = java.io.File(".").canonicalFile
+            repeat(12) {
+                val candidate = java.io.File(here, "packages/sdk-shared-fixtures")
+                if (candidate.isDirectory) return candidate
+                here = here?.parentFile
+            }
+            val codespace = java.io.File("/workspaces/appdna-ai/packages/sdk-shared-fixtures")
+            if (codespace.isDirectory) return codespace
+            error("Could not locate packages/sdk-shared-fixtures. Set APPDNA_SDK_FIXTURES_DIR.")
+        }
+        val file = java.io.File(root(), "resilience/runtime_settings_precedence.fixture.json")
+        return org.json.JSONObject(file.readText()).getJSONObject("resilience").getJSONObject("wrapper_options")
+    }
+
+    /** The value of a runtime setting as native received it (null: not set by the host). */
+    private fun nativeValue(o: ai.appdna.sdk.AppDNAOptions, key: String): Number? = when (key) {
+        "flushInterval" -> o.flushInterval
+        "batchSize" -> o.batchSize
+        "configTTL" -> o.configTTL
+        else -> error("unknown runtime setting '$key'")
     }
 
     @Test
