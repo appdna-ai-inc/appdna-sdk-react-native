@@ -201,10 +201,69 @@ class PushTapIntentBridgeTest {
         settle()
         assertEquals("host JS sees an AppDNA tap, already handled", listOf<Any?>(true, true), answers)
 
-        module.routePushTap(launch) // the next configure re-runs the launch intent
+        module.routePushTap(launch) // the next configure hands the launch intent over again: ignored
         settle()
         assertEquals("routed once", 1, routes.size)
         assertEquals("onPushTapped once", 1, emitted.count { it == "onPushTapped" })
+    }
+
+    /**
+     * Round 26 (1): native handles a copy, so the launch intent stays a live tap, and only the persisted
+     * claim (the last 32 tap keys) kept a re-`configure` from routing it again — after 33 later taps it
+     * fired again. NEGATIVE CONTROL: without the [PushTapIntentLedger] check in `routePushTap` the launch
+     * tap is routed twice.
+     */
+    @Test
+    fun `a re-configure after more than 32 taps does not re-fire the launch tap`() {
+        val launch = tapIntent("p-launch33", "d-launch33").apply {
+            putExtra("action_type", "deep_link")
+            putExtra("action_value", "https://example.com/launch33")
+        }
+        newModule(launch)
+        configureAndWait()
+        val launchRoutes = { routes.count { it.second == "https://example.com/launch33" } }
+        assertEquals(1, launchRoutes())
+
+        repeat(33) { i -> module.pushTapIntentListener.onNewIntent(tapIntent("p-later-$i", "d-later-$i")) }
+        settle()
+        assertEquals(34, emitted.count { it == "onPushTapped" })
+
+        AppDNA.shutdown()
+        idle()
+        configureAndWait()
+        assertEquals("the launch tap is routed once", 1, launchRoutes())
+        assertEquals("onPushTapped once per tap", 34, emitted.count { it == "onPushTapped" })
+        assertEquals("the launch intent keeps the marker", "1", launch.getStringExtra("appdna"))
+    }
+
+    /**
+     * Round 26 (2): a tap on a notification the previous SDK version posted (no marker, no key) cannot be
+     * deduplicated by native, and the module strips only the copy, so every re-`configure` routed the
+     * launch intent again. NEGATIVE CONTROL: without the ledger check in `routePushTap` it is routed twice.
+     */
+    @Test
+    fun `a legacy unkeyed launch tap is routed once across a re-configure`() {
+        val launch = Intent(Intent.ACTION_MAIN).apply {
+            putExtra("push_id", "")
+            putExtra("action_type", "deep_link")
+            putExtra("action_value", "https://example.com/legacy-launch")
+            putExtra("screen_id", "")
+            putExtra("deep_link", "")
+        }
+        newModule(launch)
+        configureAndWait()
+        val legacyRoutes = { routes.count { it.second == "https://example.com/legacy-launch" } }
+        assertEquals("handled at configure", 1, legacyRoutes())
+
+        AppDNA.shutdown()
+        idle()
+        configureAndWait()
+        assertEquals("a re-configure does not route it again", 1, legacyRoutes())
+        // A reload re-creates the module; the ledger is process-wide.
+        runCatching { module.invalidate() }
+        newModule(launch)
+        configureAndWait()
+        assertEquals("nor does a re-created module", 1, legacyRoutes())
     }
 
     @Test

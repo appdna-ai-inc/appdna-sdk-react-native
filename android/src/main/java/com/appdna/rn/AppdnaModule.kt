@@ -92,14 +92,15 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
      * `push_id`, `delivery_id`), and on the activity's own intent that hid the tap from host JS — a
      * host that reads the launch / new intent's extras and calls `isAppDNAMessage` / `handleTap` got
      * `false` and routed the tap a second time. The activity's intent keeps its extras; the persisted
-     * tap claim (`delivery_id ?: push_id`, the last 32 taps) is what makes every later sight of the tap —
-     * the host's `handleTap`, a re-run at the next `configure` — return `true` without tracking or
-     * routing it again.
+     * tap claim (`delivery_id ?: push_id`, the last 32 taps) makes the host's `handleTap` for the same tap
+     * return `true` without tracking or routing it again. Each intent object is handed to native once
+     * ([PushTapIntentLedger]), so the next `configure` does not re-run the launch intent — not after 32
+     * later taps, and not for a tap with no key (a notification the previous SDK version posted).
      */
     internal val pushTapIntentListener = AppdnaPushTapIntents { intent -> routePushTap(intent) }
 
     internal fun routePushTap(intent: Intent?) {
-        if (intent == null) return
+        if (intent == null || !PushTapIntentLedger.claim(intent)) return
         val copy = Intent(intent)
         AppDNA.onReady { AppDNA.handlePushTap(copy) }
     }
