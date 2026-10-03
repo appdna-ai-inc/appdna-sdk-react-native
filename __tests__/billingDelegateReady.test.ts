@@ -1,5 +1,5 @@
 /**
- * SPEC-497 D-R40-1 (R41, R60 S7) — when the native billing forwarder may take queued purchases.
+ * When the native billing forwarder may take queued purchases.
  *
  * Native registers the RN billing forwarder NOT delivering: the SDK's late-purchase queue (a purchase
  * reported at app start or after `identify`, an interrupted or Ask-to-Buy purchase…) drains only into a

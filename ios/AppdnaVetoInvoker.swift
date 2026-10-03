@@ -24,7 +24,7 @@ final class AppdnaVetoInvoker {
     let timeout: TimeInterval
     private let emit: ([String: Any]) -> Void
 
-    /// Schedules the give-up: `(seconds, fire)`. Production waits on the main queue; SPEC-497 §4.9 —
+    /// Schedules the give-up: `(seconds, fire)`. Production waits on the main queue;
     /// the XCTest injects a scheduler that records the requested interval and fires on demand, because
     /// there is no virtual clock under `DispatchQueue.main.asyncAfter`.
     typealias TimeoutScheduler = (TimeInterval, @escaping () -> Void) -> Void

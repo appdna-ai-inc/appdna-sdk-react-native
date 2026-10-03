@@ -195,8 +195,8 @@ export interface Spec extends TurboModule {
   startEntitlementObserver(): Promise<void>;
 
   /**
-   * INTERNAL (SPEC-497 D-R40-1): whether a JS onPurchaseCompleted is registered, so the native
-   * billing forwarder may take queued late-purchase deliveries. A flip to true drains the queue.
+   * INTERNAL: whether a JS onPurchaseCompleted is registered, so the native billing forwarder
+   * may take queued late-purchase deliveries. A flip to true drains the queue.
    */
   billingDelegateReady(ready: boolean): void;
 

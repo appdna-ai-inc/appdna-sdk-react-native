@@ -43,7 +43,7 @@ class MainActivity : ReactActivity() {
                     launchIntent.getStringExtra(arg)?.takeIf { it.isNotBlank() }?.let { putString(prop, it) }
                   }
                 }
-                // SPEC-497 §3.11 — `appdnaEnv=sandbox` exactly when this build carries the test-only
+                // `appdnaEnv=sandbox` exactly when this build carries the test-only
                 // base-URL override (the `ai.appdna.sdk.BASE_URL_OVERRIDE` meta-data, fed from the
                 // gitignored local.properties). Emitted even with no intent extras.
                 if (!baseUrlOverride().isNullOrBlank()) putString("appdnaEnv", "sandbox")
@@ -80,12 +80,12 @@ class MainActivity : ReactActivity() {
             "appdnaPlacement" to "placement",
             // SPEC-496 device pass: `items` | `empty` — sample host data for onBeforeStepRender.
             "appdnaHostDataDemo" to "hostDataDemo",
-            // SPEC-497 §4.10 — the sign-in timeout floor device rows.
+            // The sign-in timeout floor device rows.
             "appdnaSignInDelaySeconds" to "signInDelaySeconds",
             "appdnaVetoTimeout" to "vetoTimeout",
             "appdnaStepAdvanceDelaySeconds" to "stepAdvanceDelaySeconds",
             "appdnaStepAdvanceReply" to "stepAdvanceReply",
-            // SPEC-497 §3.11 / §13h — billing provider, host-buy product, location flow, hostWait's URL.
+            // Billing provider, host-buy product, location flow, hostWait's URL.
             "appdnaBillingProvider" to "billingProvider",
             "appdnaHostProductId" to "hostProductId",
             "appdnaLocationFlowId" to "locationFlowId",

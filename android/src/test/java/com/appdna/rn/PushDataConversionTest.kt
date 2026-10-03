@@ -13,9 +13,9 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * SPEC-497 §9.2 / §9.8 — how a JS push payload crosses into the SDK's `Map<String, String>` on Android.
+ * How a JS push payload crosses into the SDK's `Map<String, String>` on Android.
  *
- * JS numbers arrive as `Double`; an integral one must cross as `"5"`, not `"5.0"` (R82) — what the host
+ * JS numbers arrive as `Double`; an integral one must cross as `"5"`, not `"5.0"` — what the host
  * wrote, and what Flutter produces for the same payload. Nested objects and arrays must cross as VALID
  * JSON that the SDK's `PushPayloadParser` reads (`action: {type, value}` routes the deep link) — never
  * Kotlin's `toString()`, which yields `{type=deep_link, …}`.

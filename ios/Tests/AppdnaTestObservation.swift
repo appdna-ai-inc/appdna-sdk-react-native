@@ -3,7 +3,7 @@ import StoreKitTest
 import UserNotifications
 import AppDNASDK
 
-/// SPEC-497 §9a.8 — the test bundle's principal class (`NSPrincipalClass`, set by the podspec's
+/// The test bundle's principal class (`NSPrincipalClass`, set by the podspec's
 /// `test_spec.info_plist`). XCTest instantiates it on the main thread BEFORE any test runs — so before
 /// any test in this process configures the SDK — which is the only moment an explicit
 /// `AppDNA.installNotificationProxy()` can be proven to be the install (the proxy installs once per
@@ -14,7 +14,7 @@ final class AppdnaTestObservation: NSObject {
     static var diagnoseAtInstall = ""
     static var delegateClassAtInstall = ""
 
-    /// SPEC-497 §3.10 — the ONE StoreKit test session of this process, opened before anything touches
+    /// The ONE StoreKit test session of this process, opened before anything touches
     /// StoreKit (the handler pass drives `purchase` / `restorePurchases`). `AppdnaStoreKitHostedTests`
     /// reuses it. Hygiene, not a fix: measured on the bridge, the late-purchase tests also pass with a
     /// fresh session per test — the losses once blamed on session binding were the core queue's stale

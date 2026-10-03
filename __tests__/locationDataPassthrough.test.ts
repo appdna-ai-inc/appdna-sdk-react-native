@@ -1,5 +1,5 @@
 /**
- * SPEC-497 §13h (D2) — `AppDNA.getLocationData` passes the native object through, nulls included.
+ * `AppDNA.getLocationData` passes the native object through, nulls included.
  *
  * A typed-but-unselected address crosses as `{formatted_address, raw_query}` with every other key
  * `null` (both natives emit `null` for a missing field, never `0.0` / `""`). The facade must not

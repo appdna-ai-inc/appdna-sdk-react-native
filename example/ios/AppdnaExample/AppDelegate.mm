@@ -52,12 +52,12 @@
     @"appdnaPlacement" : @"placement",
     // SPEC-496 device pass: `items` | `empty` — sample host data for onBeforeStepRender (App.tsx).
     @"appdnaHostDataDemo" : @"hostDataDemo",
-    // SPEC-497 §4.10 — the sign-in timeout floor device rows (App.tsx).
+    // The sign-in timeout floor device rows (App.tsx).
     @"appdnaSignInDelaySeconds" : @"signInDelaySeconds",
     @"appdnaVetoTimeout" : @"vetoTimeout",
     @"appdnaStepAdvanceDelaySeconds" : @"stepAdvanceDelaySeconds",
     @"appdnaStepAdvanceReply" : @"stepAdvanceReply",
-    // SPEC-497 §3.11 / §13h — billing provider, the host-buy product, the location flow, hostWait's URL.
+    // Billing provider, the host-buy product, the location flow, hostWait's URL.
     @"appdnaBillingProvider" : @"billingProvider",
     @"appdnaHostProductId" : @"hostProductId",
     @"appdnaLocationFlowId" : @"locationFlowId",
@@ -72,7 +72,7 @@
       props[launchKeys[arg]] = value;
     }
   }
-  // SPEC-497 §3.11 — `appdnaEnv=sandbox` exactly when this build carries the test-only base-URL
+  // `appdnaEnv=sandbox` exactly when this build carries the test-only base-URL
   // override (Info.plist `AppDNABaseURLOverride` ← `$(APPDNA_BASE_URL_OVERRIDE)` from the uncommitted
   // Local.xcconfig). Emitted even with no launch arguments.
   NSString *override = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"AppDNABaseURLOverride"];

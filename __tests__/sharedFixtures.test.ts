@@ -40,7 +40,7 @@
  *   - tap_push → AppDNA.push.handleTap() — AppdnaModule.handlePushTap
  *   - receive_push (via) → AppDNA.push.handleMessage() — AppdnaModule.handlePushMessage
  *
- * The three push kinds (SPEC-497 §8.7) are host API calls since B2, so this runner asserts their
+ * The three push kinds are host API calls since B2, so this runner asserts their
  * BRIDGE CONTRACT only (the call, with the fixture's payload and action id); the `expect` block is
  * proven by the RN Android JVM runner `SharedFixtureBridgeTest.kt`, driving the same module methods
  * into the live native SDK.
@@ -226,7 +226,7 @@ async function runFixture(fixture: Fixture): Promise<void> {
       return;
     case 'receive_push': {
       // Only the `via: handleMessageData` form is a host API call. A raw FCM RemoteMessage through the
-      // SDK's own service is not — such a fixture must not claim `rn` (§8.7 ruling).
+      // SDK's own service is not — such a fixture must not claim `rn` (ruling).
       if (fixture.action.via !== 'handleMessageData') {
         throw new Error(`[${fixture.id}] receive_push without via=handleMessageData has no RN entry point`);
       }

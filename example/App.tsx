@@ -73,7 +73,7 @@ type Props = {
    */
   hostDataDemo?: string;
   /**
-   * SPEC-497 §4.10 — the sign-in timeout floor device rows (all optional; unset = no delay):
+   * The sign-in timeout floor device rows (all optional; unset = no delay):
    * `signInDelaySeconds` — `onBeforeStepAdvance` waits n s for the FIRST sign-in action of each
    * presentation, then answers `proceed` (later attempts in that presentation proceed at once);
    * `vetoTimeout` — passed to `AppDNAOptions.vetoTimeout`; `stepAdvanceDelaySeconds` +
@@ -84,7 +84,7 @@ type Props = {
   stepAdvanceDelaySeconds?: string;
   stepAdvanceReply?: string;
   /**
-   * SPEC-497 §3.11 / §13h — the billing, local-server and location device rows:
+   * The billing, local-server and location device rows:
    * `billingProvider` — `storeKit2` (default) | `revenueCat` | `none` | `adapty:<publicKey>`;
    * `appdnaEnv` — `sandbox`, emitted natively only when the build carries the base-URL override
    * (never a hand-passed argument); `hostProductId` — what "Host buy (no finish)" buys (iOS);
@@ -109,14 +109,14 @@ const billingProviderOption = (raw?: string): AppDNAOptions['billingProvider'] |
 };
 
 /**
- * SPEC-497 §3.11 — the iOS host's OWN StoreKit calls (`AppdnaE2EHost.m`): a purchase the host never
+ * The iOS host's OWN StoreKit calls (`AppdnaE2EHost.m`): a purchase the host never
  * finishes, and the `AppDNA-E2E unfinished=<ids>` log. Absent on Android (its ownership rows run on the
  * native sample host).
  */
 const e2eHost: { hostBuy(productId: string): Promise<string>; logTransactions(): Promise<null> } | undefined =
   Platform.OS === 'ios' ? NativeModules.AppdnaE2EHost : undefined;
 
-/** The sign-in actions a host must answer (the SDK's own list, SPEC-497 §4.2) — picks which delay applies. */
+/** The sign-in actions a host must answer (the SDK's own list) — picks which delay applies. */
 const SIGN_IN_ACTIONS = new Set([
   'social_login', 'login', 'register', 'reset_password', 'magic_link', 'verify_email',
   'resend_verification', 'enable_biometric', 'email_login', 'request_otp', 'verify_otp',
@@ -154,7 +154,7 @@ const hostWait = async (seconds: number, waitUrl = 'http://localhost:8081/status
   }
 };
 
-/** A synthetic AppDNA-marked push (SPEC-497 §9.2) for the forwarding API buttons. */
+/** A synthetic AppDNA-marked push for the forwarding API buttons. */
 const SAMPLE_PUSH = {
   appdna: '1',
   push_id: 'rn_e2e_push',
@@ -247,7 +247,7 @@ export default function App({
   const subscriptions = useRef<Array<() => void>>([]);
   // `showmore` host: pages shown so far, per step. A revisit answers with the list the user last saw.
   const showMorePages = useRef<Record<string, number>>({});
-  // SPEC-497 §4.10 — whether this presentation's first sign-in action has been delayed yet.
+  // Whether this presentation's first sign-in action has been delayed yet.
   const signInDelayed = useRef(false);
 
   // The log is what the device pass reads back: every delegate callback and every veto appends a
@@ -270,9 +270,9 @@ export default function App({
   );
 
   /**
-   * SPEC-497 §3.11 / §13b.2 — a restore, with the lines the restore rows assert:
+   * A restore, with the lines the restore rows assert:
    * `AppDNA-E2E onRestoreCompleted <ids>` or `AppDNA-E2E restoreFailed <errorType>` — one token, the
-   * native hosts' format (§3.11); on React Native the rejection code IS the `billingErrorType`.
+   * native hosts' format; on React Native the rejection code IS the `billingErrorType`.
    */
   const restoreE2E = useCallback(
     async (label: string, fn: () => Promise<string[]>) => {
@@ -339,7 +339,7 @@ export default function App({
       // the proof the hook ran; returning an override here would mutate every step of every flow this
       // example is pointed at, which is a worse default for a demo than a visible log.
       onBeforeStepRender: async (_flowId, stepId) => {
-        // SPEC-497 §13h D2-1 — the location device row reads the stored answer on the step after it.
+        // The location device row reads the stored answer on the step after it.
         if (locationFlowId && stepId === 'step_after') {
           const loc = await AppDNA.getLocationData('e2e_location');
           const line = `AppDNA-E2E location ${loc === null ? 'null' : JSON.stringify(loc)}`;
@@ -408,7 +408,7 @@ export default function App({
       onPaywallAction: (id, action) => append(`paywall action: ${id} / ${action}`),
       onPaywallPurchaseCompleted: (id, product) => append(`paywall purchase: ${id} / ${product}`),
       onPaywallPurchaseFailed: (id, error, errorType, productId) => {
-        // SPEC-497 §3.11 — the exact line the device rows grep (host log / logcat).
+        // The exact line the device rows grep (host log / logcat).
         console.log(`AppDNA-E2E onPaywallPurchaseFailed ${errorType} ${productId}`);
         append(`paywall purchase failed: ${id} / ${errorType} / ${productId} / ${String(error)}`);
       },
@@ -506,7 +506,7 @@ export default function App({
       ...(provider ? { billingProvider: provider } : {}),
     });
     append(`configured env=${appdnaEnv === 'sandbox' ? 'sandbox' : 'production'} billingProvider=${billingProvider ?? 'default'}`);
-    // SPEC-497 §3.11 — the local-server precheck line: the base URL the SDK resolved, read from
+    // The local-server precheck line: the base URL the SDK resolved, read from
     // diagnose() (`base_url: <v>`), and the environment this host configured.
     const report = await AppDNA.diagnose();
     const baseUrl = /base_url: (\S+)/.exec(report ?? '')?.[1] ?? 'unknown';

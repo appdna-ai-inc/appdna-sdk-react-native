@@ -157,7 +157,7 @@ export class AppDNA {
     // subscriber, and in the normal integration there is no next subscriber.
     resumeEntitlementObserver();
     // Native builds a fresh billing forwarder at every configure, registered not delivering; tell it
-    // whether a JS `onPurchaseCompleted` is waiting (SPEC-497 D-R40-1).
+    // whether a JS `onPurchaseCompleted` is waiting.
     resendBillingDelegateReady();
   }
 

@@ -150,7 +150,7 @@ class SharedFixtureBridgeTest {
      * `AppdnaBridge.toWritableMap`, so without this the emit throws inside the SDK's delegate fan-out
      * (which swallows it) and NO delegate call ever reaches the recorder. The Java-only maps are RN's
      * own test doubles with the same `ReadableMap` / `WritableMap` contract. (No fixture claiming `rn`
-     * asserted a delegate call before SPEC-497's push fixtures, so this was never exercised.)
+     * asserted a delegate call before the push fixtures, so this was never exercised.)
      */
     private var argumentsMock: MockedStatic<Arguments>? = null
 
@@ -348,7 +348,7 @@ class SharedFixtureBridgeTest {
     }
 
     private fun runOneFixture() {
-        // SPEC-497 §9.2 — the handled-key set is process-wide and the Android tap key is persisted, so two
+        // The handled-key set is process-wide and the Android tap key is persisted, so two
         // push fixtures sharing a push_id would dedup each other. The core's own reset, by reflection.
         if (fixtureJson.optString("category") == "push_payload") {
             resetPushIdempotency()
@@ -508,7 +508,7 @@ class SharedFixtureBridgeTest {
             ?.getStringExtra("paywall_id")
     }
 
-    // ── SPEC-497 §8.7 push drivers — the module's isAppDNAMessage / handlePushTap / handlePushMessage ──
+    // ── push drivers — the module's isAppDNAMessage / handlePushTap / handlePushMessage ──
 
     private fun driveClassifyPush(action: JSONObject) {
         if (action.optString("payload_shape") == "apns") {
@@ -570,7 +570,7 @@ class SharedFixtureBridgeTest {
     }
 
     /**
-     * The §8.7 projection: `onHostCallback` dropped, `payload` unwrapped into the args, `push_id` →
+     * The projection: `onHostCallback` dropped, `payload` unwrapped into the args, `push_id` →
      * `pushId`. (The RN push forwarders emit `{payload: {...}, …}`; the fixtures name the core's fields.)
      * The routed destination's own `onScreenDismissed` for the routed `show_screen` id (a screen this
      * runner's config does not have is dismissed at once) is left out for the same reason as its
@@ -614,7 +614,7 @@ class SharedFixtureBridgeTest {
         cls.getDeclaredField("routeSink").apply { isAccessible = true }.set(null, sink)
     }
 
-    // ── SPEC-497 §3.9 — the wrapper-reachable half of the `*_fails_loudly` fixtures ──────────────────
+    // ── — the wrapper-reachable half of the `*_fails_loudly` fixtures ──────────────────
 
     /**
      * `billing/paywall_purchase_no_provider_fails_loudly` and `…_revenuecat_fails_loudly` drive a paywall
@@ -622,13 +622,13 @@ class SharedFixtureBridgeTest {
      * reach is `AppDNA.billing.purchase` on the same provider: configured through the module's own
      * `configure` with that `billingProvider`, `purchase()` must REJECT with the code the fixture names
      * as the delegate's `errorType` — and `restorePurchases()` with `providerNotAvailable` (the restore
-     * error contract, §13b.2).
+     * error contract).
      */
     @Test
     fun failsLoudlyFixturesRejectPurchaseWithTheFixtureErrorType() {
         val failures = mutableListOf<String>()
         try {
-            // Every `purchase` fixture whose id ends in `_fails_loudly` — the §3.9 ruling's own
+            // Every `purchase` fixture whose id ends in `_fails_loudly` — the ruling's own
             // selector (check-fixture-coverage.ts `case 'purchase'`), so a new one joins by itself.
             val loud = failsLoudlyFixtures()
             assertEquals("§3.9 has exactly two refusing-provider purchase fixtures (none, revenueCat)", 2, loud.size)
@@ -649,7 +649,7 @@ class SharedFixtureBridgeTest {
     }
 
     /**
-     * SPEC-497 D-R40-1 (R41) — the RN forwarder is registered NOT delivering (a queued purchase emitted
+     * The RN forwarder is registered NOT delivering (a queued purchase emitted
      * to a JS side with no `onPurchaseCompleted` would be lost), and only `billingDelegateReady(true)`
      * makes it the delegate the delivery-queue drain calls; `false` takes that back. Before native
      * `configure` there is no forwarder, and the call is a no-op.
@@ -749,7 +749,7 @@ class SharedFixtureBridgeTest {
     }
 
     /**
-     * The §3.9 `*_fails_loudly` set, chosen by SHAPE (a `purchase` fixture whose setup provider is one
+     * The `*_fails_loudly` set, chosen by SHAPE (a `purchase` fixture whose setup provider is one
      * that must refuse — `none` / `revenueCat`), never by id (`check:fixture-runner-skips`).
      */
     private fun failsLoudlyFixtures(): List<Pair<String, JSONObject>> =
@@ -897,7 +897,7 @@ class SharedFixtureBridgeTest {
         // The delegate calls, as JS receives them: `(event, payload)` off the generated emitter.
         val expectedCalls = expect.optJSONArray("delegate_calls") ?: JSONArray()
         if (fixtureJson.optString("category") == "push_payload") {
-            // §14 per-category rule: push delegate calls compare ORDER-INSENSITIVELY, after the §8.7
+            // Per-category rule: push delegate calls compare ORDER-INSENSITIVELY, after the
             // projection (payload unwrapped, push_id → pushId, onHostCallback dropped).
             val remaining = projectedPushCalls().toMutableList()
             assertEquals(
@@ -1104,5 +1104,5 @@ class SharedFixtureBridgeTest {
     }
 }
 
-/** Billing providers under which an SDK purchase must be refused (SPEC-497 §3.3). */
+/** Billing providers under which an SDK purchase must be refused. */
 private val REFUSING_PROVIDERS = setOf("none", "revenueCat")

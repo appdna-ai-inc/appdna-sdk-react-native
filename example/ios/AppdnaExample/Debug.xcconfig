@@ -1,4 +1,4 @@
-// SPEC-497 §3.11 — the AppdnaExample Debug configuration's base. It keeps the CocoaPods settings and
+// The AppdnaExample Debug configuration's base. It keeps the CocoaPods settings and
 // adds the local, UNCOMMITTED Local.xcconfig (gitignored), which may set the test-only base-URL
 // override: `APPDNA_BASE_URL_OVERRIDE = https:/$()/<host>` (`//` would start an xcconfig comment).
 #include "../Pods/Target Support Files/Pods-AppdnaExample/Pods-AppdnaExample.debug.xcconfig"

@@ -17,7 +17,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 /**
- * SPEC-497 §4.2 / §4.9 — the React Native Android bridge half of the sign-in timeout floor, on
+ * The React Native Android bridge half of the sign-in timeout floor, on
  * coroutine virtual time, through the REAL invoker, the REAL pending-callback map and the REAL forwarder:
  *
  *  - a `social_login` reply at 60 s is delivered (the bridge waits `max(vetoTimeout, 120 s)`);

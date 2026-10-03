@@ -3,11 +3,11 @@ package com.appdna.rn
 import com.facebook.react.bridge.ReadableMap
 
 /**
- * SPEC-497 §9.2 "Nested values" — a JS push payload → the SDK's `Map<String, String>` for
+ * "Nested values" — a JS push payload → the SDK's `Map<String, String>` for
  * `AppDNA.push.isAppDNAMessage` / `handleMessageData` / `handleTapData`.
  *
  * - a scalar crosses as its string. JS numbers arrive as `Double` on Android, so a number is written in
- *   plain decimal without a trailing `.0` (`5.0` → `"5"`, R82) — what the host wrote in JS, and what
+ *   plain decimal without a trailing `.0` (`5.0` → `"5"`) — what the host wrote in JS, and what
  *   Flutter produces for the same payload; NaN / ±Infinity are dropped;
  * - a nested object or array crosses as JSON text — never `toString()`, which yields `{type=deep_link,
  *   …}` that the SDK's `PushPayloadParser` cannot read;

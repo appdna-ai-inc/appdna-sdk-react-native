@@ -41,9 +41,9 @@ class AppdnaParseOptionsTest {
     @Test
     fun `configTTL is left unset, never a wrapper literal`() {
         // The bug this guards: a `?? 300` in the wrapper drifted 12× off the native default. When the
-        // host says nothing, the bridge passes nothing: native resolves bootstrap `settings.configTTL`,
-        // else its own 3600 (`RuntimeSettings`).
-        org.junit.Assert.assertNull(module.parseOptions(JavaOnlyMap()).configTTL)
+        // host says nothing, the bridge passes native's own default, which native reads as unset: it resolves
+        // bootstrap `settings.configTTL`, else its own 3600 (`RuntimeSettings`).
+        assertEquals(ai.appdna.sdk.AppDNAOptions.DEFAULT_CONFIG_TTL, module.parseOptions(JavaOnlyMap()).configTTL)
     }
 
     /**
@@ -83,11 +83,14 @@ class AppdnaParseOptionsTest {
         return org.json.JSONObject(file.readText()).getJSONObject("resilience").getJSONObject("wrapper_options")
     }
 
-    /** The value of a runtime setting as native received it (null: not set by the host). */
+    /**
+     * The value of a runtime setting as native received it (null: not set by the host — native's option left at
+     * its default, which native reads as unset).
+     */
     private fun nativeValue(o: ai.appdna.sdk.AppDNAOptions, key: String): Number? = when (key) {
-        "flushInterval" -> o.flushInterval
-        "batchSize" -> o.batchSize
-        "configTTL" -> o.configTTL
+        "flushInterval" -> o.flushInterval.takeIf { it != ai.appdna.sdk.AppDNAOptions.DEFAULT_FLUSH_INTERVAL }
+        "batchSize" -> o.batchSize.takeIf { it != ai.appdna.sdk.AppDNAOptions.DEFAULT_BATCH_SIZE }
+        "configTTL" -> o.configTTL.takeIf { it != ai.appdna.sdk.AppDNAOptions.DEFAULT_CONFIG_TTL }
         else -> error("unknown runtime setting '$key'")
     }
 

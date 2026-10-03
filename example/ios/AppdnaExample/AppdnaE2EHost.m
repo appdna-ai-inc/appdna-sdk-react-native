@@ -1,4 +1,4 @@
-// SPEC-497 §3.11 — the example host's OWN StoreKit calls, for the billing-ownership device rows.
+// The example host's OWN StoreKit calls, for the billing-ownership device rows.
 //
 // `hostBuy(productId)` buys through the host's own StoreKit payment queue and deliberately NEVER
 // finishes the transaction — the shape of an app whose billing SDK (not AppDNA) owns transactions.

@@ -101,7 +101,7 @@ internal class OnboardingForwarder(
                 put("responses", responses)
                 stepData?.let { put("stepData", it) }
             },
-            // SPEC-497 §4.2 — a sign-in action spans OS UI the host cannot shorten (account pickers,
+            // A sign-in action spans OS UI the host cannot shorten (account pickers,
             // 2FA, a code from email), so it waits at least the core floor (120 s); every other step
             // keeps the configured vetoTimeout.
             timeoutMs = maxOf(invoker.timeoutMs, StepAdvanceResult.minimumBridgeTimeoutMs(stepData) ?: 0L),

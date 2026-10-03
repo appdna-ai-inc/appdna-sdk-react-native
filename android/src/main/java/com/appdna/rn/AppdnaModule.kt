@@ -645,7 +645,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     }
 
     override fun restorePurchases(promise: Promise) {
-        // SPEC-497 §13b.2 restore error contract: reject with the `billingErrorType` code
+        // Restore error contract: reject with the `billingErrorType` code
         // (`providerNotAvailable`, `networkError`, `serverError`, …), as `purchase()` does. It was a
         // fixed "RESTORE_ERROR", so a host could not tell "restore through your provider" from "retry".
         launchSettling(
@@ -700,7 +700,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
      * billing manager existed is dropped too, rather than being flushed in later behind our back.
      */
     /**
-     * SPEC-497 D-R40-1 (R41) — INTERNAL. Whether a JS `onPurchaseCompleted` is registered: flips the
+     * INTERNAL. Whether a JS `onPurchaseCompleted` is registered: flips the
      * billing forwarder's `deliversPurchases` (a flip to `true` drains the late-purchase queue into
      * it). Before native `configure` there is no forwarder, so it is a no-op; the facade re-sends its
      * latest value after `configure()`.
@@ -758,7 +758,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         promise.resolve(null)
     }
 
-    // SPEC-497 §9.2 (B2) — the forwarding API for a host that owns Firebase Messaging. The payload is
+    // The forwarding API for a host that owns Firebase Messaging. The payload is
     // read HERE, on the bridge thread (a ReadableMap is only valid on it), and converted natively;
     // every entry point is marker-gated in the core.
     override fun isAppDNAMessage(data: ReadableMap, promise: Promise) {
@@ -840,7 +840,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         AppDNA.surveys.setDelegate(SurveyForwarder(emitter))
         AppDNA.inAppMessages.setDelegate(InAppMessageForwarder(emitter))
         AppDNA.push.setDelegate(PushForwarder(emitter))
-        // SPEC-497 D-R40-1 (R41): registered NOT delivering. The late-purchase queue drains into a
+        // Registered NOT delivering. The late-purchase queue drains into a
         // delivering delegate, and a queued purchase handed to this forwarder while no JS
         // `onPurchaseCompleted` exists is emitted into nothing — lost. JS says when it is ready
         // (`billingDelegateReady`), and `configure()` re-sends the latest answer right after this.
@@ -1022,11 +1022,12 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         }
 
         return AppDNAOptions(
-            // Passed only when the host set them (never a literal, never native's default): a value filled
-            // in here would read as the host's own choice and beat the bootstrap's `settings`.
-            flushInterval = (values["flushInterval"] as? Number)?.toLong(),
-            batchSize = (values["batchSize"] as? Number)?.toInt(),
-            configTTL = (values["configTTL"] as? Number)?.toLong(),
+            // The host's value when it set one, else native's own default — which native reads as "not set by
+            // the host" (`AppDNAOptions.requested*`), so the bootstrap's `settings` apply. Never a literal of
+            // the bridge's: a value filled in here would read as the host's choice and beat the bootstrap.
+            flushInterval = (values["flushInterval"] as? Number)?.toLong() ?: defaults.flushInterval,
+            batchSize = (values["batchSize"] as? Number)?.toInt() ?: defaults.batchSize,
+            configTTL = (values["configTTL"] as? Number)?.toLong() ?: defaults.configTTL,
             logLevel = logLevel,
             notificationIcon = (values["notificationIcon"] as? Number)?.toInt() ?: defaults.notificationIcon,
             // §7 rule 1: injected unconditionally, NOT read from `values`. A host cannot spoof it.
@@ -1035,7 +1036,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
             // AC-21: Android gained billingProvider in 1.0.42, so the host's choice finally arrives.
             billingProvider = BillingProvider.fromWire(values["billingProvider"]) ?: defaults.billingProvider,
             requireConsent = values["requireConsent"] as? Boolean ?: defaults.requireConsent,
-            // A zero / negative value is the native default (as on Flutter, SPEC-497 §4.2), so the
+            // A zero / negative value is the native default (as on Flutter), so the
             // invoker and diagnose() agree.
             // The core field is whole seconds (it only feeds diagnose()); rounded UP so 0.5 s reads 1,
             // not 0 → the default. The bridge's own wait uses the exact value (`parseVetoTimeoutMs`).

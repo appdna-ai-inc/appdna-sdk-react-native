@@ -3,7 +3,7 @@ import UserNotifications
 import AppDNASDK
 @testable import appdna_sdk_react_native
 
-/// SPEC-497 §9a.8 — the APP-HOSTED, public-API variant of the notification-proxy tests.
+/// The APP-HOSTED, public-API variant of the notification-proxy tests.
 ///
 /// The core's proxy/bootstrap tests run hostless against an injected in-memory slot, because
 /// `UNUserNotificationCenter.current()` raises without an app. This pod's `test_spec` is app-hosted, so

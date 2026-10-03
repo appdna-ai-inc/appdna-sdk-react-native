@@ -2,18 +2,18 @@ import XCTest
 @testable import appdna_sdk_react_native
 import AppDNASDK
 
-/// SPEC-497 — the React Native iOS bridge halves.
+/// The React Native iOS bridge halves.
 ///
-/// 1. **§4.2 / §4.9 sign-in floor.** `onBeforeStepAdvance` for a sign-in action waits
+/// 1. ** sign-in floor.** `onBeforeStepAdvance` for a sign-in action waits
 ///    `max(vetoTimeout, core 120 s)`; every other step keeps `vetoTimeout`. The invoker has no virtual
 ///    clock (it gives up via `DispatchQueue.main.asyncAfter`), so it takes an injectable timeout
 ///    scheduler: this test records the interval the bridge ASKS for and fires the give-up on demand.
-/// 2. **§9.2 / §9.8 push forwarding.** A JS payload reaches the SDK UNTOUCHED on iOS — a nested
+/// 2. ** push forwarding.** A JS payload reaches the SDK UNTOUCHED on iOS — a nested
 ///    `action` stays a dictionary and a list stays an array, never `String(describing:)` — and the
 ///    nested deep link routes.
-/// 3. **§13b.2 restore error contract.** `restorePurchases` rejects with the `billingErrorType` code
+/// 3. ** restore error contract.** `restorePurchases` rejects with the `billingErrorType` code
 ///    (was a fixed `RESTORE_ERROR`); under `none` that is `providerNotAvailable`, as is `purchase`.
-/// 4. **§3.2 rule 6 / §4.2** `parseOptions`: a key-less Adapty is refused (core `fromWire`); a
+/// 4. **** `parseOptions`: a key-less Adapty is refused (core `fromWire`); a
 ///    non-positive `vetoTimeout` is the native default.
 final class AppdnaSpec497BridgeTests: XCTestCase {
 

@@ -305,7 +305,7 @@ class PushTapIntentBridgeTest {
     }
 
     /**
-     * Round 28 — before `configure`, each intent the module handed over (each `onHostResume` of a new
+     * Before `configure`, each intent the module handed over (each `onHostResume` of a new
      * activity, each `onNewIntent`) used to leave its own closure in native's `onReady` list, kept until
      * ready, so the list grew. Now non-taps never wait and the taps wait behind ONE native callback; every
      * tap is still handled once at configure.
@@ -334,7 +334,7 @@ class PushTapIntentBridgeTest {
     }
 
     /**
-     * Round 28 — native throwing while it handles a waiting tap threw out of an `onReady` closure on the
+     * Native throwing while it handles a waiting tap threw out of an `onReady` closure on the
      * main thread, which crashes the app. NEGATIVE CONTROL: without the catch in `PendingPushTaps.drain`
      * the exception reaches the looper and this test fails.
      */
@@ -348,7 +348,7 @@ class PushTapIntentBridgeTest {
     }
 
     /**
-     * Round 29 — a tap that waited for `configure`, then JS `shutdown()` and a new `configure` (another user,
+     * A tap that waited for `configure`, then JS `shutdown()` and a new `configure` (another user,
      * after a sign-out): the tap belonged to the session that ended. The native `onReady` closure outlives
      * `shutdown()` and drained it into the new session; the iOS SDK clears its own buffer at `shutdown()`.
      * A tap that arrives after the `shutdown()` is still delivered. NEGATIVE CONTROL: without
@@ -389,7 +389,7 @@ class PushTapIntentBridgeTest {
     }
 
     /**
-     * Round 29 (minor 5) — `resetForTest` cleared the queue but not `drainRegistered`, so after a test that queued
+     * `resetForTest` cleared the queue but not `drainRegistered`, so after a test that queued
      * a tap and never reached ready, a queued tap registered no drain. NEGATIVE CONTROL: without
      * `drainRegistered = false` in `resetForTest`, no closure is registered and the assertion fails.
      */
@@ -404,7 +404,7 @@ class PushTapIntentBridgeTest {
     }
 
     /**
-     * Round 30 (minor 5) — a drain posted to the main thread while the SDK was ready (`AppDNA.onReady` posts at
+     * A drain posted to the main thread while the SDK was ready (`AppDNA.onReady` posts at
      * once) runs AFTER a JS `shutdown()` that came in on the native-modules thread. It used to hand the tap that
      * arrived after the shutdown to the shut-down SDK, which dropped it: never tracked, never routed. Now a drain
      * registered before a shutdown hands nothing over and waits for the next ready.
@@ -441,7 +441,7 @@ class PushTapIntentBridgeTest {
     }
 
     /**
-     * Round 30 (minor 5) — JS `shutdown()` (native-modules thread) while the main thread hands a tap to native:
+     * JS `shutdown()` (native-modules thread) while the main thread hands a tap to native:
      * the native shutdown waits for that hand-over. NEGATIVE CONTROL: without `handoverLock` in
      * `shutdownNative`, `shutdown()` completes while the tap is being handed over.
      */

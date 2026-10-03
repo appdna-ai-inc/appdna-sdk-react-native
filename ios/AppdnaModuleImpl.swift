@@ -244,7 +244,7 @@ public final class AppdnaModuleImpl: NSObject {
     public func getLastInitError(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         guard let err = AppDNA.lastInitError else { return resolve("null") }
         resolve(AppdnaJSON.encode([
-            "type": String(describing: type(of: err)),
+            "type": appdnaInitErrorTypeName(err),
             "message": err.localizedDescription,
         ]))
     }
@@ -564,7 +564,7 @@ public final class AppdnaModuleImpl: NSObject {
                 let productIds: [String] = try await AppDNA.billing.restorePurchases()
                 resolve(productIds)
             } catch {
-                // SPEC-497 §13b.2 restore error contract: the CODE is the `billingErrorType`
+                // Restore error contract: the CODE is the `billingErrorType`
                 // (`providerNotAvailable` under revenueCat / adapty not linked / none), as `purchase`
                 // already does. It was a fixed "RESTORE_ERROR".
                 reject(billingErrorType(error), error.localizedDescription, error)
@@ -609,7 +609,7 @@ public final class AppdnaModuleImpl: NSObject {
     /// taking its listeners with it.)" — a claim about Android, asserted in a Swift file, and only
     /// true ACROSS A SHUTDOWN. A plain re-subscribe (re-mount, Fast Refresh) stacked listeners there
     /// too. Android is idempotent now for the same reason this is.
-    /// SPEC-497 D-R40-1 (R41) — INTERNAL. Whether a JS `onPurchaseCompleted` is registered: flips the
+    /// INTERNAL. Whether a JS `onPurchaseCompleted` is registered: flips the
     /// billing forwarder's `deliversPurchases` (a flip to `true` drains the late-purchase queue into
     /// it). Before native `configure` there is no forwarder — a no-op; the facade re-sends after
     /// `configure()`.
@@ -671,7 +671,7 @@ public final class AppdnaModuleImpl: NSObject {
         resolve(nil)
     }
 
-    // MARK: - Push forwarding (SPEC-497 §9.2, B2)
+    // MARK: - Push forwarding
     //
     // For a host that owns its notification handling. Classification and handling are native and
     // marker-gated (no `appdna: "1"` → false, nothing done). On iOS the payload passes UNTOUCHED —
@@ -784,7 +784,7 @@ public final class AppdnaModuleImpl: NSObject {
         AppDNA.surveys.setDelegate(survey)
         AppDNA.inAppMessages.setDelegate(messages)
         AppDNA.pushModule.setDelegate(push)
-        // SPEC-497 D-R40-1 (R41): registered NOT delivering. The late-purchase queue drains into a
+        // Registered NOT delivering. The late-purchase queue drains into a
         // delivering delegate, and a queued purchase handed to this forwarder while no JS
         // `onPurchaseCompleted` exists is emitted into nothing — lost. JS says when it is ready
         // (`billingDelegateReady`), and `configure()` re-sends the latest answer right after this.
@@ -880,7 +880,7 @@ public final class AppdnaModuleImpl: NSObject {
         // "adapty" or a key-less map carries no apiKey and is refused (→ the default).
         let billingProvider = BillingProvider.fromWire(values["billingProvider"]) ?? defaults.billingProvider
 
-        // A zero, negative or non-numeric vetoTimeout is the native default (SPEC-497 §4.2), so the
+        // A zero, negative or non-numeric vetoTimeout is the native default, so the
         // invoker and diagnose() agree.
         let vetoTimeout: TimeInterval = {
             if let t = (values["vetoTimeout"] as? NSNumber)?.doubleValue, t > 0 { return t }

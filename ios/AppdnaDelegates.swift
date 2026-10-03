@@ -82,7 +82,7 @@ final class OnboardingForwarder: NSObject, AppDNAOnboardingDelegate {
             "responses": responses,
         ]
         if let stepData { args["stepData"] = stepData }
-        // SPEC-497 §4.2 — a sign-in action spans OS UI the host cannot shorten (account pickers, 2FA,
+        // A sign-in action spans OS UI the host cannot shorten (account pickers, 2FA,
         // a code from email), so it waits at least the core floor (120 s); every other step keeps the
         // configured vetoTimeout.
         let timeout = max(invoker.timeout, StepAdvanceResult.minimumBridgeTimeout(stepData: stepData) ?? 0)
@@ -396,13 +396,26 @@ final class DeepLinkForwarder: NSObject, AppDNADeepLinkDelegate {
     }
 }
 
+/// The `type` an init error carries to JS — the names Android sends (`throwable::class.java.simpleName`):
+/// `BootstrapFailed`, `SubsystemFailed`, `FirebaseConfigMissing`, and `UnsupportedBlockType` (iOS only). Any other
+/// error keeps its Swift type name. (iOS used to send "AppDNAInitError" for every case.)
+func appdnaInitErrorTypeName(_ error: Error) -> String {
+    if let e = error as? AppDNAInitError {
+        if case .bootstrapFailed = e { return "BootstrapFailed" }
+        if case .subsystemFailed = e { return "SubsystemFailed" }
+        if case .firebaseConfigMissing = e { return "FirebaseConfigMissing" }
+        if case .unsupportedBlockType = e { return "UnsupportedBlockType" }
+    }
+    return String(describing: type(of: error))
+}
+
 final class InitForwarder: NSObject, AppDNAInitDelegate {
     private let emit: AppdnaEmit
     init(emit: @escaping AppdnaEmit) { self.emit = emit }
 
     func onInitDegraded(reason: Error) {
         emit("onInitDegraded", [
-            "type": String(describing: type(of: reason)),
+            "type": appdnaInitErrorTypeName(reason),
             "message": reason.localizedDescription,
         ])
     }

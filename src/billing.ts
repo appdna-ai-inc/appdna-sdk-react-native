@@ -176,7 +176,7 @@ export function __resetEntitlementObserverForTesting(): void {
 
 /**
  * Whether a JS `onPurchaseCompleted` is registered — the latch behind the internal native
- * `billingDelegateReady` (SPEC-497 D-R40-1).
+ * `billingDelegateReady`.
  *
  * The native billing forwarder is registered NOT delivering: the SDK's late-purchase queue (a purchase
  * reported at app start, after `identify`, an interrupted or Ask-to-Buy purchase…) drains only into a

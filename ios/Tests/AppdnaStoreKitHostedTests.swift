@@ -5,7 +5,7 @@ import UIKit
 import AppDNASDK
 @testable import appdna_sdk_react_native
 
-/// SPEC-497 §3.10 fallback — the StoreKit half of the billing proof, APP-HOSTED.
+/// Fallback — the StoreKit half of the billing proof, APP-HOSTED.
 ///
 /// Runs in whatever order XCTest picks — after other classes that configure and shut the SDK down in
 /// this process. That order once lost every late purchase: `SKTestSession` reuses transaction ids, and
@@ -27,7 +27,7 @@ import AppDNASDK
 /// Ask-to-Buy approval (each delivered ONCE through `onPurchaseCompleted`, then finished), and a forced
 /// renewal (not a purchase). The no-network restore records the SDK's requests by putting a recording
 /// `URLProtocol` into every default `URLSessionConfiguration` (see `withCountingProtocol`): its result needs
-/// no server, and its only call is the background `/billing/verify` of what it granted (§17-4). NOT asserted
+/// no server, and its only call is the background `/billing/verify` of what it granted. NOT asserted
 /// here: event PROPERTIES (charged / intro / trial price, `is_trial`) — iOS has no public event observer,
 /// and no recorded request is ever answered, so no upload body is ever inspected.
 final class AppdnaStoreKitHostedTests: XCTestCase {
@@ -135,7 +135,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
     }
 
     /// The persisted subscription snapshot, decoded: product id → state. The SDK keeps computing and
-    /// saving it while lifecycle events are suppressed (§3.2 rule 4).
+    /// saving it while lifecycle events are suppressed.
     private func snapshotProducts() -> Set<String> {
         guard let data = UserDefaults.standard.data(forKey: "appdna.billing.last_sub_snapshot_v1"),
               let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [] }
@@ -268,7 +268,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
     }
 
     func testStoreKit2RestoreNeedsNoServerAndOnlyQueuesVerification() async throws {
-        // C1-7i + §17-4: a storeKit2 restore reads `Transaction.currentEntitlements`, so its result needs no
+        // C1-7i +: a storeKit2 restore reads `Transaction.currentEntitlements`, so its result needs no
         // AppDNA server. Every transaction it grants is ALSO queued for `POST /billing/verify` — in the
         // background, never awaited (docs/sdks/ios/billing.mdx "verifies each transaction … on the AppDNA
         // server"). So: the restore returns its products while `/billing/verify` is held unanswered and every
@@ -428,7 +428,7 @@ final class AppdnaStoreKitHostedTests: XCTestCase {
         XCTAssertEqual(recorder.count("ai.appdna.test.monthly"), before, "a renewal is not reported as a purchase")
     }
 
-    // MARK: - The RN forwarder: no delivery until JS is ready (D-R40-1, R41)
+    // MARK: - The RN forwarder: no delivery until JS is ready
 
     /// Records what the RN module emits to JS.
     final class EmitRecorder: NSObject, AppdnaEventSink {
