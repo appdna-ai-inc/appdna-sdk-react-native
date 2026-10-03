@@ -8,7 +8,7 @@ import type { ViewStyle, StyleProp, NativeSyntheticEvent } from 'react-native';
 import AppdnaScreenSlotView from './specs/AppdnaScreenSlotNativeComponent';
 
 /**
- * SPEC-070-B P4 / W19 — the public React component for an inline, server-driven AppDNA screen slot.
+ * The public React component for an inline, server-driven AppDNA screen slot.
  *
  * A slot renders whatever the console publishes for `name` — a native SwiftUI / Compose surface,
  * embedded through Fabric. See `specs/AppdnaScreenSlotNativeComponent.ts` for why height is driven
@@ -38,7 +38,7 @@ export interface AppDNAScreenSlotProps {
 }
 
 /**
- * W19 — last-known height per slot name, surviving unmount.
+ * Last-known height per slot name, surviving unmount.
  *
  * `measuredHeight` is component state, so a REMOUNT (tab switch, list recycle, navigation back)
  * resets it to `undefined` and the slot drops to `minHeight` for a frame before native re-measures —

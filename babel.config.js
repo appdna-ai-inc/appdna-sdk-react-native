@@ -1,4 +1,4 @@
-// SPEC-070-B P0 (AC-27). The RN preset is what lets jest parse TS + the RN module syntax the facade
+// The RN preset is what lets jest parse TS + the RN module syntax the facade
 // uses. Without it `__tests__/sharedFixtures.test.ts` cannot even be loaded — which is why the
 // suite "executed nowhere" before this phase.
 module.exports = {

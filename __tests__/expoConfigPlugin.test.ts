@@ -1,5 +1,5 @@
 /**
- * SPEC-070-B — the Expo config plugin, driven through fake Expo mod runners.
+ * The Expo config plugin, driven through fake Expo mod runners.
  *
  * These fakes stand in for `@expo/config-plugins`, which is an OPTIONAL peer (an Expo app always has
  * it; a bare-RN app never loads `app.plugin.js` at all). They behave the way the real runners do —

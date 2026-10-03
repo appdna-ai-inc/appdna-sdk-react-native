@@ -1,4 +1,4 @@
-// SPEC-070-B P0 (AC-27). RN's entire CI was `npm install` + `tsc`; there was no jest, no `test`
+// RN's entire CI was `npm install` + `tsc`; there was no jest, no `test`
 // script, and a CI comment claiming the fixture suite "already executes". It did not.
 module.exports = {
   preset: 'react-native',
@@ -19,7 +19,7 @@ module.exports = {
   // The facade is the unit under test; the native module is mocked in jest.setup.js. A jest test
   // therefore proves the BRIDGE CONTRACT (method name, argument shape) and nothing about native.
   // AC-24 makes the fixture runner assert against `expect`, not the call shape — but even then, the
-  // envelope and the `framework` tag are unreachable from here. That is AC-2's job, on a device.
+  // envelope and the `framework` tag are unreachable from here. That is the device pass's job.
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts'],
   clearMocks: true,
 };

@@ -2,7 +2,7 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- SPEC-070-B P1 / D16 — host capability declarations. The SDK degrades rather than crashing
+    <!-- Host capability declarations. The SDK degrades rather than crashing
          when a permission is undeclared, so an onboarding permission step SILENTLY STALLS. Explicit
          list, not "add when something breaks". -->
     <uses-permission android:name="android.permission.CAMERA" />

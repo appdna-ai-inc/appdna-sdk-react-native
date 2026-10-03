@@ -4,7 +4,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * SPEC-070-B §5 / §5.1 — the pending-veto map for the host-veto wire protocol.
+ * The pending-veto map for the host-veto wire protocol.
  *
  * ## Why this exists at all
  *
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong
  *      accepting unvalidated promo codes. The onboarding hooks answer with a map; the three vetoes
  *      answer with a bare bool — one `resultJson` envelope must preserve the distinction.
  *
- * ## W10 hardening (AC-39)
+ * ## W10 hardening
  *   - An unknown or foreign `callbackId` is **ignored, never thrown** — a reply from a previous JS
  *     epoch is expected, not exceptional.
  *   - The map is **count-bounded** as well as time-bounded: a burst can balloon it inside the
@@ -75,7 +75,7 @@ internal object AppdnaHostCallbacks {
     fun evict(callbackId: String): Boolean = pending.remove(callbackId) != null
 
     /**
-     * E6/E11 — on `invalidate()`, resolve every pending veto with `null` so the caller applies the
+     * On `invalidate()`, resolve every pending veto with `null` so the caller applies the
      * hook's default. A JS side that no longer exists will never answer, and native awaits forever.
      */
     fun invalidateAll() {

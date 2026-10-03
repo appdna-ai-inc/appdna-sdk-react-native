@@ -6,7 +6,7 @@ import {
 import type { AppDNABillingDelegate } from './generated/delegates';
 
 /**
- * N11 — the wire shape is the **union** of the iOS and Android entitlement models, with the keys the
+ * The wire shape is the **union** of the iOS and Android entitlement models, with the keys the
  * running platform has no concept of **omitted, never faked**. `isActive` is synthesised on Android
  * from `status`; dates cross as ISO-8601 strings.
  *
@@ -357,7 +357,7 @@ export class AppDNABilling {
         ));
       }
       if (delegate.onBillingUnavailable) {
-        // N8 — Android-only. iOS's billing protocol has no such method, so this listener is registered
+        // Android-only. iOS's billing protocol has no such method, so this listener is registered
         // on both platforms and fires on one. Documented rather than faked.
         subs.push(addNativeListener('onBillingUnavailable', () => delegate.onBillingUnavailable!()));
       }

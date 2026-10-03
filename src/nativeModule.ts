@@ -3,7 +3,7 @@ import type { Spec } from './specs/NativeAppdnaModule';
 import { clearHostCallbacksForSlot } from './hostCallbacks';
 
 /**
- * SPEC-070-B D-q2 / D-c / §20 — the single place the native module is resolved.
+ * The single place the native module is resolved.
  *
  * ## Why `TurboModuleRegistry`, and why no `NativeEventEmitter`
  *
@@ -165,7 +165,7 @@ export function __resetNativeModuleForTesting(): void {
 }
 
 /**
- * SPEC-070-B E2 — parse a value that crossed the bridge as a JSON string.
+ * Parse a value that crossed the bridge as a JSON string.
  *
  * `getRemoteConfig`, `getFeatureVariant`, `getExperimentConfig`, `getPushToken`,
  * `checkDeferredDeepLink`, `getWebEntitlement` and `getLastInitError` can each return a bool, a

@@ -1,5 +1,5 @@
 buildscript {
-    // SPEC-070-B P0: inherit the CONSUMER's Kotlin. Pinning 1.9.22 here would force every host onto
+    // Inherit the CONSUMER's Kotlin. Pinning 1.9.22 here would force every host onto
     // our toolchain; `ai.appdna:sdk-android` publishes a precompiled AAR whose 1.9.22 metadata is
     // forward-compatible, so a newer host Kotlin consumes it fine.
     ext.getExtOrDefault = { name, fallback ->
@@ -66,7 +66,7 @@ android {
     }
 
     buildFeatures {
-        // SPEC-070-B P4: AppdnaScreenSlotView hosts a ComposeView and invokes the native
+        // AppdnaScreenSlotView hosts a ComposeView and invokes the native
         // @Composable `AppDNAScreenSlot(name)`, so this module compiles Composable-calling code
         // and needs the Compose compiler.
         buildConfig true
@@ -105,7 +105,7 @@ android {
 }
 
 repositories {
-    // SPEC-070-B P0, mirroring the Flutter plugin's on-branch override: resolve a LOCALLY published
+    // Mirroring the Flutter plugin's on-branch override: resolve a LOCALLY published
     // `ai.appdna:sdk-android` when APPDNA_ANDROID_SDK_PATH is set, so an unreleased native can be
     // compile-verified before it is published. Unset in CI/publish → mavenCentral only.
     //
@@ -134,23 +134,23 @@ dependencies {
     implementation "com.facebook.react:react-android"
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
-    // SPEC-070-B AC-11/AC-33: `parseOptions`, the JSON bridge and the veto decoder are native-only.
+    // `parseOptions`, the JSON bridge and the veto decoder are native-only.
     // A jest test cannot see a Kotlin `?: 3600`, and neither can a Dart one.
     testImplementation "junit:junit:4.13.2"
     testImplementation "org.robolectric:robolectric:4.11.1"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3"
-    // AC-11: `parseOptions` is an instance method on AppdnaModule, whose super
+    // `parseOptions` is an instance method on AppdnaModule, whose super
     // (NativeAppdnaModuleSpec → ReactContextBaseJavaModule) needs a ReactApplicationContext — abstract
     // since RN 0.76. The init block never touches it, so a Mockito mock (constructed via Objenesis,
     // no super ctor run) is a sufficient stand-in to reach parseOptions.
     testImplementation "org.mockito:mockito-core:5.11.0"
 
-    // SPEC-070-B D-v: pinned to the native this wrapper wraps. A bare Gradle version is a required
+    // Pinned to the native this wrapper wraps. A bare Gradle version is a required
     // MINIMUM, not a lock — Gradle happily resolves something newer — so `check:version-lockstep`
-    // (AC-34) asserts this coordinate equals the shipped Android version rather than assuming it.
+    // Asserts this coordinate equals the shipped Android version rather than assuming it.
     implementation "ai.appdna:sdk-android:1.0.54"
 
-    // SPEC-070-B P4: Compose runtime/UI + the ViewTree owners (SlotViewTreeOwner) needed to host a
+    // Compose runtime/UI + the ViewTree owners (SlotViewTreeOwner) needed to host a
     // ComposeView outside a ComponentActivity. sdk-android pulls Compose in via `implementation`
     // (not exported), so the wrapper declares its own aligned copies — mirrors the Flutter plugin.
     def composeBom = platform('androidx.compose:compose-bom:2024.02.02')

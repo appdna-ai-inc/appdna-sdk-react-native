@@ -1,5 +1,5 @@
 /**
- * SPEC-451 — the React Native half of the `map_delegate_route` shared fixture.
+ * The React Native half of the `map_delegate_route` shared fixture.
  *
  * A thin wrapper FORWARDS, so the only thing this side can prove is that what it forwards is the
  * shape the native decoder accepts. That is not a small claim: the map route crosses the bridge as

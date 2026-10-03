@@ -11,7 +11,7 @@ Pod::Spec.new do |s|
   s.authors          = { "AppDNA AI" => "support@appdna.ai" }
   s.source           = { :git => "https://github.com/appdna-ai-inc/appdna-sdk-react-native.git", :tag => "v#{s.version}" }
 
-  # SPEC-070-B P0. The iOS core SDK targets 16.0 (AppDNASDK.podspec:15); a wrapper cannot ask for
+  # The iOS core SDK targets 16.0 (AppDNASDK.podspec:15); a wrapper cannot ask for
   # less than the thing it wraps.
   s.platform         = :ios, "16.0"
   s.swift_version    = "5.9"
@@ -22,7 +22,7 @@ Pod::Spec.new do |s|
   s.source_files     = "ios/**/*.{h,m,mm,swift}"
   s.exclude_files    = "ios/Tests/**/*"
 
-  # SPEC-070-B AC-11 / AC-21 / AC-30b — the iOS half had ZERO unit tests.
+  # The iOS half had ZERO unit tests.
   #
   # `parseOptions` (the `framework` tag, the `configTTL` default, `billingProvider`) was proven on
   # Android only, and "Android is right" is not evidence about Swift: the two are separate
@@ -53,18 +53,18 @@ Pod::Spec.new do |s|
     test_spec.info_plist = { 'NSPrincipalClass' => 'AppdnaTestObservation' }
   end
 
-  # SPEC-070-B P0 (AC-38 / W7): Apple merges the app's, the pod's, and every dependency's privacy
+  # Apple merges the app's, the pod's, and every dependency's privacy
   # manifest. The wrapper collects nothing of its own — it declares only the API-usage reasons its
   # own code triggers. The collected-data types are declared by the core pod's manifest, which is
   # where the collection actually happens.
   s.resource_bundles = { "AppdnaSdkReactNative" => ["ios/PrivacyInfo.xcprivacy"] }
 
-  # SPEC-070-B D-v: the wrapper always pins the freshest native. `~>` admits a newer PATCH with no
-  # source edit, so `check:version-lockstep` (AC-34) asserts this line matches the shipped iOS
+  # The wrapper always pins the freshest native. `~>` admits a newer PATCH with no
+  # source edit, so `check:version-lockstep` asserts this line matches the shipped iOS
   # version rather than trusting that it does.
   s.dependency "AppDNASDK", "~> 1.0.82"
 
-  # SPEC-495 — 🔴 STATIC, because this pod links the static AppDNASDK and inherits its map symbols.
+  # 🔴 STATIC, because this pod links the static AppDNASDK and inherits its map symbols.
   #
   # AppDNASDK is `static_framework` (GoogleMaps ships as a static xcframework). A DYNAMIC framework
   # that links a static library must resolve that library's external symbols at its own link step,

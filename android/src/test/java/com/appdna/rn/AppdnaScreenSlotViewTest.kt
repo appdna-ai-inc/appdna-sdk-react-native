@@ -14,7 +14,7 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 
 /**
- * SPEC-070-B P4 — the height contract of [AppdnaScreenSlotView].
+ * The height contract of [AppdnaScreenSlotView].
  *
  * There was no Android test for the slot, and that is precisely why it shipped as a HEIGHT FIXED
  * POINT. `AppDNAScreenSlot.tsx` drives the host's height from JS

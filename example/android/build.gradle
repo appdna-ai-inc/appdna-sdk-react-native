@@ -22,7 +22,7 @@ buildscript {
 
 apply plugin: "com.facebook.react.rootproject"
 
-// SPEC-070-B P1 on-branch override, mirroring the Flutter example. The gate lives HERE, in the app,
+// On-branch override, mirroring the Flutter example. The gate lives HERE, in the app,
 // not in the wrapper's android/build.gradle: with RN 0.76's settings plugin the APP owns dependency
 // resolution, so `allprojects.repositories` declared inside a library is ignored. Learned the hard
 // way on the Flutter plugin, where the identical mistake silently resolved nothing.

@@ -3,7 +3,7 @@
 NS_ASSUME_NONNULL_BEGIN
 
 /**
- * SPEC-070-B P2 — the seam that lets Swift emit a TurboModule event.
+ * The seam that lets Swift emit a TurboModule event.
  *
  * Codegen puts the `emitOnX:` methods on `NativeAppdnaModuleSpecBase`, an ObjC class with a C++
  * `facebook::react::EventEmitterCallback` ivar. Swift cannot subclass it — the header pulls in

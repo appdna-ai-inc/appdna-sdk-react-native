@@ -2,7 +2,7 @@ import Foundation
 import AppDNASDK
 
 /**
- * SPEC-070-B §5 — ask the JS host for a veto, and give up after `timeout` seconds.
+ * Ask the JS host for a veto, and give up after `timeout` seconds.
  *
  * The SDK awaits a host veto **forever**; the timer has always belonged to the wrapper. Flutter gets
  * one reply port per `invokeMethod`, so it needs no correlation. React Native's native→JS path is
@@ -20,7 +20,7 @@ import AppDNASDK
 final class AppdnaVetoInvoker {
 
     /// The configured wait (`AppDNAOptions.vetoTimeout`). Internal so a caller can compute a per-call
-    /// floor against it (SPEC-496 §5b C5.5).
+    /// floor against it.
     let timeout: TimeInterval
     private let emit: ([String: Any]) -> Void
 
@@ -48,7 +48,7 @@ final class AppdnaVetoInvoker {
     /// Emit the veto request and await JS's reply. `nil` means "no opinion": a timeout, a saturated
     /// pending map, a hook JS never registered, or a host that answered `null`.
     ///
-    /// `timeout` — SPEC-496 §5b C5.5: an optional PER-CALL wait, defaulting to the configured one. Only
+    /// `timeout`: an optional PER-CALL wait, defaulting to the configured one. Only
     /// `onElementInteraction` passes it (a `refresh` has an 8 s SDK deadline the 5 s default would cut
     /// short); every other hook keeps the configured value.
     func invoke(_ hook: String, _ args: [String: Any], timeout: TimeInterval? = nil) async -> Any? {

@@ -2,7 +2,7 @@ import XCTest
 @testable import appdna_sdk_react_native
 import AppDNASDK
 
-/// SPEC-496 §5b C9 — the React Native iOS bridge for `onElementInteraction`.
+/// The React Native iOS bridge for `onElementInteraction`.
 ///
 /// 1. **The refresh wait.** A `refresh` interaction has an 8 s SDK deadline. The bridge bounds every
 ///    host callback at `vetoTimeout` (5 s by default), so without the per-call floor a host answering a

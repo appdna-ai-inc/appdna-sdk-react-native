@@ -1,7 +1,7 @@
 import Foundation
 import AppDNASDK
 
-/// SPEC-070-B P1 — DTO → bridge-safe dictionary mappers.
+/// DTO → bridge-safe dictionary mappers.
 ///
 /// The old shim called `.toMap()` on `TransactionInfo`, `ProductInfo` and `Entitlement`. None of
 /// them has such a method — only `WebEntitlement` and `DeferredDeepLink` do. Those calls could
@@ -35,7 +35,7 @@ enum AppdnaMappers {
             "productId": tx.productId,
             // Cross-platform-consistent: emit epoch-millis as a String. Android's
             // `TransactionInfo.purchaseDate` is already epoch-millis (Play `purchaseTime`); iOS's is a
-            // Date. Matching Flutter (SPEC-070-C MED-2). Previously iOS emitted ISO-8601 while Android
+            // Date. Matching Flutter. Previously iOS emitted ISO-8601 while Android
             // emitted epoch-millis, so a host doing `new Date(tx.purchaseDate)` got a valid date on iOS
             // and `Invalid Date` on Android.
             "purchaseDate": String(Int64((tx.purchaseDate.timeIntervalSince1970 * 1000).rounded())),
@@ -72,7 +72,7 @@ enum AppdnaMappers {
         // same integer-micros representation instead of shipping a lossy Double.
         let micros = NSDecimalNumber(decimal: product.price * 1_000_000).int64Value
         out["priceMicros"] = micros
-        // `currencyCode` is Android-only: iOS's ProductInfo does not expose it (N-row §4).
+        // `currencyCode` is Android-only: iOS's ProductInfo does not expose it (N-row).
         return out
     }
 
@@ -168,12 +168,12 @@ enum AppdnaMappers {
     /// a JS host read `undefined` on iOS but `null` on Android for the SAME input — the exact
     /// `undefined`-vs-`null` fork that `map(ScreenResult)` emits `NSNull()` for `last_action` to prevent
     /// (see :180). The rule is "match the other platform", not "be uniform with ourselves": Android keeps
-    /// the null, so we keep the null. (Was `compact`/compactMapValues — R9 wire-parity fix.)
+    /// the null, so we keep the null. (Was `compact`/compactMapValues — wire-parity fix.)
     private static func withNulls(_ dict: [String: Any?]) -> [String: Any] {
         dict.mapValues { $0 ?? NSNull() }
     }
     /**
-     * P8 — the 9th delegate's result payloads.
+     * The 9th delegate's result payloads.
      *
      * The keys are Android's, EXACTLY: `screen_id`/`last_action`/`duration_ms` (snake_case), not the
      * Swift property names. iOS hands the delegate a typed `ScreenResult` while Android hands it an
@@ -237,7 +237,7 @@ enum AppdnaMappers {
         }
     }
 
-    /// P8 — the onboarding location field's structured answer. Keys match Android's exactly (both
+    /// The onboarding location field's structured answer. Keys match Android's exactly (both
     /// natives already declare them in snake_case), so the two wires agree without translation.
     static func map(_ loc: LocationData) -> [String: Any] {
         withNulls([

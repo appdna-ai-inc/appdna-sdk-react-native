@@ -3,7 +3,7 @@ import AppDNASDK
 @testable import appdna_sdk_react_native
 
 /**
- SPEC-070-B AC-11 / AC-21 / AC-30b — the native `parseOptions` mapping, on iOS.
+ The native `parseOptions` mapping, on iOS.
 
  ## Why this target exists at all
 
@@ -50,7 +50,7 @@ final class AppdnaParseOptionsTests: XCTestCase {
         XCTAssertEqual(module.parseOptions(nil).framework, "react_native")
         XCTAssertEqual(module.parseOptions([:]).framework, "react_native")
 
-        // §7 rule 1: a host must not be able to set, spoof or omit its own attribution. The tag is
+        // A host must not be able to set, spoof or omit its own attribution. The tag is
         // INJECTED, never read from `values` — so a host claiming to be native stays react_native.
         // `event-envelope.schema.ts` is `.catch('native')`: a wrong tag does not error, is not logged
         // and is not metered. It just quietly lies in BigQuery, which is the worst possible failure.

@@ -1,5 +1,5 @@
 /**
- * SPEC-070-B D-q / D-q1 — Expo config plugin for @appdna-ai/react-native-sdk.
+ * Expo config plugin for @appdna-ai/react-native-sdk.
  *
  * Floor: **Expo SDK 52** (pins React Native 0.76 exactly). RN 0.77+ / Kotlin 2.0 IS supported — the
  * Android module's Compose config is version-gated (see android/build.gradle). ⚠ On Expo SDK 53+

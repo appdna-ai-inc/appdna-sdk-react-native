@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * SPEC-070-B E6 — teardown must not abandon anything it was in the middle of.
+ * Teardown must not abandon anything it was in the middle of.
  *
  * `invalidate()` calls `scope.cancel()`. A cancelled coroutine does not run the rest of its body, so
  * before this every in-flight `configure` / `purchase` / `getProducts` / `restorePurchases` died

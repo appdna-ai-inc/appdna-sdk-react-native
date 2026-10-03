@@ -17,7 +17,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
 /**
- * SPEC-070-B AC-19 / E11 — **the N-fold-delivery property itself**.
+ * **the N-fold-delivery property itself**.
  *
  * Every native listener the bridge registers is registered on the process-global `AppDNA` singleton
  * and captures a bridge-scoped module. A Metro reload destroys the JS side and creates a new module;

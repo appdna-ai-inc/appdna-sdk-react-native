@@ -4,7 +4,7 @@ import AppDNASDK
 @testable import appdna_sdk_react_native
 
 /**
- SPEC-070-B AC-3 — the anti-"bridged-but-dead" evidence pass, iOS half.
+ The anti-"bridged-but-dead" evidence pass, iOS half.
 
  ## The bug class, restated because it is the one that keeps happening
 
@@ -237,7 +237,7 @@ final class AppdnaHandlerPassTests: XCTestCase {
         )
     }
 
-    /// R14 — cross-platform parity guard for `handleDeepLink`. Android never validates the URL and
+    /// Cross-platform parity guard for `handleDeepLink`. Android never validates the URL and
     /// always resolves; iOS used to REJECT with `BAD_URL` when `URL(string:)` returned nil. Called
     /// fire-and-forget, that reject surfaced as an unhandled rejection on iOS ONLY. iOS now resolves
     /// (drops the unparseable string) to match Android and the wrapper's resolve-don't-fork convention.

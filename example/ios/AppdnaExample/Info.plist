@@ -52,7 +52,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
-	<!-- SPEC-070-B P1 / D16 — host capability declarations.
+	<!-- Host capability declarations.
 	     The SDK degrades rather than crashing when a usage string is missing, so a permission
 	     onboarding step SILENTLY STALLS instead of raising. That is why this is an explicit list and
 	     not "add them when something breaks". -->

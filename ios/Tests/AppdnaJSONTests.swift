@@ -3,7 +3,7 @@ import AppDNASDK
 @testable import appdna_sdk_react_native
 
 /**
- SPEC-070-B AC-15 / E9 — the bridge marshalling, on iOS.
+ The bridge marshalling, on iOS.
 
  ## Why this file exists
 
@@ -120,7 +120,7 @@ final class AppdnaJSONTests: XCTestCase {
 }
 
 /**
- SPEC-070-B AC-15 / P1 — the DTO → bridge-dictionary mappers, on iOS.
+ The DTO → bridge-dictionary mappers, on iOS.
 
  The rule these encode is "the SDKs disagree about the type; the WIRE must not". Every one of them is
  a hand-written translation into ANOTHER platform's key names, and until now nothing checked a single

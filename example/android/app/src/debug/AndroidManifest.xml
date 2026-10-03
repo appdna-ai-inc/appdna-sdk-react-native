@@ -8,7 +8,7 @@
       release bundle that a debug build doesn't ship — the "Unable to load script" red box.
 
       `usesCleartextTraffic` here applies to the DEBUG variant only; the release build keeps cleartext
-      disabled. This is what `react-native init` scaffolds; the hand-built example (SPEC-070-B P1) missed it.
+      disabled. This is what `react-native init` scaffolds; the hand-built example missed it.
     -->
     <application
         android:usesCleartextTraffic="true"

@@ -244,7 +244,7 @@ export interface Spec extends TurboModule {
 
   /**
    * Answer a pending native→JS veto. Native→JS is one-way, so the reply travels as an explicit
-   * call (§5).
+   * call.
    */
   respondToHostCallback(callbackId: string, resultJson: string): void;
 
@@ -345,15 +345,15 @@ export interface Spec extends TurboModule {
 
   readonly onWebEntitlementChanged: EventEmitter<UnsafeObject>;
 
-  /** SPEC-404: the backend locked this SDK key. Payload `{reason, lockedAt}`. */
+  /** The backend locked this SDK key. Payload `{reason, lockedAt}`. */
   readonly onSdkRuntimeLocked: EventEmitter<UnsafeObject>;
 
-  /** SPEC-404: the lock cleared. */
+  /** The lock cleared. */
   readonly onSdkRuntimeUnlocked: EventEmitter<UnsafeObject>;
 
   /**
    * A native→JS veto request: `{callbackId, hook, argsJson}`. JS answers with
-   * `respondToHostCallback`. Native awaits FOREVER — the 5s timer lives in the wrapper (§5).
+   * `respondToHostCallback`. Native awaits FOREVER — the 5s timer lives in the wrapper.
    */
   readonly onHostCallback: EventEmitter<UnsafeObject>;
 }

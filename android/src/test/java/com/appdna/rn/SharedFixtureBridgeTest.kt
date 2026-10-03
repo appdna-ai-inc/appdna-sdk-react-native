@@ -35,7 +35,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /**
- * SPEC-070-B AC-24 — the React Native **integration** fixture runner.
+ * The React Native **integration** fixture runner.
  *
  * ## Why this file exists, and what AC-24 originally asked for
  *
@@ -72,7 +72,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
  *     key no observer produced, so a vacuous assertion is impossible.
  *
  * Plus one invariant no other runner can assert: every envelope produced while driven through this
- * wrapper must carry `device.framework == "react_native"` (SPEC-070-B §7). On iOS/Android core it is
+ * wrapper must carry `device.framework == "react_native"`. On iOS/Android core it is
  * `native`; if the wrapper ever stopped injecting it, every RN event would land in BigQuery
  * mis-attributed and nothing would error.
  *
@@ -858,7 +858,7 @@ class SharedFixtureBridgeTest {
         // rather than the push path the fixture pins; the route is asserted via `state_after.routed`.
         val envelopes = persistedEnvelopes().filterNot { isRoutedScreenDismissal(it) }
 
-        // Wrapper-only invariant (SPEC-070-B §7). No other runner can assert it: on iOS/Android core
+        // Wrapper-only invariant. No other runner can assert it: on iOS/Android core
         // the tag is `native`. A wrapper that stops injecting it mis-attributes every RN event in
         // BigQuery — `event-envelope.schema.ts` is `.catch('native')`, so nothing errors and nothing
         // is logged.

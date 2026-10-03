@@ -1,4 +1,4 @@
-// SPEC-070-B P4 — see AppdnaFabricComponents.h for why a host on dynamic frameworks needs this.
+// See AppdnaFabricComponents.h for why a host on dynamic frameworks needs this.
 
 #import "AppdnaFabricComponents.h"
 

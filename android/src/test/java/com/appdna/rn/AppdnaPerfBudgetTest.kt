@@ -19,7 +19,7 @@ import java.io.File
 import java.lang.ref.WeakReference
 
 /**
- * SPEC-070-B W15–W21 / AC-37 — the performance budgets, as numbers in CI.
+ * The performance budgets, as numbers in CI.
  *
  * AC-37 asks for budgets that are "**numbers in CI, not vibes**", and the distinction it is drawing is
  * between a measurement and a constant. Two of the six existed (app size, ScreenSlot layout shift).
@@ -93,7 +93,7 @@ class AppdnaPerfBudgetTest {
         // Warm up the classes `configure` touches on the caller's thread — AppDNAOptions, the enums,
         // the ReadableMap reader. Otherwise the first call measures the JVM's CLASS LOADER, not the
         // wrapper, and the budget would be enforcing something it does not name. (parseOptions is
-        // `internal` precisely so AC-11's tests can reach it; that seam is reused here.)
+        // `internal` precisely so the parse-options tests can reach it; that seam is reused here.)
         repeat(50) { module.parseOptions(JavaOnlyMap()) }
 
         // A no-op promise: the settling happens on Dispatchers.Default and is not what is being timed.

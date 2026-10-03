@@ -23,7 +23,7 @@ import java.lang.reflect.Method
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * SPEC-070-B AC-3 — the anti-"bridged-but-dead" evidence pass, Android half.
+ * The anti-"bridged-but-dead" evidence pass, Android half.
  *
  * ## The bug class
  *
@@ -176,7 +176,7 @@ class AppdnaHandlerPassTest {
                 } else {
                     // The branch WAS taken; the codegen'd emitter then needed a live JS event-emitter
                     // callback, which a unit test has no way to provide. Reaching the emitter is the
-                    // thing under test — delivering to JS is the device pass's job (AC-2).
+                    // thing under test — delivering to JS is the device pass's job.
                     eventEvidence[event] = "dispatched to its emitter (${cause::class.java.simpleName} beyond the bridge)"
                 }
             }

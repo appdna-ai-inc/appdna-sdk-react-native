@@ -1,5 +1,5 @@
 /**
- * Two fixes that a round-2 audit broke on purpose — and every existing test still passed.
+ * Two fixes that an audit broke on purpose — and every existing test still passed.
  *
  *   1. `setDelegate` REPLACES the previous delegate's listeners. It used to throw the subscription
  *      away, so a delegate registered in a `useEffect` that remounts (tab switch, navigation-back,

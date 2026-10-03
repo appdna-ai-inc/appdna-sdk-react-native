@@ -4,7 +4,7 @@ import SwiftUI
 import AppDNASDK
 
 /**
- * SPEC-070-B P4 — the Swift half of the iOS ScreenSlot Fabric component.
+ * The Swift half of the iOS ScreenSlot Fabric component.
  *
  * ## Why a Swift half exists
  *

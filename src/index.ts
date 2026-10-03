@@ -58,7 +58,7 @@ export { AppDNAPush } from './push';
 export { AppDNAScreenSlot } from './AppDNAScreenSlot';
 export type { AppDNAScreenSlotProps } from './AppDNAScreenSlot';
 export type { PushPayload } from './push';
-// SPEC-451 — the route a `map` block draws, supplied by the host at runtime.
+// The route a `map` block draws, supplied by the host at runtime.
 export { mapRoute } from './mapRoute';
 export type { MapRouteInput, MapRouteStop, MapRouteBridgePayload } from './mapRoute';
 
@@ -84,7 +84,7 @@ export type {
 } from './generated/delegates';
 
 /**
- * W16 — a synchronous, in-memory snapshot of remote config for hot-path reads.
+ * A synchronous, in-memory snapshot of remote config for hot-path reads.
  *
  * Native config reads are async bridge round-trips (and E2 makes several cross as a JSON string
  * parsed in the facade). A component reading a flag PER RENDER would pay a hop + parse every render.
@@ -290,12 +290,12 @@ export class AppDNA {
     return AppdnaModule.setPushPermission(granted);
   }
 
-  /** Track push notification delivered (SPEC-030). */
+  /** Track push notification delivered. */
   static async trackPushDelivered(pushId: string): Promise<void> {
     return AppdnaModule.trackPushDelivered(pushId);
   }
 
-  /** Track push notification tapped (SPEC-030). */
+  /** Track push notification tapped. */
   static async trackPushTapped(
     pushId: string,
     action?: string
@@ -415,7 +415,7 @@ export class AppDNA {
         addNativeListener<{ flowId: string; stepId: string; permissionType: string; granted: boolean }>('onPermissionResult', (data) => delegate?.onPermissionResult?.(data.flowId, data.stepId, data.permissionType, data.granted)),
       ]);
 
-      // §5 — the four hooks native AWAITS. They go on the host-callback channel, not the one-way
+      // The four hooks native AWAITS. They go on the host-callback channel, not the one-way
       // event channel, because native blocks the onboarding step until JS answers or the timer fires.
       if (delegate?.onBeforeStepAdvance) {
         registerHostCallback('onBeforeStepAdvance', (a) =>
@@ -513,7 +513,7 @@ export class AppDNA {
       return () => sub.remove();
     },
     /**
-     * W16 — fetch the whole config map once and keep it fresh, so `getCached()` can read it
+     * Fetch the whole config map once and keep it fresh, so `getCached()` can read it
      * synchronously. Call after `configure()`. Idempotent: it (re)fetches the snapshot and, the first
      * time, subscribes to `onRemoteConfigChanged` to auto-refresh the cache when native's config
      * changes. Cheap to await once; the point is that everything AFTER it is synchronous.
@@ -551,7 +551,7 @@ export class AppDNA {
       }
     },
     /**
-     * W16 — synchronous read from the primed snapshot. Returns `undefined` if {@link primeSnapshot}
+     * Synchronous read from the primed snapshot. Returns `undefined` if {@link primeSnapshot}
      * has not run yet (call it after `configure()`) OR if the key is absent. For per-render flag
      * reads; one-off reads should use the async `get()`.
      *
@@ -560,7 +560,7 @@ export class AppDNA {
      * every subsequent reader. Use `get()` (which re-parses fresh JSON) if you need to mutate.
      */
     getCached: (key: string): unknown => _configSnapshot?.[key],
-    /** W16 — whether {@link primeSnapshot} has populated the synchronous cache. */
+    /** Whether {@link primeSnapshot} has populated the synchronous cache. */
     hasSnapshot: (): boolean => _configSnapshot !== null,
   };
 
@@ -579,7 +579,7 @@ export class AppDNA {
 
   /** Experiments module. */
   static experiments = {
-    /** E2 — native encodes the variant as JSON, because it may legitimately be null. */
+    /** Native encodes the variant as JSON, because it may legitimately be null. */
     getVariant: async (experimentId: string): Promise<string | null> =>
       parseNativeJson<string | null>(await AppdnaModule.getExperimentVariant(experimentId)),
     isInVariant: (experimentId: string, variantId: string): Promise<boolean> =>
@@ -591,7 +591,7 @@ export class AppDNA {
 
   /** In-app messages module. */
   static inAppMessages = {
-    /** W17 — fire-and-forget on the native side; a Promise here would only fake a round trip. */
+    /** Fire-and-forget on the native side; a Promise here would only fake a round trip. */
     suppressDisplay: (suppress: boolean): void =>
       safeSyncInvoke(() => AppdnaModule.suppressMessages(suppress)),
     /** Set a delegate to receive in-app message lifecycle callbacks. */
@@ -607,7 +607,7 @@ export class AppDNA {
         addNativeListener<{ messageId: string; action: string; data?: Record<string, unknown> }>('onMessageAction', (data) => delegate?.onMessageAction?.(data.messageId, data.action, data.data)),
         addNativeListener<{ messageId: string }>('onMessageDismissed', (data) => delegate?.onMessageDismissed?.(data.messageId)),
       ]);
-      // §5.1 — `shouldShowMessage` is a VETO, not an observation. It used to be registered on the
+      // `shouldShowMessage` is a VETO, not an observation. It used to be registered on the
       // one-way event channel, where the listener's return value is discarded and a message the host
       // suppressed was shown anyway. It goes on the host-callback channel, which native awaits.
       if (delegate?.shouldShowMessage) {
@@ -735,7 +735,7 @@ export class AppDNA {
       setDelegateListeners('deepLinks', () => !delegate ? [] : [
         addNativeListener<{ url: string; params?: Record<string, string> }>('onDeepLinkReceived', (data) => delegate?.onDeepLinkReceived?.(data.url, data.params ?? {})),
       ]);
-      // §5 — a veto: native awaits it before dispatching the link, so it cannot ride the event
+      // A veto: native awaits it before dispatching the link, so it cannot ride the event
       // channel, where a listener's return value is discarded. Defaults to allow.
       if (delegate?.shouldOpen) {
         registerHostCallback('shouldOpen', (a) =>
@@ -745,7 +745,7 @@ export class AppDNA {
   };
 
   /**
-   * SPEC-404 — backend-driven lock state. Fires once per transition, so a host can surface a
+   * Backend-driven lock state. Fires once per transition, so a host can surface a
    * "service unavailable" banner and retry its event queue when the lock clears.
    */
   static lifecycle = {
@@ -844,7 +844,7 @@ export class AppDNA {
     // Invalidate any in-flight configure()'s post-await lifecycle work (see _configureGen): a configure
     // still awaiting native must not resume the entitlement observer on top of this teardown.
     _configureGen++;
-    // W16 — drop the config snapshot and its refresh subscription so a shutdown→configure cycle does
+    // Drop the config snapshot and its refresh subscription so a shutdown→configure cycle does
     // not serve pre-shutdown config, and the listener is not left dangling.
     _configSnapshotSub?.remove();
     _configSnapshotSub = null;

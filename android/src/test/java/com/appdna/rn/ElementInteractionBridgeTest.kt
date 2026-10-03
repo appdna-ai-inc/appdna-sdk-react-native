@@ -18,7 +18,7 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 /**
- * SPEC-496 §5b C9 — the React Native Android bridge half of "Show more":
+ * The React Native Android bridge half of "Show more":
  *
  *  1. `onElementInteraction` with `action == "refresh"` waits `max(vetoTimeout, core
  *     minimumBridgeTimeoutMs)` — a JS host answering at 6 s (above the 5 s default) IS delivered,
