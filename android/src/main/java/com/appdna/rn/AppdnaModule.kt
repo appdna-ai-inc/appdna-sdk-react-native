@@ -385,7 +385,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
             } else {
                 AppdnaBridge.toJson(
                     mapOf(
-                        "type" to err::class.java.simpleName,
+                        "type" to initErrorTypeName(err),
                         "message" to (err.message ?: ""),
                     ),
                 )

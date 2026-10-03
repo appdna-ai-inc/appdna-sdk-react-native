@@ -445,11 +445,23 @@ internal class LifecycleForwarder(private val emitter: AppdnaEventEmitter) : App
     }
 }
 
+/**
+ * The `type` an init error carries to JS: an explicit string per SDK error class — the names iOS sends
+ * (`appdnaInitErrorTypeName`) — never the class's runtime name, which R8 renames in a minified host build. Any other
+ * throwable keeps its class name (the SDK's own are kept by the consumer rules).
+ */
+internal fun initErrorTypeName(t: Throwable): String = when (t) {
+    is ai.appdna.sdk.AppDNAInitError.BootstrapFailed -> "BootstrapFailed"
+    is ai.appdna.sdk.AppDNAInitError.SubsystemFailed -> "SubsystemFailed"
+    is ai.appdna.sdk.AppDNAInitError.FirebaseConfigMissing -> "FirebaseConfigMissing"
+    else -> t::class.java.simpleName.ifEmpty { "Throwable" }
+}
+
 internal class InitForwarder(private val emitter: AppdnaEventEmitter) : AppDNAInitDelegate {
     override fun onInitDegraded(reason: Throwable) {
         emitter.emit(
             "onInitDegraded",
-            mapOf("type" to reason::class.java.simpleName, "message" to (reason.message ?: reason.toString())),
+            mapOf("type" to initErrorTypeName(reason), "message" to (reason.message ?: reason.toString())),
         )
     }
 }

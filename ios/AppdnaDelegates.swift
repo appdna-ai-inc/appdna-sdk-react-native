@@ -396,7 +396,7 @@ final class DeepLinkForwarder: NSObject, AppDNADeepLinkDelegate {
     }
 }
 
-/// The `type` an init error carries to JS — the names Android sends (`throwable::class.java.simpleName`):
+/// The `type` an init error carries to JS — the strings Android sends (an explicit one per init error class):
 /// `BootstrapFailed`, `SubsystemFailed`, `FirebaseConfigMissing`, and `UnsupportedBlockType` (iOS only). Any other
 /// error keeps its Swift type name. (iOS used to send "AppDNAInitError" for every case.)
 func appdnaInitErrorTypeName(_ error: Error) -> String {
