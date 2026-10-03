@@ -3,7 +3,7 @@
 // Generator: scripts/sdk-codegen/emit-delegates.ts
 // Regenerate: pnpm sdk-codegen
 
-/** Onboarding flow lifecycle observer + SPEC-083/419/421 async return-value hooks (routed via the sync_callbacks channel on Flutter/RN; native-hand-written on iOS, hand-written-Android per D11). */
+/** Onboarding flow lifecycle observer + async return-value hooks (routed via the sync_callbacks channel on Flutter/RN; hand-written natively on iOS and Android). */
 export interface AppDNAOnboardingDelegate {
   onOnboardingStarted(flowId: string): void;
   onOnboardingStepChanged(flowId: string, stepId: string, stepIndex: number, totalSteps: number): void;
@@ -32,7 +32,7 @@ export interface AppDNAPaywallDelegate {
   onPaywallRestoreCompleted(paywallId: string, restoredProductIds: string[]): void;
   onPaywallRestoreFailed(paywallId: string, error: unknown): void;
   onPaywallDismissed(paywallId: string): void;
-  /** Validate a user-entered promo code. Return true to accept, false to reject. Routed via sync_callbacks; defaults to reject on no-delegate/timeout (SPEC-070-C §3.7). */
+  /** Validate a user-entered promo code. Return true to accept, false to reject. Routed via sync_callbacks; defaults to reject on no-delegate/timeout. */
   onPromoCodeSubmit?(paywallId: string, code: string): Promise<boolean>;
   /** Post-purchase: the SDK asks the host to open a deep-link URL. */
   onPostPurchaseDeepLink(paywallId: string, url: string): void;
@@ -43,7 +43,7 @@ export interface AppDNAPaywallDelegate {
 /** Survey lifecycle observer. */
 export interface AppDNASurveyDelegate {
   onSurveyPresented(surveyId: string): void;
-  /** Survey completed. responses = list of SurveyResponse maps (native emits this; SPEC-070-C §3.9). */
+  /** Survey completed. responses = list of SurveyResponse maps (native emits this). */
   onSurveyCompleted(surveyId: string, responses: Record<string, unknown>[]): void;
   /** @deprecated Use onSurveyCompleted. DEPRECATED (1.0.5) — native never emitted this; use onSurveyCompleted. Non-breaking forwarding shim. */
   onSurveySubmitted?(surveyId: string, response: Record<string, unknown>): void;
@@ -52,11 +52,11 @@ export interface AppDNASurveyDelegate {
 
 /** In-app message lifecycle + show veto. */
 export interface AppDNAInAppMessageDelegate {
-  /** Message shown with its trigger event (native emits this; SPEC-070-C §3.10). */
+  /** Message shown with its trigger event (native emits this). */
   onMessageShown(messageId: string, trigger: string): void;
   /** @deprecated Use onMessageShown. DEPRECATED (1.0.5) — native never emitted this; use onMessageShown. Non-breaking forwarding shim. */
   onMessagePresented?(messageId: string): void;
-  /** Message action tapped. data = optional action payload map (native emits this; SPEC-070-C §3.10). */
+  /** Message action tapped. data = optional action payload map (native emits this). */
   onMessageAction(messageId: string, action: string, data: Record<string, unknown> | undefined): void;
   onMessageDismissed(messageId: string): void;
   /** Veto. Return false to suppress display. */
@@ -74,10 +74,10 @@ export interface AppDNAPushDelegate {
 export interface AppDNABillingDelegate {
   onPurchaseCompleted(productId: string, transaction: Record<string, unknown>): void;
   onPurchaseFailed(productId: string, error: unknown): void;
-  /** Entitlements changed. Each map is an Entitlement (productId/store/status/expiresAt/isTrial/offerType) — parse via Entitlement.fromMap (SPEC-070-C §3.8). */
+  /** Entitlements changed. Each map is an Entitlement (productId/store/status/expiresAt/isTrial/offerType) — parse via Entitlement.fromMap. */
   onEntitlementsChanged(entitlements: Record<string, unknown>[]): void;
   onRestoreCompleted(restoredProductIds: string[]): void;
-  /** Fires when billing is permanently unavailable (Play Services missing/broken). Android-only — never fires on iOS (SPEC-070-C §3.8/§3.14). Hide paywalls / disable purchase UI. */
+  /** Fires when billing is permanently unavailable (Play Services missing/broken). Android-only — never fires on iOS. Hide paywalls / disable purchase UI. */
   onBillingUnavailable(): void;
 }
 
@@ -97,7 +97,7 @@ export interface AppDNAScreenDelegate {
   onScreenAction(screenId: string, action: Record<string, unknown>): boolean | Promise<boolean>;
 }
 
-/** SPEC-404 — backend-driven SDK lock-state observer. Fires once per state transition (idle <-> locked). Hosts use this to surface a custom "service unavailable" banner and trigger a one-shot event-queue retry on unlock. */
+/** Backend-driven SDK lock-state observer. Fires once per state transition (idle <-> locked). Hosts use this to surface a custom "service unavailable" banner and trigger a one-shot event-queue retry on unlock. */
 export interface AppDNALifecycleDelegate {
   /** Fires once on idle to locked. reason in {billing_overdue, manual_admin, org_cancelled}. lockedAt is ISO-8601 (raw string for cross-platform parity; host parses if it needs a Date). */
   onSdkRuntimeLocked(reason: string, lockedAt: string): void;

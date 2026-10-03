@@ -4,7 +4,7 @@ import React
 import AppDNASDK
 
 /**
- * SPEC-070-B P2 — the Swift half of the iOS TurboModule.
+ * The Swift half of the iOS TurboModule.
  *
  * ## Why this is not the TurboModule itself
  *
@@ -22,7 +22,7 @@ import AppDNASDK
 @objc(AppdnaModuleImpl)
 public final class AppdnaModuleImpl: NSObject {
 
-    /// SPEC-070-B §7 — pinned literal, underscore not hyphen. Injected unconditionally in
+    /// Pinned literal, underscore not hyphen. Injected unconditionally in
     /// `parseOptions`, never read from the host's options: a host must not be able to set, spoof or
     /// omit its own attribution. `event-envelope.schema.ts` is `.catch('native')`, so a wrong tag
     /// does not error, is not logged, and is not metered — it just quietly lies in BigQuery.
@@ -31,7 +31,7 @@ public final class AppdnaModuleImpl: NSObject {
     /// Set by the ObjC++ adapter. Weak: the adapter owns this object.
     @objc public weak var eventSink: (any AppdnaEventSink)?
 
-    /// PN row 3 — the token for the entitlements handler, so `invalidate()` can detach it. Before
+    /// The token for the entitlements handler, so `invalidate()` can detach it. Before
     /// this, a reload left N handlers on the process-global singleton and delivered N-fold.
     private var entitlementObserverToken: UUID?
 
@@ -45,7 +45,7 @@ public final class AppdnaModuleImpl: NSObject {
     private var configObserver: NSObjectProtocol?
 
     /**
-     * P3 — the eight veto hooks and every observe callback are routed by these.
+     * The eight veto hooks and every observe callback are routed by these.
      *
      * The SDK's delegate properties are `weak`, so the forwarders must be OWNED here. A local that
      * goes out of scope at the end of `configure` deallocates immediately and the delegate silently
@@ -161,7 +161,7 @@ public final class AppdnaModuleImpl: NSObject {
         resolve(nil)
     }
 
-    /// W17 — fire-and-forget. Native enqueues, so a Promise per event would allocate for nothing.
+    /// Fire-and-forget. Native enqueues, so a Promise per event would allocate for nothing.
     @objc(track:properties:)
     public func track(_ event: String, properties: NSDictionary?) {
         AppDNA.track(event: event, properties: properties as? [String: Any])
@@ -262,7 +262,7 @@ public final class AppdnaModuleImpl: NSObject {
 
     // MARK: - Remote config
 
-    /// E2 — a config value of unknown shape crosses as a JSON string, parsed in the facade.
+    /// A config value of unknown shape crosses as a JSON string, parsed in the facade.
     @objc(getRemoteConfig:resolve:reject:)
     public func getRemoteConfig(_ key: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         resolve(AppdnaJSON.encode(AppDNA.getRemoteConfig(key: key)))
@@ -364,7 +364,7 @@ public final class AppdnaModuleImpl: NSObject {
         }
     }
 
-    /// N17 — an overload on iOS, a distinct name on Android. The wrapper exposes one name.
+    /// An overload on iOS, a distinct name on Android. The wrapper exposes one name.
     @objc(presentPaywallByPlacement:context:resolve:reject:)
     public func presentPaywallByPlacement(
         _ placement: String,
@@ -434,7 +434,7 @@ public final class AppdnaModuleImpl: NSObject {
 
     // MARK: - Screens (P8 — the 9th delegate)
     //
-    // §18.6 excluded AppDNAScreenDelegate because "RN has no screen surface until P4 lands
+    // Excluded AppDNAScreenDelegate because "RN has no screen surface until P4 lands
     // AppDNAScreenSlot". P4 landed it — but the slot is INLINE and raises nothing: the screen
     // delegate's observe events are fired by `ScreenManager`, the PRESENTED-screen path. RN could not
     // present a screen at all while iOS and Android both shipped the identical surface. That is what
@@ -643,7 +643,7 @@ public final class AppdnaModuleImpl: NSObject {
         resolve(AppdnaJSON.encode(AppDNA.pushModule.getToken()))
     }
 
-    /// N9 — a hex-encoded APNs `Data` here; the FCM string on Android. One signature, two meanings.
+    /// A hex-encoded APNs `Data` here; the FCM string on Android. One signature, two meanings.
     @objc(setPushToken:resolve:reject:)
     public func setPushToken(_ token: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         guard let data = Self.hexStringToData(token) else {
@@ -700,7 +700,7 @@ public final class AppdnaModuleImpl: NSObject {
 
     // MARK: - Deep links / web entitlements
 
-    /// N15 — a `URL` here, a `String` on Android.
+    /// A `URL` here, a `String` on Android.
     @objc(handleDeepLink:resolve:reject:)
     public func handleDeepLink(_ url: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         // Resolve-don't-fork (the same cross-platform reconciliation already applied to presentPaywall's
@@ -856,7 +856,7 @@ public final class AppdnaModuleImpl: NSObject {
     // MARK: - Helpers
 
     /// ⚠ `internal`, not `private`: `AppdnaParseOptionsTests` reaches it through `@testable import`
-    /// (AC-11). A jest test cannot see a native `?? 3600`, and neither can a Dart one.
+    /// A jest test cannot see a native `?? 3600`, and neither can a Dart one.
     /// The WRAPPER's own version (this package), not the native SDK's. Injected, never read from the
     /// host's options. Kept in lockstep with package.json by `check:wrapper-version-selfreport`.
     static let wrapperVersion = "1.0.19"
@@ -895,7 +895,7 @@ public final class AppdnaModuleImpl: NSObject {
             configTTL: values["configTTL"] as? TimeInterval,
             logLevel: logLevel,
             billingProvider: billingProvider,
-            // §7 rule 1: injected unconditionally, NOT read from `values`. A host cannot spoof it.
+            // Injected unconditionally, NOT read from `values`. A host cannot spoof it.
             framework: Self.frameworkTag,
             frameworkVersion: Self.wrapperVersion,
             requireConsent: values["requireConsent"] as? Bool ?? defaults.requireConsent,

@@ -1,5 +1,5 @@
 /**
- * SPEC-070-B §5 / §5.1 — the JS half of the host-veto protocol.
+ * The JS half of the host-veto protocol.
  *
  * Native awaits a veto and applies its own default when the answer is `null`. So every assertion
  * here is about what lands in `respondToHostCallback`: `"null"` means "apply your default", and a
@@ -152,7 +152,7 @@ describe('host-callback dispatcher', () => {
 });
 
 /**
- * SPEC-496 §5b C10 — the JS half of the `element_interaction_data_context_decode` shared fixture.
+ * The JS half of the `element_interaction_data_context_decode` shared fixture.
  *
  * The decode of `dataContext` (null members kept as removal markers, 0/1 kept as numbers) happens in
  * the native bridge, into the core `ElementInteractionResult.decodeDataContext`. The wrapper's job is to

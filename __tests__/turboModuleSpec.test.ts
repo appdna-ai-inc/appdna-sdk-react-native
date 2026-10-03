@@ -1,5 +1,5 @@
 /**
- * SPEC-070-B P2 / E1 / E2 — the TurboModule spec must be codegen-LEGAL.
+ * The TurboModule spec must be codegen-LEGAL.
  *
  * RN's codegen is what turns `src/specs/NativeAppdnaModule.ts` into a C++ JSI spec and an abstract
  * Kotlin class. If a type in it is illegal, the failure lands at a HOST's build — `pod install` or
@@ -8,7 +8,7 @@
  * So we run RN's own parser here. This is not a re-implementation of the rules: it is the exact
  * `TypeScriptParser` a host would run.
  *
- * ## 🔴 Two SPEC-070-B §2.3 claims are REFUTED for RN 0.76.4, measured here, not reasoned
+ * ## 🔴 Two claims are REFUTED for RN 0.76.4, measured here, not reasoned
  *
  *   - **"`UnsafeObject[]` throws `UnsupportedArrayElementTypeAnnotationParserError`."** It does not.
  *     `UnsafeObject` and `Object` both lower to `GenericObjectTypeAnnotation`, so `UnsafeObject[]`
@@ -59,7 +59,7 @@ describe('NativeAppdnaModule TurboModule spec', () => {
     expect(spec.eventEmitters.length).toBeGreaterThanOrEqual(30);
 
     const names = spec.methods.map((m: { name: string }) => m.name);
-    // The one method that makes native→JS vetoes answerable at all (§5).
+    // The one method that makes native→JS vetoes answerable at all.
     expect(names).toContain('respondToHostCallback');
     // D-h / AC-22: reachable from JS, or the runner's injection would launder a dead surface.
     expect(names).toContain('notifyScreenAppeared');
@@ -92,7 +92,7 @@ describe('NativeAppdnaModule TurboModule spec', () => {
         (m: { name: string }) => m.name === 'getExperimentExposures',
       ).typeAnnotation.returnTypeAnnotation;
 
-    // Both lower to the same thing. §2.3's "UnsupportedArrayElementTypeAnnotationParserError" does
+    // Both lower to the same thing. The "UnsupportedArrayElementTypeAnnotationParserError" does
     // not occur in RN 0.76.4. We keep `Object[]` because it says what we mean, not because the
     // alternative fails.
     expect(annotationOf(variant)).toEqual(annotationOf(source));

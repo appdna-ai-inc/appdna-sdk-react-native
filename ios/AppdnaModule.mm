@@ -41,7 +41,7 @@ RCT_EXPORT_MODULE()
 }
 
 /**
- * E10 / §2.3 — `requiresMainQueueSetup` is NO by native grace: the core SDK self-marshals onto the
+ * `requiresMainQueueSetup` is NO by native grace: the core SDK self-marshals onto the
  * main thread where it needs to (`AppDNA.swift:458,485,1342`). Recorded as a dependency, not an
  * assumption.
  */

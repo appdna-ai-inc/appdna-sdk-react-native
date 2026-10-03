@@ -1,8 +1,8 @@
 /**
  * sharedFixtures.test.ts
  *
- * Cross-platform behavioral fixture runner for React Native — SPEC-070-0
- * §3.2 + §3.3 step 7.
+ * Cross-platform behavioral fixture runner for React Native
+ * step 7.
  *
  * Per ADR-001 the React Native TS layer is a THIN WRAPPER. This runner is
  * leg ONE of two, and it verifies the **bridge contract**: for each
@@ -183,7 +183,7 @@ function loadRnFixtures(): Fixture[] {
 async function runFixture(fixture: Fixture): Promise<void> {
   switch (fixture.action.kind) {
     case 'track_event': {
-      // SPEC-070-B §18: the fixture key is `event_name`, not `event`. The driver read the wrong key
+      // The fixture key is `event_name`, not `event`. The driver read the wrong key
       // and papered over it with `?? 'unknown'` — so it drove a track('unknown') and asserted
       // against undefined. The suite never ran, so nobody saw it. A missing key is a broken
       // fixture; say so instead of inventing an event name.

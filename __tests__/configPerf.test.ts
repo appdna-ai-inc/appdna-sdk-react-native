@@ -1,5 +1,5 @@
 /**
- * SPEC-070-B P9 — W16 (synchronous config snapshot) + W17 (fire-and-forget track).
+ * W16 (synchronous config snapshot) + W17 (fire-and-forget track).
  *
  * Both are perf contracts a typecheck cannot express: that `track()` returns no Promise, and that a
  * primed config snapshot answers synchronously and refreshes when native reports a change.

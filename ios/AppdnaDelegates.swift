@@ -2,7 +2,7 @@ import Foundation
 import AppDNASDK
 
 /**
- * SPEC-070-B P3 — the native→JS delegate forwarders (iOS).
+ * The native→JS delegate forwarders (iOS).
  *
  * Every one of the ~30 SDK callbacks used to have a JS listener and no native emitter. The facade
  * subscribed; nothing ever fired. These classes are the missing half.
@@ -21,7 +21,7 @@ import AppDNASDK
  * exposes a parallel **async seam** for each (`asyncShouldShowMessage`, `asyncShouldOpen`,
  * `asyncOnScreenAction`, and `onPromoCodeSubmit`'s completion handler), consulted in ADDITION to the
  * synchronous delegate method. The sync forwarders below return the permissive answer and defer the
- * real decision to the async seam — the seam the core SDK grew in SPEC-070-C precisely so that a
+ * real decision to the async seam — the seam the core SDK grew precisely so that a
  * wrapper could answer a veto over a bridge.
  */
 
@@ -165,7 +165,7 @@ final class OnboardingForwarder: NSObject, AppDNAOnboardingDelegate {
             "inputValues": inputValues,
         ]
         if let value { args["value"] = value }
-        // SPEC-496 §5b C5.5 — wait at least as long as core's deadline for this action (8 s for a
+        // Wait at least as long as core's deadline for this action (8 s for a
         // `refresh`), so the bridge never cuts a slow "Show more" short. One line; the rule is core's.
         let timeout = max(invoker.timeout, ElementInteractionResult.minimumBridgeTimeout(action: action) ?? 0)
         return AppdnaVetoDecoder.elementInteractionResult(await invoker.invoke("onElementInteraction", args, timeout: timeout))
@@ -274,7 +274,7 @@ final class PaywallForwarder: NSObject, AppDNAPaywallDelegate {
 
 /**
  The 9th delegate (P8). `onScreenAction` is a VETO and rides `AppDNA.asyncOnScreenAction` (the
- host-callback seam), exactly as §18.6 ruled — but the protocol still requires it, so it returns
+ host-callback seam), as designed — but the protocol still requires it, so it returns
  `true` here: the async seam is the one that actually asks the host, and answering `false` from both
  would let the two answers disagree about the same action.
  */
@@ -383,7 +383,7 @@ final class BillingForwarder: NSObject, AppDNABillingDelegate {
         emit("onRestoreCompleted", ["restoredProducts": restoredProducts])
     }
 
-    // N8 — `onBillingUnavailable` is Android-only. iOS's protocol has no such method, and inventing
+    // `onBillingUnavailable` is Android-only. iOS's protocol has no such method, and inventing
     // one that never fires would be worse than the honest asymmetry the facade documents.
 }
 
@@ -559,13 +559,13 @@ enum AppdnaVetoDecoder {
             title: map["title"] as? String,
             subtitle: map["subtitle"] as? String,
             ctaText: map["ctaText"] as? String,
-            // SPEC-448 §B — replaces the removed `layoutOverrides`, which nothing ever read.
+            // Replaces the removed `layoutOverrides`, which nothing ever read.
             fieldOptions: decodeFieldOptions(map["fieldOptions"]),
-            // SPEC-452 — the `{{hook_data.…}}` payload. `anyMap` (not a plain cast) because a
+            // The `{{hook_data.…}}` payload. `anyMap` (not a plain cast) because a
             // bridged nested dictionary fails `as? [String: Any]` at depth, and this value is
             // nested by definition: hosts send objects and arrays of objects here.
             dataContext: anyMap(map["dataContext"]),
-            // SPEC-451 — a one-line forward into the core decoder, which is all a wrapper may be.
+            // A one-line forward into the core decoder, which is all a wrapper may be.
             mapRoutes: StepConfigOverride.decodeMapRoutes(map["mapRoutes"])
         )
     }
@@ -588,7 +588,7 @@ enum AppdnaVetoDecoder {
             // #657 — replacement options for a refresh; same decoder as the render-time override.
             fieldOptions: decodeFieldOptions(map["fieldOptions"]),
             advance: (map["advance"] as? Bool) ?? false,
-            // SPEC-496 §5b C2 — a one-line forward into the CORE decoder. Never `anyMap`: it drops
+            // A one-line forward into the CORE decoder. Never `anyMap`: it drops
             // null members, and a null member here means "remove this key".
             dataContext: ElementInteractionResult.decodeDataContext(map["dataContext"])
         )
@@ -625,7 +625,7 @@ enum AppdnaVetoDecoder {
     }
 }
 
-/// SPEC-448 §B — `[blockId: [option maps]]` from the bridge into typed options, decoded against
+/// `[blockId: [option maps]]` from the bridge into typed options, decoded against
 /// the SAME `InputOption` the config parser uses so the two cannot drift.
 private func decodeFieldOptions(_ raw: Any?) -> [String: [InputOption]]? {
     guard let byBlock = raw as? [String: Any] else { return nil }

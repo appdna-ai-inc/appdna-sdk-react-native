@@ -1,4 +1,4 @@
-// SPEC-070-B P4 — manual Fabric registration, for hosts that link pods as DYNAMIC frameworks.
+// Manual Fabric registration, for hosts that link pods as DYNAMIC frameworks.
 //
 // React Native's codegen emits an `RCTThirdPartyFabricComponentsProvider` that maps every
 // third-party component name to its view class — and wraps the whole map in `#ifndef

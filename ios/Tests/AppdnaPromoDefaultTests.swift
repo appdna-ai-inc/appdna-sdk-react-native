@@ -3,13 +3,13 @@ import AppDNASDK
 @testable import appdna_sdk_react_native
 
 /**
- SPEC-070-B AC-30b / AC-7 — `onPromoCodeSubmit`'s default is **REJECT**, on iOS.
+ `onPromoCodeSubmit`'s default is **REJECT**, on iOS.
 
  ## Why this test exists
 
  Seven of the eight veto hooks default to *allow* on a silent host: a host that registered no handler,
  or answered too slowly, should not be able to break an onboarding flow. `onPromoCodeSubmit` is the
- eighth and it is the opposite — and the asymmetry is not decorative. §11.7 is a LIVE defect on both
+ eighth and it is the opposite — and the asymmetry is not decorative. It was a LIVE defect on both
  natives: a paywall with no delegate ran a *"basic non-empty check fallback"* that marked **any
  non-blank string** as a valid promo code, printed "Code applied!", and folded it into the purchase
  metadata under a comment reading *"fold validated promo code into purchase metadata"*. The store

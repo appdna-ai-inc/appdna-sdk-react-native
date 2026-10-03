@@ -10,7 +10,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * SPEC-070-B P2 / E9 — "nothing raw crosses the RN bridge".
+ * "nothing raw crosses the RN bridge".
  *
  * Flutter gets this for free (`StandardMessageCodec`). RN's `WritableMap`/`Promise` boundary is
  * narrower, and the old module violated it three ways — each a real crash or a silent corruption:
@@ -148,7 +148,7 @@ internal object AppdnaBridge {
     }
 
     /**
-     * E2 — encode a value of unknown shape (bool | number | string | array | object | null) as JSON.
+     * Encode a value of unknown shape (bool | number | string | array | object | null) as JSON.
      * There is no codegen type for "any JSON value", and this is the only encoding whose meaning is
      * identical on both platforms. iOS's mirror is `AppdnaJSON.encode`.
      *
@@ -181,7 +181,7 @@ internal object AppdnaBridge {
     }
 
     /**
-     * §5 — decode a host veto reply. The envelope is a JSON string because the eight hooks disagree
+     * Decode a host veto reply. The envelope is a JSON string because the eight hooks disagree
      * on shape: four answer with a map, four with a bare boolean, and every one of them may answer
      * `null` for "no opinion". `JSONTokener` parses all three at top level.
      *

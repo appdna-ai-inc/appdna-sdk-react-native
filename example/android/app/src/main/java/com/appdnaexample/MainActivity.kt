@@ -78,7 +78,7 @@ class MainActivity : ReactActivity() {
             "appdnaExperimentId" to "experimentId",
             "appdnaExperimentVariantId" to "experimentVariantId",
             "appdnaPlacement" to "placement",
-            // SPEC-496 device pass: `items` | `empty` — sample host data for onBeforeStepRender.
+            // Device pass: `items` | `empty` — sample host data for onBeforeStepRender.
             "appdnaHostDataDemo" to "hostDataDemo",
             // The sign-in timeout floor device rows.
             "appdnaSignInDelaySeconds" to "signInDelaySeconds",

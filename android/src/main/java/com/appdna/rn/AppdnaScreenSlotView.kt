@@ -27,7 +27,7 @@ import com.facebook.react.uimanager.events.Event
 import com.facebook.react.uimanager.events.EventDispatcher
 
 /**
- * SPEC-070-B P4 — the Android host view for a server-driven AppDNA screen slot.
+ * The Android host view for a server-driven AppDNA screen slot.
  *
  * A `FrameLayout` wrapping a `ComposeView` that renders the native `@Composable AppDNAScreenSlot`.
  * Height is not measured by Yoga (a Fabric host view has no intrinsic size without a C++ shadow
@@ -300,7 +300,7 @@ private class SlotViewTreeOwner :
         // owner without starting it — the injected-content test seam does exactly that — crashes here,
         // and it crashes inside `onDropViewInstance`, a ViewManager callback on the UI thread.
         //
-        // `destroy()` has no business caring whether anyone started it. Found by AC-37's mount/dispose
+        // `destroy()` has no business caring whether anyone started it. Found by the earlier mount/dispose
         // memory test, which drives the real `onDropView()` the ViewManager drives.
         if (lifecycleRegistry.currentState != Lifecycle.State.INITIALIZED) {
             lifecycleRegistry.currentState = Lifecycle.State.DESTROYED

@@ -8,7 +8,7 @@ import com.facebook.react.viewmanagers.AppdnaScreenSlotViewManagerDelegate
 import com.facebook.react.viewmanagers.AppdnaScreenSlotViewManagerInterface
 
 /**
- * SPEC-070-B P4 — the Fabric ViewManager for [AppdnaScreenSlotView].
+ * The Fabric ViewManager for [AppdnaScreenSlotView].
  *
  * Implements the CODEGEN'D `AppdnaScreenSlotViewManagerInterface` (generated from
  * `src/specs/AppdnaScreenSlotNativeComponent.ts`) and forwards prop setters through the codegen'd

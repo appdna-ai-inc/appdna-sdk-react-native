@@ -1,7 +1,7 @@
 import Foundation
 
 /**
- * SPEC-070-B §5 / §5.1 — the pending-veto map for the host-veto wire protocol (iOS).
+ * The pending-veto map for the host-veto wire protocol (iOS).
  *
  * Native awaits a host veto **forever** — the SDK has no timeout. Flutter gets correlation for free
  * (each `invokeMethod` carries its own private reply port) and robustness for free
@@ -20,7 +20,7 @@ import Foundation
  *      `onPromoCodeSubmit` defaults to **reject**. A uniform default-on-timeout silently starts
  *      accepting unvalidated promo codes.
  *
- * W10 (AC-39): an unknown or foreign `callbackId` is **ignored, never raised** — a reply from a
+ * W10: an unknown or foreign `callbackId` is **ignored, never raised** — a reply from a
  * previous JS epoch is expected, not exceptional — and the map is **count-bounded** as well as
  * time-bounded, because a burst can balloon it inside the five-second window.
  *
@@ -72,7 +72,7 @@ final class AppdnaHostCallbacks {
         return pending.removeValue(forKey: callbackId) != nil
     }
 
-    /// E6/E11 — on teardown, resolve every pending veto with nil so the caller applies the hook's
+    /// On teardown, resolve every pending veto with nil so the caller applies the hook's
     /// default. A JS side that no longer exists will never answer, and native awaits forever.
     func invalidateAll() {
         lock.lock()

@@ -7,7 +7,7 @@ import ai.appdna.sdk.billing.Entitlement
 import ai.appdna.sdk.billing.ProductInfo
 
 /**
- * SPEC-070-B P1 — DTO → bridge-safe map mappers.
+ * DTO → bridge-safe map mappers.
  *
  * The old shim called `.toMap()` on `List<String>` (from `restorePurchases()`) and on
  * `TransactionInfo`. Neither has such a method. Those calls could never have compiled, and RN's CI
@@ -110,7 +110,7 @@ internal object AppdnaMappers {
         response.metadata?.let { put("metadata", it) }
     }
     /**
-     * P8 — the onboarding location field's structured answer.
+     * The onboarding location field's structured answer.
      *
      * Both natives already declare these keys in snake_case (`formatted_address`, `state_code`, …),
      * so the two wires agree without a translation layer. Mapping field-by-field rather than

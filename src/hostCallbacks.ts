@@ -1,7 +1,7 @@
 import { AppdnaModule, addNativeListener, parseNativeJson } from './nativeModule';
 
 /**
- * SPEC-070-B §5 / §5.1 — the JS half of the host-veto wire protocol.
+ * The JS half of the host-veto wire protocol.
  *
  * Flutter's `invokeMethod` carries its own private reply port, so a veto correlates for free. React
  * Native's native→JS path is **one-way**: native emits `onHostCallback` with `{callbackId, hook,

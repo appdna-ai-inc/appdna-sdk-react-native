@@ -1,6 +1,6 @@
 import { AppdnaModule, addNativeListener } from './nativeModule';
 
-/** One structured notification action button (SPEC-070-A). `id` echoes back as `onPushTapped`'s actionId. */
+/** One structured notification action button. `id` echoes back as `onPushTapped`'s actionId. */
 export interface PushAction {
   id: string;
   label: string;

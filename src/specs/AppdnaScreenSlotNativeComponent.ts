@@ -3,7 +3,7 @@ import codegenNativeComponent from 'react-native/Libraries/Utilities/codegenNati
 import type { DirectEventHandler, Double } from 'react-native/Libraries/Types/CodegenTypes';
 
 /**
- * SPEC-070-B P4 — the Fabric host view for a server-driven AppDNA screen slot.
+ * The Fabric host view for a server-driven AppDNA screen slot.
  *
  * ## Why a native component, and why height is a problem
  *

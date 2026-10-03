@@ -132,7 +132,7 @@ describe('a subscriber that outlives a shutdown keeps receiving entitlements', (
   });
 
   it('a shutdown completing DURING configure()\'s await does not leave the observer dead', async () => {
-    // R18: the same teardown-race class as the config snapshot, on the entitlement observer. configure()
+    // The same teardown-race class as the config snapshot, on the entitlement observer. configure()
     // resumes the observer in its post-await continuation; if a shutdown() completes while that await is
     // pending, the resume must be SKIPPED — otherwise it re-latches the observer as "started" on the
     // torn-down SDK, and the next real configure() short-circuits and leaves onEntitlementsChanged dead.

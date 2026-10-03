@@ -8,7 +8,7 @@ import com.facebook.react.module.model.ReactModuleInfoProvider
 import com.facebook.react.uimanager.ViewManager
 
 /**
- * SPEC-070-B P2 — a New-Architecture package.
+ * A New-Architecture package.
  *
  * `ReactPackage.createNativeModules` eagerly constructs every module at startup and cannot expose a
  * TurboModule. `BaseReactPackage` resolves modules LAZILY by name, and `isTurboModule = true` is

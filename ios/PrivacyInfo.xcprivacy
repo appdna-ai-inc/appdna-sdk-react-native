@@ -3,7 +3,6 @@
 <plist version="1.0">
 <dict>
   <!--
-    SPEC-070-B P0 / AC-38 (W7).
 
     Apple MERGES the app's manifest with every linked pod's, so this file declares only what the
     React Native wrapper itself does. The wrapper persists nothing, logs nothing, and collects

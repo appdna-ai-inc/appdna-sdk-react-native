@@ -64,9 +64,9 @@ type Props = {
   /** A paywall placement name, for `paywall.presentByPlacement`. */
   placement?: string;
   /**
-   * SPEC-496 device pass — `items` makes `onBeforeStepRender` hand every step a sample
+   * Device pass — `items` makes `onBeforeStepRender` hand every step a sample
    * `dataContext` (`hook_data.recommendations`, three items); `empty` hands it an empty list, so the
-   * empty-text / required-select path can be exercised. `showmore` is the SPEC-496 §5b paging host for
+   * empty-text / required-select path can be exercised. `showmore` is the paging host for
    * "Show more" (`refresh_step`): page 1 is a–d, and every `refresh` interaction answers — after 1.5 s, so
    * the spinner shows — with the list so far plus the next four (accumulate, at most 20). Unset → no
    * override, as before.
@@ -171,14 +171,14 @@ const freshSamplePush = () => ({
   delivery_id: `rn_e2e_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
 });
 
-/** SPEC-496 — sample host data for the `hostDataDemo` launch arg. Public placeholder images only. */
+/** Sample host data for the `hostDataDemo` launch arg. Public placeholder images only. */
 const HOST_DATA_DEMO_ITEMS = [
   { id: 'w1', name: 'Maple Farm', subtitle: 'Toronto', imageUrl: 'https://picsum.photos/seed/w1/400/300' },
   { id: 'w2', name: 'Oak Hall', subtitle: 'Nashville', imageUrl: 'https://picsum.photos/seed/w2/400/300' },
   { id: 'w3', name: 'Birch Mill', subtitle: 'Dublin', imageUrl: 'https://picsum.photos/seed/w3/400/300' },
 ];
 
-/** SPEC-496 §5b — the `showmore` host's list: `a`, `b`, … with the page each arrived on as its subtitle. */
+/** The `showmore` host's list: `a`, `b`, … with the page each arrived on as its subtitle. */
 const showMoreItems = (count: number) =>
   Array.from({ length: count }, (_, i) => {
     const id = String.fromCharCode(97 + i);
@@ -190,7 +190,7 @@ const showMoreItems = (count: number) =>
     };
   });
 
-/** SPEC-496 §5b — the `showmore` host's stand-in for backend latency (see the call site). */
+/** The `showmore` host's stand-in for backend latency (see the call site). */
 const demoLatency = (ms: number) => {
   const end = Date.now() + ms;
   while (Date.now() < end) {
@@ -346,7 +346,7 @@ export default function App({
           console.log(line);
           append(line);
         }
-        // SPEC-496 — opt-in via the `appdnaHostDataDemo` launch arg only, so the default stays "no
+        // Opt-in via the `appdnaHostDataDemo` launch arg only, so the default stays "no
         // override". The payload is what a host's `{{hook_data.recommendations}}` repeat reads.
         if (hostDataDemo === 'showmore') {
           const recommendations = showMoreItems(4 * (showMorePages.current[stepId] ?? 1));
@@ -521,7 +521,7 @@ export default function App({
     await AppDNA.identify('rn_e2e_user', { plan: 'demo' });
     append('identified rn_e2e_user');
 
-    // W16 — the synchronous config cache. Priming it is what makes `getCached()` a real read rather
+    // The synchronous config cache. Priming it is what makes `getCached()` a real read rather
     // than `undefined`, and it is also what `shutdown()` has to tear down.
     await AppDNA.remoteConfig.primeSnapshot();
     append(`remoteConfig.hasSnapshot() → ${AppDNA.remoteConfig.hasSnapshot()}`);

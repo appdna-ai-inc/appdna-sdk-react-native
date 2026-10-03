@@ -60,7 +60,7 @@ npm view @appdna-ai/react-native-sdk@1.0.6 deprecated
 
 ---
 
-## 🔴 Publish gate — RN 0.77 / Kotlin 2.0 validation (impl-audit R5, F1)
+## 🔴 Publish gate — RN 0.77 / Kotlin 2.0 validation (impl-audit, F1)
 
 The `peerDependencies` range is `react-native >=0.76.9` (no upper bound), so it advertises RN 0.77+
 (Kotlin 2.0). That support is currently **compile-validated only, and only by a HYBRID check**

@@ -1,5 +1,5 @@
 /**
- * SPEC-070-B D-q2 / D-c / AC-14 — a runtime that cannot host the native module must fail
+ * A runtime that cannot host the native module must fail
  * comprehensibly.
  *
  * `AppdnaModule is undefined` is the error every published version of this package produced, and it
@@ -58,7 +58,7 @@ describe('missing native module', () => {
   });
 
   it('sync void methods do NOT crash the JS thread on a missing/torn-down bridge', () => {
-    // R13: track/setLogLevel/notifyScreenAppeared/suppressDisplay are SYNCHRONOUS void JSI methods a
+    // track/setLogLevel/notifyScreenAppeared/suppressDisplay are SYNCHRONOUS void JSI methods a
     // host calls fire-and-forget — a void return gives no promise to `.catch()`, and the Proxy
     // get-trap throws SYNCHRONOUSLY when the module is absent. notifyScreenAppeared is wired into the
     // navigation container (fires on EVERY route change), so an unguarded throw crashes navigation on a

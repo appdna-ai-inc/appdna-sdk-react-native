@@ -50,7 +50,7 @@
     @"appdnaExperimentId" : @"experimentId",
     @"appdnaExperimentVariantId" : @"experimentVariantId",
     @"appdnaPlacement" : @"placement",
-    // SPEC-496 device pass: `items` | `empty` — sample host data for onBeforeStepRender (App.tsx).
+    // Device pass: `items` | `empty` — sample host data for onBeforeStepRender (App.tsx).
     @"appdnaHostDataDemo" : @"hostDataDemo",
     // The sign-in timeout floor device rows (App.tsx).
     @"appdnaSignInDelaySeconds" : @"signInDelaySeconds",

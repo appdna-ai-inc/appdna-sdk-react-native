@@ -1,5 +1,5 @@
 /**
- * SPEC-070-B W19 / AC-37 — the ScreenSlot must not produce a visible layout shift.
+ * The ScreenSlot must not produce a visible layout shift.
  *
  * AC-17 permits a 0-height first frame at the MEASUREMENT layer; AC-37 forbids it reaching the
  * screen. Two distinct shifts have to be ruled out:

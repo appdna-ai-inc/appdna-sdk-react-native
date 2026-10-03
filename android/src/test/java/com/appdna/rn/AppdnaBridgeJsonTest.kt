@@ -12,7 +12,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * SPEC-070-B E2 / §5 — the two pieces no jest test can see.
+ * The two pieces no jest test can see.
  *
  * `AppdnaBridge.toJson` is the only encoding whose meaning must be identical on both platforms, and
  * `AppdnaVetoDecoder` turns a host's JSON reply into a native return type. Both live below the

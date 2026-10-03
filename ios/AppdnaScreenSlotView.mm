@@ -1,4 +1,4 @@
-// SPEC-070-B P4 — the iOS Fabric host view for a server-driven AppDNA screen slot.
+// The iOS Fabric host view for a server-driven AppDNA screen slot.
 //
 // A Fabric component view MUST be an ObjC++ `RCTViewComponentView`: that is where the C++
 // ComponentDescriptor, the generated props struct, and the event emitter live. The thing embedded is

@@ -5,7 +5,7 @@ require Pod::Executable.execute_command('node', ['-p',
     {paths: [process.argv[1]]},
   )', __dir__]).strip
 
-# SPEC-070-B P1 / D-q1. The core pod requires iOS 16 (AppDNASDK.podspec:15); RN's
+# The core pod requires iOS 16 (AppDNASDK.podspec:15); RN's
 # `min_ios_version_supported` is lower, and CocoaPods resolves the FLOOR, not the max.
 platform :ios, '16.0'
 
@@ -16,7 +16,7 @@ ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 prepare_react_native_project!
 
-# SPEC-495 — GoogleMaps is a STATIC xcframework, and this example links dynamically.
+# GoogleMaps is a STATIC xcframework, and this example links dynamically.
 #
 # `pod install` refuses outright:
 #
@@ -43,7 +43,7 @@ pre_install do |installer|
 end
 
 target 'AppdnaExample' do
-  # SPEC-070-B AC-11 / AC-21 / AC-30b — install the podspec's `Tests` test_spec, so CI can RUN the
+  # Install the podspec's `Tests` test_spec, so CI can RUN the
   # iOS unit tests (`parseOptions`, the promo-code default) rather than merely compile them.
   #
   # This MUST come before `use_native_modules!`. Autolinking looks the pod up in the target's existing
@@ -79,7 +79,7 @@ target 'AppdnaExample' do
       :path => '../../',
       :testspecs => ['Tests']
 
-  # SPEC-495 — the app target must link GoogleMaps ITSELF, and this is the second half of the
+  # The app target must link GoogleMaps ITSELF, and this is the second half of the
   # `pre_install` patch above rather than a duplicate of it.
   #
   # Disabling the validator lets `pod install` finish; it does not make CocoaPods LINK a static
@@ -98,7 +98,7 @@ target 'AppdnaExample' do
 
   config = use_native_modules!
 
-  # SPEC-070-B P1 on-branch override, mirroring the Flutter example's APPDNA_IOS_SDK_PATH: build
+  # On-branch override, mirroring the Flutter example's APPDNA_IOS_SDK_PATH: build
   # against a LOCAL iOS SDK so an UNPUBLISHED native (1.0.70) can be compile-verified before
   # release. Unset in CI/publish → the registry pod named by the wrapper's podspec is used.
   #
@@ -108,7 +108,7 @@ target 'AppdnaExample' do
     pod 'AppDNASDK', :path => local_ios_sdk
   end
 
-  # SPEC-070-B P1 / D-q1 — Firebase's LINKAGE, established by building rather than by reasoning.
+  # Firebase's LINKAGE, established by building rather than by reasoning.
   #
   # `AppDNASDK` depends on FirebaseFirestore, a Swift pod. RN links pods as static LIBRARIES by
   # default, and CocoaPods then refuses: `FirebaseFirestoreInternal` "does not define modules".

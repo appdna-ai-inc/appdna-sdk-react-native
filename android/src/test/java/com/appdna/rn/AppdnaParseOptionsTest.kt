@@ -12,11 +12,11 @@ import org.mockito.Mockito.mock
 import org.robolectric.RobolectricTestRunner
 
 /**
- * SPEC-070-B AC-11 — the native `parseOptions` mapping, on Android.
+ * The native `parseOptions` mapping, on Android.
  *
  * A jest test mocks the native module, so it can observe neither the `?? 3600` config-TTL default
  * (E7 — the drift that made the wrappers fetch config 12× too often) nor the unconditional
- * `framework = "react_native"` tag (§7 rule 1 — the reason RN events land in BigQuery as `react_native`
+ * `framework = "react_native"` tag (the reason RN events land in BigQuery as `react_native`
  * and not `native`). Only a native unit test reaches them, which is why `parseOptions` is `internal`.
  *
  * Robolectric because `parseOptions` builds an `AppDNAOptions` from a `ReadableMap`, and `JavaOnlyMap`

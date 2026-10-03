@@ -16,7 +16,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * SPEC-070-B W15 / AC-37 — `configure()` must not run on the JS thread.
+ * `configure()` must not run on the JS thread.
  *
  * A TurboModule method body executes on the JS THREAD on Android (E10), and `AppDNA.configure` opens
  * SQLite, reads SharedPreferences and warms the config cache. Running that inline stalls JS at app

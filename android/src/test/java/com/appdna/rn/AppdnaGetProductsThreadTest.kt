@@ -13,7 +13,7 @@ import org.robolectric.RobolectricTestRunner
 import java.util.concurrent.atomic.AtomicReference
 
 /**
- * SPEC-070-B E10 — a `ReadableArray` may only be read on the thread the bridge delivered it on.
+ * A `ReadableArray` may only be read on the thread the bridge delivered it on.
  *
  * `configure` and `presentPaywall` both parse their `ReadableMap` BEFORE dispatching, and both say so
  * in a comment. `getProducts` did not: it read the `ReadableArray` INSIDE `scope.launch`, i.e. after

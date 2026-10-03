@@ -1,7 +1,7 @@
 import Foundation
 
 /**
- * SPEC-070-B E2 — encode a value of unknown shape as JSON.
+ * Encode a value of unknown shape as JSON.
  *
  * `getRemoteConfig`, `getFeatureVariant` and `getExperimentConfig` can each return a bool, a number,
  * a string, an array or an object. There is no codegen type for "any JSON value", so the value

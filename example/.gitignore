@@ -1,4 +1,4 @@
-# SPEC-070-B AC-25(a). This example ships in TWO public places: the npm tarball (governed by the
+# This example ships in TWO public places: the npm tarball (governed by the
 # package's `files` allowlist) and the force-pushed public git mirror (`git subtree split`, which
 # carries the entire committed history regardless of `files`). Nothing secret may ever be committed
 # here — inject at build time via launch args / env, exactly as the Flutter example does.

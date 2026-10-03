@@ -6,7 +6,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 
 /**
- * SPEC-070-B §5 — ask the JS host for a veto, and give up after [timeoutMs].
+ * Ask the JS host for a veto, and give up after [timeoutMs].
  *
  * The SDK awaits a host veto **forever**; the timer has always belonged to the wrapper. Flutter gets
  * one reply port per `invokeMethod`, so it needs no correlation. React Native's native→JS path is
@@ -38,7 +38,7 @@ internal class AppdnaVetoInvoker(
     /**
      * Emit the veto request and await JS's reply.
      *
-     * @param timeoutMs this call's wait; defaults to the configured one. SPEC-496 §5b C5.5 — only the
+     * @param timeoutMs this call's wait; defaults to the configured one. Only the
      *   `onElementInteraction` bridge passes its own (`max(configured, core minimumBridgeTimeoutMs)`),
      *   so a `refresh` is never cut short of the SDK's 8 s deadline.
      * @return the decoded reply (a `Map`, a `Boolean`, …), or `null` on timeout, on a saturated
