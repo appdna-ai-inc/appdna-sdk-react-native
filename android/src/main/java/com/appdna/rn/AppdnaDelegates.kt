@@ -20,7 +20,7 @@ import ai.appdna.sdk.paywalls.AppDNAPaywallDelegate
 import ai.appdna.sdk.paywalls.PaywallAction
 
 /**
- * SPEC-070-B P3 — the native→JS delegate forwarders.
+ * The native→JS delegate forwarders.
  *
  * Every one of the ~30 SDK callbacks used to have a JS listener and no native emitter. The facade
  * subscribed; nothing ever fired. These classes are the missing half.
@@ -40,7 +40,7 @@ import ai.appdna.sdk.paywalls.PaywallAction
  * `asyncShouldOpen`, `asyncOnScreenAction`, and `onPromoCodeSubmit`'s completion handler), consulted
  * in ADDITION to the sync delegate method. The sync forwarders below return the permissive answer
  * and defer the real decision to the async seam. That is not a workaround; it is the seam the core
- * SDK grew in SPEC-070-C precisely so a wrapper could answer a veto over a bridge.
+ * SDK grew precisely so a wrapper could answer a veto over a bridge.
  */
 
 /** Emit an event to JS. Implemented by [AppdnaModule]. */
@@ -178,7 +178,7 @@ internal class OnboardingForwarder(
                 value?.let { put("value", it) }
                 put("inputValues", inputValues)
             },
-            // SPEC-496 §5b C5.5 — wait at least as long as the SDK's own deadline for this action.
+            // Wait at least as long as the SDK's own deadline for this action.
             timeoutMs = maxOf(invoker.timeoutMs, ElementInteractionResult.minimumBridgeTimeoutMs(action) ?: 0L),
         )
         return AppdnaVetoDecoder.elementInteractionResult(reply)
@@ -278,7 +278,7 @@ internal class PaywallForwarder(
      * repeat.
      */
     override fun onPromoCodeSubmit(paywallId: String, code: String, completion: (Boolean) -> Unit) {
-        // E6 — `completion` MUST be called exactly once, on every path. The veto runs on the module's
+        // `completion` MUST be called exactly once, on every path. The veto runs on the module's
         // coroutine scope, and that scope dies on teardown: before this, a reload mid-veto (or a code
         // submitted after one) left `completion` uncalled and the paywall's promo field spinning
         // forever, with no way for the user to cancel out of it. Every abandonment path now answers
@@ -310,7 +310,7 @@ internal class PaywallForwarder(
 
 /**
  * The 9th delegate (P8). `onScreenAction` is deliberately NOT overridden here — it is a VETO and
- * rides `AppDNA.asyncOnScreenAction` (the host-callback seam), exactly as §18.6 ruled. Implementing
+ * rides `AppDNA.asyncOnScreenAction` (the host-callback seam), exactly as the parity ruling says. Implementing
  * it in both places would ask the host twice and let the two answers disagree.
  */
 internal class ScreenForwarder(private val emitter: AppdnaEventEmitter) : AppDNAScreenDelegate {
@@ -417,7 +417,7 @@ internal class BillingForwarder(private val emitter: AppdnaEventEmitter) : AppDN
         emitter.emit("onRestoreCompleted", mapOf("restoredProducts" to restoredProducts))
     }
 
-    /** N8 — Android-only. iOS never emits it, and the facade documents that. */
+    /** Android-only. iOS never emits it, and the facade documents that. */
     override fun onBillingUnavailable() {
         emitter.emit("onBillingUnavailable", emptyMap())
     }
@@ -430,7 +430,7 @@ internal class DeepLinkForwarder(private val emitter: AppdnaEventEmitter) : AppD
 }
 
 /**
- * SPEC-404 — the backend runtime lock. iOS wired this; Android did not, and
+ * The backend runtime lock. iOS wired this; Android did not, and
  * `AppDNA.lifecycle.setDelegate(...)` is one facade with one signature, so the same JS fired on iOS
  * and was silently deaf on Android. When the backend hard-suspends an SDK key, an Android host
  * showed no "service unavailable" state and never learned the lock had cleared.
@@ -582,13 +582,13 @@ internal object AppdnaVetoDecoder {
             title = map["title"] as? String,
             subtitle = map["subtitle"] as? String,
             ctaText = map["ctaText"] as? String,
-            // SPEC-448 §B — replaces the removed `layoutOverrides`, which nothing ever read.
+            // Replaces the removed `layoutOverrides`, which nothing ever read.
             fieldOptions = decodeFieldOptions(map["fieldOptions"]),
-            // SPEC-452 — the `{{hook_data.…}}` payload. `anyMap`, not a plain cast: a bridged
+            // The `{{hook_data.…}}` payload. `anyMap`, not a plain cast: a bridged
             // nested map fails a direct cast at depth, and this value is nested by definition —
             // hosts send objects and arrays of objects here.
             dataContext = map["dataContext"]?.let { anyMap(it) },
-            // SPEC-451 — a one-line forward into the core decoder, which is all a wrapper may be.
+            // A one-line forward into the core decoder, which is all a wrapper may be.
             mapRoutes = ai.appdna.sdk.onboarding.StepConfigOverride.decodeMapRoutes(map["mapRoutes"]),
         )
     }
@@ -606,7 +606,7 @@ internal object AppdnaVetoDecoder {
             // #657 — replacement options for a refresh; same decoder as the render-time override.
             fieldOptions = decodeFieldOptions(map["fieldOptions"]),
             advance = map["advance"] as? Boolean ?: false,
-            // SPEC-496 §5b C2 — a one-line forward into the core decoder. NOT `anyMap`: it drops null
+            // A one-line forward into the core decoder. NOT `anyMap`: it drops null
             // members, and a null member is how a host removes a `hook_data` key.
             dataContext = ElementInteractionResult.decodeDataContext(map["dataContext"]),
         )
@@ -635,7 +635,7 @@ internal object AppdnaVetoDecoder {
 }
 
 /**
- * SPEC-448 §B — `[blockId: [option maps]]` from the bridge into typed options.
+ * `[blockId: [option maps]]` from the bridge into typed options.
  *
  * A one-line forward into the core, which is all a wrapper is allowed to be. The previous version
  * reached into `OnboardingConfigParser` -- `internal`, so from this separate Gradle module it did

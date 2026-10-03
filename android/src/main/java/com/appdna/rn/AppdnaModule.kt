@@ -28,7 +28,7 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
 /**
- * SPEC-070-B P2 — the AppDNA TurboModule for Android.
+ * The AppDNA TurboModule for Android.
  *
  * Extends the CODEGEN'D [NativeAppdnaModuleSpec] rather than `ReactContextBaseJavaModule`, so a
  * method that exists in `src/specs/NativeAppdnaModule.ts` but not here is a COMPILE error, and vice
@@ -48,13 +48,13 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     NativeAppdnaModuleSpec(reactContext) {
 
     /**
-     * SPEC-070-B E6 — cancelled in [invalidate]. The old module leaked this scope: a `configure()`
+     * Cancelled in [invalidate]. The old module leaked this scope: a `configure()`
      * after a Metro reload created a second one and never cancelled the first.
      */
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     /**
-     * PN row 5 — retained so [invalidate] can remove it. Kotlin listener removal is REFERENCE
+     * Retained so [invalidate] can remove it. Kotlin listener removal is REFERENCE
      * IDENTITY: a lambda literal allocates a fresh object per evaluation, so passing one to
      * `removeEntitlementsChangedListener` would silently remove nothing.
      */
@@ -74,7 +74,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     private var configUpdatesJob: kotlinx.coroutines.Job? = null
 
     /**
-     * P3 — the eight veto hooks and every observe callback are routed by these. Built in
+     * The eight veto hooks and every observe callback are routed by these. Built in
      * [configure], because `vetoTimeout` is a configure option and a forwarder registered before it
      * would use the wrong timer.
      */
@@ -128,7 +128,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     private var billingForwarder: BillingForwarder? = null
 
     /**
-     * E6 — every promise a coroutine on [scope] owes an answer to.
+     * Every promise a coroutine on [scope] owes an answer to.
      *
      * `invalidate()` calls `scope.cancel()`. A cancelled coroutine does not run the rest of its body,
      * so an in-flight `configure` / `purchase` / `getProducts` / `restorePurchases` used to die
@@ -161,13 +161,13 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     companion object {
         const val NAME = "AppdnaModule"
 
-        /** E6 — what a host sees when the bridge is torn down under an in-flight call. */
+        /** What a host sees when the bridge is torn down under an in-flight call. */
         internal const val INVALIDATED_CODE = "SDK_INVALIDATED"
         internal const val INVALIDATED_MESSAGE =
             "The AppDNA native module was torn down (reload or shutdown) before this call completed."
 
         /**
-         * SPEC-070-B §7 — pinned literal, underscore not hyphen. Injected UNCONDITIONALLY in the
+         * Pinned literal, underscore not hyphen. Injected UNCONDITIONALLY in the
          * native bridge, never read from the host's options: a host must not be able to set, spoof,
          * or omit its own attribution. `event-envelope.schema.ts` is `.catch('native')`, so a wrong
          * tag does not error, is not logged, and is not metered — it just quietly lies in BigQuery.
@@ -307,7 +307,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         promise.resolve(null)
     }
 
-    /** W17 — fire-and-forget: native enqueues, so a Promise per event would allocate for nothing. */
+    /** Fire-and-forget: native enqueues, so a Promise per event would allocate for nothing. */
     override fun track(event: String, properties: ReadableMap?) {
         AppDNA.track(event, AppdnaBridge.toPropertyMap(properties))
     }
@@ -405,7 +405,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     // ── Remote config ─────────────────────────────────────────────────────────
 
     /**
-     * E9.1 — resolves a JSON **string**, not a raw `Map`. `promise.resolve(map)` throws at the
+     * Resolves a JSON **string**, not a raw `Map`. `promise.resolve(map)` throws at the
      * bridge, so an object-valued flag worked on iOS and Flutter and crashed on RN Android.
      */
     override fun getRemoteConfig(key: String, promise: Promise) {
@@ -494,7 +494,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
-    /** N17 — an iOS overload, a distinct Android name. The wrapper exposes one name for both. */
+    /** An iOS overload, a distinct Android name. The wrapper exposes one name for both. */
     override fun presentPaywallByPlacement(placement: String, context: ReadableMap?, promise: Promise) {
         val activity = reactContext.currentActivity ?: return promise.resolve(false)
         // Same as `presentPaywall`: read the ReadableMap on the thread that delivered it.
@@ -737,7 +737,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         promise.resolve(AppdnaBridge.toJson(AppDNA.push.getToken()))
     }
 
-    /** N9 — an FCM `String` here; hex-encoded APNs `Data` on iOS. One signature, two meanings. */
+    /** An FCM `String` here; hex-encoded APNs `Data` on iOS. One signature, two meanings. */
     override fun setPushToken(token: String, promise: Promise) {
         AppDNA.setPushToken(token)
         promise.resolve(null)
@@ -776,7 +776,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
 
     // ── Deep links / web entitlements ─────────────────────────────────────────
 
-    /** N15 — a `String` here, a `URL` on iOS. */
+    /** A `String` here, a `URL` on iOS. */
     override fun handleDeepLink(url: String, promise: Promise) {
         AppDNA.deepLinks.handleURL(url)
         promise.resolve(null)
@@ -852,7 +852,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         // ScreenManager.setDelegate — the presented-screen path, which is what actually fires these.
         AppDNA.screenDelegate = ScreenForwarder(emitter)
         AppDNA.setInitDelegate(InitForwarder(emitter))
-        // SPEC-404. iOS attached this; Android did not, so `lifecycle.setDelegate(...)` — the same JS,
+        // iOS attached this; Android did not, so `lifecycle.setDelegate(...)` — the same JS,
         // the same signature — fired on one platform and was silently deaf on the other.
         AppDNA.setLifecycleDelegate(LifecycleForwarder(emitter))
 
@@ -1004,7 +1004,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /**
-     * ⚠ `internal` so `AppdnaParseOptionsTest` can reach it (AC-11). A jest test cannot see a
+     * ⚠ `internal` so `AppdnaParseOptionsTest` can reach it. A jest test cannot see a
      * native `?? 3600`, and neither can a Dart one — only a native unit test can.
      */
     internal fun parseOptions(map: ReadableMap?): AppDNAOptions {
@@ -1030,10 +1030,10 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
             configTTL = (values["configTTL"] as? Number)?.toLong() ?: defaults.configTTL,
             logLevel = logLevel,
             notificationIcon = (values["notificationIcon"] as? Number)?.toInt() ?: defaults.notificationIcon,
-            // §7 rule 1: injected unconditionally, NOT read from `values`. A host cannot spoof it.
+            // Injected unconditionally, NOT read from `values`. A host cannot spoof it.
             framework = FRAMEWORK_TAG,
             frameworkVersion = WRAPPER_VERSION,
-            // AC-21: Android gained billingProvider in 1.0.42, so the host's choice finally arrives.
+            // Android gained billingProvider in 1.0.42, so the host's choice finally arrives.
             billingProvider = BillingProvider.fromWire(values["billingProvider"]) ?: defaults.billingProvider,
             requireConsent = values["requireConsent"] as? Boolean ?: defaults.requireConsent,
             // A zero / negative value is the native default (as on Flutter), so the
