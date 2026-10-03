@@ -160,7 +160,7 @@ describe('host-callback dispatcher', () => {
  * for every RN host. An `undefined` member cannot cross JSON, so it is a no-op, not a removal: that is
  * the documented TS contract, pinned here. The reply is READ FROM THE FIXTURE the natives decode.
  */
-describe('onElementInteraction reply forwarding (SPEC-496 §5b C10)', () => {
+describe('onElementInteraction reply forwarding', () => {
   const fixture = JSON.parse(
     readFileSync(fixturePath('config_overrides', 'element_interaction_data_context_decode.fixture.json'), 'utf8'),
   ) as { setup: { session_data: { host_interaction_reply: Record<string, unknown> } } };
