@@ -580,6 +580,16 @@ export default function App({
           <Button label="Flush now" onPress={() => run('flush()', () => AppDNA.flush())} />
           <Button label="Identify" onPress={() => run('identify()', () => AppDNA.identify('rn_e2e_user', { plan: 'demo', tier: 2 }))} />
           <Button label="Get user traits" onPress={() => run('getUserTraits()', () => AppDNA.getUserTraits())} />
+          {/*
+            Tell AppDNA this user is in a paid state for a subscription the SDK never sold —
+            server-side billing, a web checkout, a seat sold by a salesperson. Identify first: the
+            SDK attaches the identity it already holds, and there is deliberately no user-id
+            argument, so an app can only ever report its own users. Safe to call repeatedly.
+          */}
+          <Button
+            label="Report paying user"
+            onPress={() => run('reportPayingUser()', () => AppDNA.reportPayingUser('pro_monthly', 999, 'USD'))}
+          />
           <Button label="Notify screen appeared" onPress={() => { AppDNA.notifyScreenAppeared('rn_example_manual'); append('notifyScreenAppeared(rn_example_manual)'); }} />
           <Button label="Set log level (info)" onPress={() => { AppDNA.setLogLevel('info'); append('setLogLevel(info)'); }} />
           <Button label="Deferred deep link" onPress={() => run('checkDeferredDeepLink()', () => AppDNA.checkDeferredDeepLink())} />
