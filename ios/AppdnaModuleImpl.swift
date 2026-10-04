@@ -167,6 +167,28 @@ public final class AppdnaModuleImpl: NSObject {
         AppDNA.track(event: event, properties: properties as? [String: Any])
     }
 
+    /// SPEC-500 — forwards the host's paying-user assertion. A thin forward and nothing more: the
+    /// identity, the event name and the no-op-before-configure rule all live in the native SDK,
+    /// which is the only place they can be enforced consistently across four wrappers.
+    ///
+    /// `priceCents` crosses the bridge as a `double` because JS has one number type. It is
+    /// analytics only — MTPU is a count — so the precision question never reaches a bill.
+    @objc(reportPayingUser:priceCents:currency:resolve:reject:)
+    public func reportPayingUser(
+        _ productId: String?,
+        priceCents: Double,
+        currency: String?,
+        resolve: @escaping RCTPromiseResolveBlock,
+        reject: @escaping RCTPromiseRejectBlock
+    ) {
+        AppDNA.reportPayingUser(
+            productId: productId,
+            priceCents: priceCents > 0 ? Int(priceCents) : nil,
+            currency: currency,
+        )
+        resolve(nil)
+    }
+
     @objc(flush:reject:)
     public func flush(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         AppDNA.flush()

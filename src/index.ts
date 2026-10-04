@@ -242,6 +242,20 @@ export class AppDNA {
    * Resolves `false` when no view controller / activity was available to present from. The old
    * signature discarded that, which is how "the SDK does nothing" gets filed as a bug.
    */
+  /**
+   * Report that the current user is a paying user this month (SPEC-500).
+   *
+   * Call it whenever the user is in a paid state — it is idempotent within a month, because the
+   * meter counts distinct users. Do not try to detect the transition to paid; hosts get that wrong
+   * and a missed transition is a missed month of revenue.
+   *
+   * There is no user-id parameter by design: the SDK uses the identity it already holds, so a host
+   * cannot report users that are not its own.
+   */
+  static async reportPayingUser(productId?: string, priceCents?: number, currency?: string): Promise<void> {
+    return AppdnaModule.reportPayingUser(productId, priceCents, currency);
+  }
+
   static async presentOnboarding(flowId: string): Promise<boolean> {
     return AppdnaModule.presentOnboarding(flowId);
   }

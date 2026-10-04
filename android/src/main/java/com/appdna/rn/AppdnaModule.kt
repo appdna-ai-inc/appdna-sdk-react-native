@@ -312,6 +312,21 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         AppDNA.track(event, AppdnaBridge.toPropertyMap(properties))
     }
 
+    /**
+     * SPEC-500 — forwards the host's paying-user assertion.
+     *
+     * A thin forward and nothing more: the identity, the event name and the
+     * no-op-before-configure rule all live in the native SDK, which is the only place they can be
+     * enforced consistently across four wrappers.
+     *
+     * `priceCents` crosses as a Double because JS has one number type. It is analytics only — MTPU
+     * is a count — so the precision question never reaches a bill.
+     */
+    override fun reportPayingUser(productId: String?, priceCents: Double, currency: String?, promise: Promise) {
+        AppDNA.reportPayingUser(productId, if (priceCents > 0) priceCents.toInt() else null, currency)
+        promise.resolve(null)
+    }
+
     override fun flush(promise: Promise) {
         AppDNA.flush()
         promise.resolve(null)

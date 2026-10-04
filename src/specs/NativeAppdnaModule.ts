@@ -110,6 +110,13 @@ export interface Spec extends TurboModule {
   presentOnboarding(flowId: string): Promise<boolean>;
 
   /**
+   * Report that the current user is a paying user this month, for billing on MTPU. Call it
+   * whenever the user is in a paid state; it is idempotent within a month. The optional
+   * product/price are analytics only and never affect the bill.
+   */
+  reportPayingUser(productId?: string, priceCents?: number, currency?: string): Promise<void>;
+
+  /**
    * Present a paywall by id. False when the id does not exist, the SDK is unconfigured, or it is
    * runtime-locked.
    */
