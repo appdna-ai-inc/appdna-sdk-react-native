@@ -62,7 +62,7 @@ Pod::Spec.new do |s|
   # The wrapper always pins the freshest native. `~>` admits a newer PATCH with no
   # source edit, so `check:version-lockstep` asserts this line matches the shipped iOS
   # version rather than trusting that it does.
-  s.dependency "AppDNASDK", "~> 1.0.82"
+  s.dependency "AppDNASDK", "~> 1.0.83"
 
   # 🔴 STATIC, because this pod links the static AppDNASDK and inherits its map symbols.
   #

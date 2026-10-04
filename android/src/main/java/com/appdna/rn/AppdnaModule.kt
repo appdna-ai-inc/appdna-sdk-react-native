@@ -183,7 +183,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
          * this constant stuck at 1.0.6 while publishing 1.0.8 — so `diagnose()` and every event
          * envelope reported a version that had not been released for two cycles, and nothing noticed.
          */
-        private const val WRAPPER_VERSION = "1.0.19"
+        private const val WRAPPER_VERSION = "1.0.20"
     }
 
     // ── Promise-owning coroutines (E6) ────────────────────────────────────────
@@ -313,7 +313,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
     }
 
     /**
-     * SPEC-500 — forwards the host's paying-user assertion.
+     * Forwards the host's paying-user assertion.
      *
      * A thin forward and nothing more: the identity, the event name and the
      * no-op-before-configure rule all live in the native SDK, which is the only place they can be
@@ -322,8 +322,14 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
      * `priceCents` crosses as a Double because JS has one number type. It is analytics only — MTPU
      * is a count — so the precision question never reaches a bill.
      */
-    override fun reportPayingUser(productId: String?, priceCents: Double, currency: String?, promise: Promise) {
-        AppDNA.reportPayingUser(productId, if (priceCents > 0) priceCents.toInt() else null, currency)
+    override fun reportPayingUser(productId: String?, priceCents: Double?, currency: String?, promise: Promise) {
+        // 🔴 `Double?`, not `Double`: the TS spec declares `priceCents?`, so codegen emits a
+        // NULLABLE parameter and a non-null override compiles against nothing. Only the RN example
+        // app builds this file, which is why the mismatch survived every other check.
+        //
+        // Nullable also keeps 0 meaningful — a free trial is a real price — where the previous
+        // `if (priceCents > 0)` silently discarded it.
+        AppDNA.reportPayingUser(productId, priceCents?.toInt(), currency)
         promise.resolve(null)
     }
 

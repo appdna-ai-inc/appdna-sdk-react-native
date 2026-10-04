@@ -243,7 +243,7 @@ export class AppDNA {
    * signature discarded that, which is how "the SDK does nothing" gets filed as a bug.
    */
   /**
-   * Report that the current user is a paying user this month (SPEC-500).
+   * Report that the current user is a paying user this month .
    *
    * Call it whenever the user is in a paid state — it is idempotent within a month, because the
    * meter counts distinct users. Do not try to detect the transition to paid; hosts get that wrong

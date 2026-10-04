@@ -364,6 +364,7 @@ class SharedFixtureBridgeTest {
         val action = fixtureJson.getJSONObject("action")
         when (val kind = action.getString("kind")) {
             "identify" -> driveIdentify(action)
+            "report_paying_user" -> driveReportPayingUser(action)
             "track_event" -> driveTrackEvent(action)
             "show_paywall" -> driveShowPaywall(action)
             "classify_push" -> driveClassifyPush(action)
@@ -466,6 +467,25 @@ class SharedFixtureBridgeTest {
         // The identity the SDK stamped on the envelope it just built. `user.user_id` is the SDK's own
         // statement of who it thinks the user is (EventSchema.kt:65).
         state["user_id"] = persistedEnvelopes().lastOrNull()?.optJSONObject("user")?.optStringOrNull("user_id")
+    }
+
+    /**
+     * The host asserting a paying user, through the REAL bridged method into the live native SDK.
+     *
+     * This is the driver the jest runner cannot be: jest asserts that the bridge was CALLED, which
+     * says nothing about what the native SDK then emitted. Here the event is read back off the
+     * envelope the SDK actually built, so the property shape the billing pipeline depends on
+     * (`source: "host"`, price in MAJOR units, and NO user id) is checked against the real thing.
+     *
+     * `priceCents` crosses as a boxed Double because codegen types an optional TS number that way.
+     */
+    private fun driveReportPayingUser(action: JSONObject) {
+        val productId = action.optStringOrNull("productId")
+        val priceCents = if (action.has("priceCents")) action.getDouble("priceCents") else null
+        val currency = action.optStringOrNull("currency")
+
+        module.reportPayingUser(productId, priceCents, currency, mock(Promise::class.java, Answer { null }))
+        idle()
     }
 
     private fun driveTrackEvent(action: JSONObject) {

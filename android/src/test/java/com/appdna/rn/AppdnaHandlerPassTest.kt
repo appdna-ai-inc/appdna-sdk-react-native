@@ -259,6 +259,13 @@ class AppdnaHandlerPassTest {
         type == Boolean::class.javaPrimitiveType -> true
         type == Int::class.javaPrimitiveType -> 0
         type == Double::class.javaPrimitiveType -> 0.0
+        // A BOXED Double is what codegen emits for an OPTIONAL TS number (`priceCents?: number`
+        // becomes `@Nullable Double`). Without this case the pass refused to synthesise arguments
+        // for any such method and reported it DEAD — which is how the first optional-number method
+        // on this bridge failed every test class in the module, not just its own.
+        type == java.lang.Double::class.java -> 0.0
+        type == java.lang.Integer::class.java -> 0
+        type == java.lang.Boolean::class.java -> true
         type == ReadableMap::class.java -> JavaOnlyMap()
         type == ReadableArray::class.java -> JavaOnlyArray()
         Promise::class.java.isAssignableFrom(type) -> recordingPromise(methodName)

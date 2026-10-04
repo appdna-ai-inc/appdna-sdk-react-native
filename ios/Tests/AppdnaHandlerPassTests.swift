@@ -92,6 +92,9 @@ final class AppdnaHandlerPassTests: XCTestCase {
         drive("identify", settles: true) { res, rej in impl.identify("handler_pass", traits: [:] as NSDictionary, resolve: res, reject: rej) }
         drive("reset", settles: true) { res, rej in impl.reset(resolve: res, reject: rej) }
         drive("track", settles: false) { _, _ in impl.track("handler_pass", properties: [:] as NSDictionary) }
+        // Bridged, so it is driven: a handler that is declared and never reached is the
+        // "bridged but dead" case this pass exists to make impossible.
+        drive("reportPayingUser", settles: true) { res, rej in impl.reportPayingUser("handler_pass", priceCents: 999, currency: "USD", resolve: res, reject: rej) }
         drive("flush", settles: true) { res, rej in impl.flush(resolve: res, reject: rej) }
         drive("setConsent", settles: true) { res, rej in impl.setConsent(true, resolve: res, reject: rej) }
         drive("isConsentGranted", settles: true) { res, rej in impl.isConsentGranted(resolve: res, reject: rej) }

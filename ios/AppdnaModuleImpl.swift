@@ -167,7 +167,7 @@ public final class AppdnaModuleImpl: NSObject {
         AppDNA.track(event: event, properties: properties as? [String: Any])
     }
 
-    /// SPEC-500 — forwards the host's paying-user assertion. A thin forward and nothing more: the
+    /// Forwards the host's paying-user assertion. A thin forward and nothing more: the
     /// identity, the event name and the no-op-before-configure rule all live in the native SDK,
     /// which is the only place they can be enforced consistently across four wrappers.
     ///
@@ -881,7 +881,7 @@ public final class AppdnaModuleImpl: NSObject {
     /// A jest test cannot see a native `?? 3600`, and neither can a Dart one.
     /// The WRAPPER's own version (this package), not the native SDK's. Injected, never read from the
     /// host's options. Kept in lockstep with package.json by `check:wrapper-version-selfreport`.
-    static let wrapperVersion = "1.0.19"
+    static let wrapperVersion = "1.0.20"
 
     internal func parseOptions(_ dict: [String: Any]?) -> AppDNAOptions {
         let values = dict ?? [:]

@@ -148,7 +148,7 @@ dependencies {
     // Pinned to the native this wrapper wraps. A bare Gradle version is a required
     // MINIMUM, not a lock — Gradle happily resolves something newer — so `check:version-lockstep`
     // Asserts this coordinate equals the shipped Android version rather than assuming it.
-    implementation "ai.appdna:sdk-android:1.0.54"
+    implementation "ai.appdna:sdk-android:1.0.55"
 
     // Compose runtime/UI + the ViewTree owners (SlotViewTreeOwner) needed to host a
     // ComposeView outside a ComponentActivity. sdk-android pulls Compose in via `implementation`

@@ -204,6 +204,16 @@ async function runFixture(fixture: Fixture): Promise<void> {
       await AppDNA.identify(userId, traits);
       return;
     }
+    case 'report_paying_user': {
+      // A plain host API call, driven exactly as identify is. There is no user id to
+      // pass: the SDK attaches the identity it already holds.
+      await AppDNA.reportPayingUser(
+        fixture.action.productId as string | undefined,
+        fixture.action.priceCents as number | undefined,
+        fixture.action.currency as string | undefined,
+      );
+      return;
+    }
     case 'show_paywall': {
       // Only the PLACEMENT form has a host API. A `trigger_node_id` paywall is fired from inside a
       // native onboarding flow graph; no SDK on any platform exposes that to a host, so a fixture
@@ -279,6 +289,19 @@ function assertBridgeContract(fixture: Fixture): void {
       expect(c.args[0]).toBe(fixture.action.userId);
       expect(c.args[1]).toEqual(fixture.action.traits);
       break;
+    }
+    case 'report_paying_user': {
+      expect(mockCapturedCalls).toHaveLength(1);
+      const rpu = mockCapturedCalls[0]!;
+      expect(rpu.method).toBe('reportPayingUser');
+      // The bridge carries exactly what the host passed — and NO user id, which is the property
+      // that stops a host reporting users that are not its own.
+      expect(rpu.args).toEqual([
+        fixture.action.productId,
+        fixture.action.priceCents,
+        fixture.action.currency,
+      ]);
+      return;
     }
     case 'show_paywall': {
       expect(mockCapturedCalls).toHaveLength(1);
