@@ -16,12 +16,29 @@
  *     contract was inverted: listing the plugin twice applied every mod twice.
  */
 
-type Mod = (cfg: any) => any;
+/**
+ * The Expo shapes this suite needs. Partial and open, because an Expo config carries far more than
+ * the plugin touches — but every field a case asserts on is named, so renaming one is a compile
+ * error here instead of an assertion that quietly reads `undefined`.
+ */
+type ExpoConfig = {
+  newArchEnabled?: boolean;
+  _internal?: { pluginHistory?: Record<string, { name: string; version?: string }> };
+  [key: string]: unknown;
+};
+/** What a mod is handed and returns: the file state under `modResults`. */
+type ModConfig<T = unknown> = { modResults: T };
+type Mod = <T>(cfg: ModConfig<T>) => ModConfig<T>;
+/** An Android `gradle.properties` entry, as `withGradleProperties` models it. */
+type GradleProp = { type: string; key: string; value: string };
+/** An AppDelegate file as `withAppDelegate` hands it over. */
+type AppDelegateFile = { contents: string; language: 'objc' | 'objcpp' | 'swift' };
+type PluginProps = { useFrameworks?: string; screenSlot?: string; enablePush?: boolean };
 
 /** The mods each `withX` queued, in order, so a test can run them against a starting file state. */
 const queued: Array<{ platform: string; mod: Mod }> = [];
 
-const queue = (platform: string) => (config: any, mod: Mod) => {
+const queue = (platform: string) => (config: ExpoConfig, mod: Mod) => {
   queued.push({ platform, mod });
   return config;
 };
@@ -37,22 +54,22 @@ jest.mock(
     // The real guard, reimplemented exactly as Expo's: a name+version keyed record on the config,
     // checked BEFORE the plugin runs. This is the contract the old composition inverted.
     createRunOncePlugin:
-      (plugin: any, name: string, version?: string) => (config: any, props?: any) => {
+      (plugin: (c: ExpoConfig, p?: PluginProps) => ExpoConfig, name: string, version?: string) =>
+      (config: ExpoConfig, props?: PluginProps) => {
         const history = (config._internal ??= {}).pluginHistory ?? {};
         if (history[name]) return config;
-        config._internal.pluginHistory = { ...history, [name]: { name, version } };
+        config._internal!.pluginHistory = { ...history, [name]: { name, version } };
         return plugin(config, props);
       },
   }),
   { virtual: true },
 );
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const withAppDNA = require('../app.plugin.js');
+const withAppDNA = require('../app.plugin.js') as (c: ExpoConfig, p?: PluginProps) => ExpoConfig;
 
 /** Run every mod a `withX` queued for one platform against a starting `modResults`. */
 const runMods = <T>(platform: string, initial: T): T => {
-  let modResults: any = initial;
+  let modResults: T = initial;
   for (const entry of queued) {
     if (entry.platform !== platform) continue;
     modResults = entry.mod({ modResults }).modResults;
@@ -99,14 +116,14 @@ describe('the New Architecture', () => {
 
   it('is enabled on Android — the plugin used to write no gradle property at all', () => {
     withAppDNA({});
-    const gradle = runMods<any[]>('gradle', []);
+    const gradle = runMods<GradleProp[]>('gradle', []);
 
     expect(gradle).toContainEqual({ type: 'property', key: 'newArchEnabled', value: 'true' });
   });
 
   it('overwrites an existing newArchEnabled=false rather than appending a dead second entry', () => {
     withAppDNA({});
-    const gradle = runMods<any[]>('gradle', [
+    const gradle = runMods<GradleProp[]>('gradle', [
       { type: 'property', key: 'newArchEnabled', value: 'false' },
     ]);
 
@@ -116,7 +133,7 @@ describe('the New Architecture', () => {
   });
 
   it('is reported on the resolved config, so `expo config` agrees with the property files', () => {
-    const config: any = {};
+    const config: ExpoConfig = {};
     withAppDNA(config);
     expect(config.newArchEnabled).toBe(true);
   });
@@ -127,10 +144,10 @@ describe('the Fabric screen slot under dynamic frameworks', () => {
     withAppDNA({});
     expect(runMods<Record<string, string>>('podfile', {})['ios.useFrameworks']).toBe('dynamic');
 
-    const appDelegate = runMods('appDelegate', {
+    const appDelegate = runMods<AppDelegateFile>('appDelegate', {
       contents: OBJC_APPDELEGATE,
       language: 'objcpp',
-    }) as any;
+    });
 
     // 🔴 Without this, <AppDNAScreenSlot> renders "Unimplemented component:
     // <AppdnaScreenSlotView>" — no throw, no warning — for EVERY Expo customer.
@@ -152,11 +169,11 @@ describe('the Fabric screen slot under dynamic frameworks', () => {
 
   it('is idempotent — prebuild regenerates the AppDelegate and re-runs every mod', () => {
     withAppDNA({});
-    const once = runMods('appDelegate', { contents: OBJC_APPDELEGATE, language: 'objcpp' }) as any;
+    const once = runMods<AppDelegateFile>('appDelegate', { contents: OBJC_APPDELEGATE, language: 'objcpp' });
 
     queued.length = 0;
     withAppDNA({});
-    const twice = runMods('appDelegate', { contents: once.contents, language: 'objcpp' }) as any;
+    const twice = runMods<AppDelegateFile>('appDelegate', { contents: once.contents, language: 'objcpp' });
 
     // A second override in the same @implementation would not compile. (The method body names the
     // selector twice — declaration and `super` call — so count the DECLARATION.)
@@ -172,11 +189,11 @@ describe('the Fabric screen slot under dynamic frameworks', () => {
     // override on Expo 53 (a native Swift path is a follow-up).
     withAppDNA({});
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-    let appDelegate: any;
+    let appDelegate: AppDelegateFile | undefined;
     expect(() => {
-      appDelegate = runMods('appDelegate', { contents: SWIFT_APPDELEGATE, language: 'swift' });
+      appDelegate = runMods<AppDelegateFile>('appDelegate', { contents: SWIFT_APPDELEGATE, language: 'swift' });
     }).not.toThrow();
-    expect(appDelegate.contents).toBe(SWIFT_APPDELEGATE); // untouched — registration skipped, not blind-patched
+    expect(appDelegate!.contents).toBe(SWIFT_APPDELEGATE); // untouched — registration skipped, not blind-patched
     expect(warn).toHaveBeenCalledWith(expect.stringMatching(/SWIFT AppDelegate/));
     // The message said FirebaseFirestore REQUIRES dynamic frameworks and called the static option
     // "link statically". Static frameworks work (sdk-ci's pods-static leg); only static LIBRARIES fail.
@@ -203,7 +220,7 @@ describe('the Fabric screen slot under dynamic frameworks', () => {
 
 describe('the run-once guard', () => {
   it('applies the mods once when the plugin is listed twice', () => {
-    let config: any = {};
+    let config: ExpoConfig = {};
     config = withAppDNA(config);
     config = withAppDNA(config);
 
@@ -212,7 +229,7 @@ describe('the run-once guard', () => {
     expect(queued.filter((q) => q.platform === 'podfile')).toHaveLength(1);
     expect(queued.filter((q) => q.platform === 'gradle')).toHaveLength(1);
     expect(queued.filter((q) => q.platform === 'appDelegate')).toHaveLength(1);
-    expect(config._internal.pluginHistory['@appdna-ai/react-native-sdk']).toBeDefined();
+    expect(config._internal!.pluginHistory!['@appdna-ai/react-native-sdk']).toBeDefined();
   });
 });
 

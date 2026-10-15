@@ -537,11 +537,26 @@ export default function App({
     // The framework tag and the wrapper version are injected by native, never by this host —
     // diagnose() is where you see what it actually reported.
     setDiagnostics(await AppDNA.diagnose());
-  }, [apiKey, append, registerDelegates]);
+    // Every launch value `boot` READS is a dependency. `vetoTimeout`, `billingProvider` and
+    // `appdnaEnv` were missing, so the React compiler could not preserve this memoization at all —
+    // and a host that changed one of them would have kept configuring with the previous value.
+  }, [apiKey, append, registerDelegates, vetoTimeout, billingProvider, appdnaEnv]);
 
   useEffect(() => {
-    boot().catch((e) => setStatus(`Failed: ${String(e)}`));
     // Deliberately runs once per `boot` identity. The Reconfigure button drives the second cycle.
+    // Awaited inside an async body rather than `.catch(setStatus)` on the call: a `setState` in the
+    // effect's own synchronous body is a cascading render the compiler refuses to compile around.
+    let cancelled = false;
+    void (async () => {
+      try {
+        await boot();
+      } catch (e) {
+        if (!cancelled) setStatus(`Failed: ${String(e)}`);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [boot]);
 
   return (
