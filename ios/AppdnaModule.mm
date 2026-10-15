@@ -283,6 +283,12 @@ RCT_EXPORT_MODULE()
   [_impl presentOnboarding:flowId resolve:resolve reject:reject];
 }
 
+- (void)isReady:(RCTPromiseResolveBlock )resolve
+            reject:(RCTPromiseRejectBlock )reject
+{
+  [_impl isReady:resolve reject:reject];
+}
+
 - (void)reportPayingUser:(NSString *)productId
             priceCents:(double)priceCents
             currency:(NSString *)currency

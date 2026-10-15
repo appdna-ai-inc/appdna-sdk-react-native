@@ -346,6 +346,22 @@ public final class AppdnaModuleImpl: NSObject {
     /// `OnboardingModule.present(flowId:from:context:)` discards the argument it is handed
     /// (AppDNA+Modules.swift). A host that passed `experimentOverrides` got a silent no-op. Removed
     /// from the IR (`sdk-methods.ts`) rather than left as a parameter that does nothing.
+    /// #855 — the question a host must be able to ask before trusting a `presentOnboarding` false.
+    ///
+    /// That call resolves false both when a flow does not exist and when the SDK is not up yet, and
+    /// on a COLD FIRST LAUNCH the second window is long — ~3s on an iPhone simulator, ~20-25s on a
+    /// Pixel-class emulator, 103s once on a bad network. One boolean cannot say both.
+    ///
+    /// ⚠️ "Configured", NOT "the remote config has arrived": the fetch is started and not awaited.
+    /// Use `remoteConfig.onChanged` for fetched values.
+    @objc(isReady:reject:)
+    public func isReady(
+        resolve: @escaping RCTPromiseResolveBlock,
+        reject: @escaping RCTPromiseRejectBlock
+    ) {
+        resolve(AppDNA.isReady)
+    }
+
     @objc(presentOnboarding:resolve:reject:)
     public func presentOnboarding(
         _ flowId: String,

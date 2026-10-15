@@ -110,6 +110,14 @@ export interface Spec extends TurboModule {
   presentOnboarding(flowId: string): Promise<boolean>;
 
   /**
+   * Whether the SDK has finished configuring — the condition `onReady` fires on, readable
+   * synchronously. A `presentOnboarding` that resolves false while this is false means "the SDK
+   * is not up yet", not "no such flow". Note this is NOT "the remote config has arrived": the
+   * fetch is started and not awaited, so use remoteConfig.onChanged for fetched values.
+   */
+  isReady(): Promise<boolean>;
+
+  /**
    * Report that the current user is a paying user this month, for billing on MTPU. Call it
    * whenever the user is in a paid state; it is idempotent within a month. The optional
    * product/price are analytics only and never affect the bill.

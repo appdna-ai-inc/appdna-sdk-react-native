@@ -260,6 +260,23 @@ export class AppDNA {
     return AppdnaModule.presentOnboarding(flowId);
   }
 
+  /**
+   * Whether the SDK has finished configuring — the condition `onReady` fires on, readable
+   * synchronously from the host's point of view.
+   *
+   * #855 — `presentOnboarding` resolves false both when a flow does not exist and when the SDK is
+   * not up yet, and on a COLD FIRST LAUNCH that second window is long: ~3s on an iPhone simulator,
+   * ~20-25s on a Pixel-class emulator, 103s once on a bad network. One boolean cannot say both, so
+   * check this before deciding whether to retry or to treat the flow as missing.
+   *
+   * ⚠️ NOT "the remote config has arrived": the remote fetch is STARTED by configure and not
+   * awaited, so a flow that exists only server-side can still be absent just after this turns
+   * true; `remoteConfig.onChanged` is what fires for fetched values.
+   */
+  static async isReady(): Promise<boolean> {
+    return AppdnaModule.isReady();
+  }
+
   /** Get a remote config value. */
   static async getRemoteConfig(key: string): Promise<unknown> {
     // E2: an unknown-shape value crosses as a JSON string.

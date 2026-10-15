@@ -482,6 +482,20 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
      * `experimentOverrides` got a silent no-op on both platforms. Removed from the IR
      * (`sdk-methods.ts`) rather than left as a parameter that does nothing.
      */
+    /**
+     * #855 — the question a host must be able to ask before trusting a `presentOnboarding` false.
+     *
+     * That call resolves false both when a flow does not exist and when the SDK is not up yet, and
+     * on a COLD FIRST LAUNCH the second window is long — measured at ~20-25s on a Pixel-class
+     * emulator, and 103s once on a bad network. One boolean cannot say both.
+     *
+     * ⚠️ "Configured", NOT "the remote config has arrived": the fetch is started and not awaited.
+     * Use `remoteConfig.onChanged` for fetched values.
+     */
+    override fun isReady(promise: Promise) {
+        promise.resolve(AppDNA.isReady)
+    }
+
     override fun presentOnboarding(flowId: String, promise: Promise) {
         // E10: dispatch onto the UI thread so native's own main-looper check takes the latch-free
         // path. Blocking here would freeze the JS thread for the latch's five seconds.
