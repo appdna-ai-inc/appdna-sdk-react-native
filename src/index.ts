@@ -491,6 +491,32 @@ export class AppDNA {
      */
     present: (paywallId: string, context?: PaywallContext): Promise<boolean> =>
       AppdnaModule.presentPaywall(paywallId, context),
+    /**
+     * #970 — keep the paywall up after a successful restore.
+     *
+     * A restore that returns at least one product auto-dismisses the paywall, because the user is
+     * now entitled. This suppresses that once, so you can show a confirmation of your own or
+     * upsell on top of the still-visible paywall.
+     *
+     * 🔴 **Call it BEFORE the user taps Restore** — presenting the paywall is the natural moment.
+     * Setting it from inside `onPaywallRestoreCompleted` is too late: that callback crosses the
+     * bridge asynchronously (both platforms emit to JS and return), and native reads the flag on
+     * the line after the forward. The native SDKs document the in-delegate form because their
+     * delegate call IS synchronous; React Native's is not.
+     *
+     * One-shot: the SDK clears it on every restore terminal event — success, empty success and
+     * failure — so it cannot leak into the next presentation, and must be re-armed each time.
+     *
+     * ```ts
+     * await AppDNA.paywall.present('premium_v2');
+     * AppDNA.paywall.skipNextAutoDismissOnRestore(true); // this presentation only
+     * ```
+     *
+     * iOS, Android and Flutter have had this since the auto-dismiss shipped; React Native did not,
+     * so an RN host had no way to keep the paywall up at all.
+     */
+    skipNextAutoDismissOnRestore: (value: boolean): void =>
+      AppdnaModule.skipNextAutoDismissOnRestore(value),
     /** Set a delegate to receive paywall lifecycle callbacks. */
     setDelegate: (delegate: Partial<AppDNAPaywallDelegate> | null): void => {
       // Replaces the previous delegate's listeners rather than stacking a second set on top.

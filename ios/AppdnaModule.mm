@@ -314,6 +314,11 @@ RCT_EXPORT_MODULE()
   [_impl presentPaywallByPlacement:placement context:context resolve:resolve reject:reject];
 }
 
+- (void)skipNextAutoDismissOnRestore:(BOOL)value
+{
+  [_impl skipNextAutoDismissOnRestore:value];
+}
+
 - (void)presentSurvey:(NSString *)surveyId
             resolve:(RCTPromiseResolveBlock )resolve
             reject:(RCTPromiseRejectBlock )reject

@@ -113,9 +113,17 @@ final class AppdnaHandlerPassTests: XCTestCase {
         drive("isInVariant", settles: true) { res, rej in impl.isInVariant("handler_pass", variantId: "handler_pass", resolve: res, reject: rej) }
         drive("getExperimentConfig", settles: true) { res, rej in impl.getExperimentConfig("handler_pass", key: "handler_pass", resolve: res, reject: rej) }
         drive("getExperimentExposures", settles: true) { res, rej in impl.getExperimentExposures(resolve: res, reject: rej) }
+        // The gate reported this one missing: #855 added `isReady` to the IR and to all four
+        // natives, and nothing ever drove it here — so the pass could not have told a dead handler
+        // from a live one. It is the gate working, not a new method.
+        drive("isReady", settles: true) { res, rej in impl.isReady(resolve: res, reject: rej) }
         drive("presentOnboarding", settles: true) { res, rej in impl.presentOnboarding("handler_pass", resolve: res, reject: rej) }
         drive("presentPaywall", settles: true) { res, rej in impl.presentPaywall("handler_pass", context: [:] as NSDictionary, resolve: res, reject: rej) }
         drive("presentPaywallByPlacement", settles: true) { res, rej in impl.presentPaywallByPlacement("handler_pass", context: [:] as NSDictionary, resolve: res, reject: rej) }
+        // #970. Driven with `false`, not `true`: this is a reachability pass sharing a process with
+        // every other test in the target, and the native flag is real global state. The body runs
+        // either way; AppdnaSkipAutoDismissBridgeTests proves the value actually lands.
+        drive("skipNextAutoDismissOnRestore", settles: false) { _, _ in impl.skipNextAutoDismissOnRestore(false) }
         drive("presentSurvey", settles: true) { res, rej in impl.presentSurvey("handler_pass", resolve: res, reject: rej) }
         drive("setSessionData", settles: true) { res, rej in impl.setSessionData("handler_pass", valueJson: "handler_pass", resolve: res, reject: rej) }
         drive("getSessionData", settles: true) { res, rej in impl.getSessionData("handler_pass", resolve: res, reject: rej) }

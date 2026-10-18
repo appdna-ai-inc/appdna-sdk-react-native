@@ -136,6 +136,12 @@ export interface Spec extends TurboModule {
    */
   presentPaywallByPlacement(placement: string, context?: Object): Promise<boolean>;
 
+  /**
+   * Suppress the automatic dismiss a successful restore performs, once. Set it BEFORE the
+   * Restore tap — a JS restore callback runs after native has already decided.
+   */
+  skipNextAutoDismissOnRestore(value: boolean): void;
+
   /** Present a survey by id. */
   presentSurvey(surveyId: string): Promise<void>;
 

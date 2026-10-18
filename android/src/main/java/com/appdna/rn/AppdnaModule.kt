@@ -539,6 +539,22 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
+    /**
+     * The host's opt-out of the automatic dismiss a successful restore performs.
+     *
+     * iOS, Android and Flutter all exposed this; React Native did not, so an RN host that wanted to
+     * keep the paywall open after a restore — to show its own confirmation, or to upsell — had no
+     * way to say so.
+     *
+     * 🔴 The host must set this BEFORE the Restore tap. `PaywallManager` reads the flag on the line
+     * after it forwards `onPaywallRestoreCompleted`, and [PaywallForwarder] forwards by emitting to
+     * JS and returning — so a JS handler that sets it has not run yet. A native delegate can set it
+     * inline because its call is synchronous; a bridged one cannot.
+     */
+    override fun skipNextAutoDismissOnRestore(value: Boolean) {
+        AppDNA.paywall.skipNextAutoDismissOnRestore = value
+    }
+
     override fun presentSurvey(surveyId: String, promise: Promise) {
         AppDNA.surveys.present(surveyId)
         promise.resolve(null)

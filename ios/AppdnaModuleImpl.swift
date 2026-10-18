@@ -558,6 +558,21 @@ public final class AppdnaModuleImpl: NSObject {
         AppDNA.inAppMessages.suppressDisplay(suppress)
     }
 
+    /// #970 — keep the paywall up after a successful restore, once.
+    ///
+    /// 🔴 Set from JS BEFORE the Restore tap, not from `onPaywallRestoreCompleted`: that callback
+    /// reaches JS through `emit`, which returns immediately, while `PaywallManager` reads the flag
+    /// on the line after the forward. The native delegate IS synchronous and so can set it inline;
+    /// a bridged one cannot.
+    ///
+    /// The SDK snapshots and CLEARS the flag on every restore terminal (`PaywallManager.swift`),
+    /// so it is one-shot by construction and nothing here needs to reset it — which is also why
+    /// this is a plain setter and not a promise.
+    @objc(skipNextAutoDismissOnRestore:)
+    public func skipNextAutoDismissOnRestore(_ value: Bool) {
+        AppDNA.paywall.skipNextAutoDismissOnRestore = value
+    }
+
     // MARK: - Billing
 
     /// - Parameter offerToken: a Google Play concept. StoreKit has no equivalent, so iOS ignores it
