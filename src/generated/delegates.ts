@@ -103,4 +103,6 @@ export interface AppDNALifecycleDelegate {
   onSdkRuntimeLocked(reason: string, lockedAt: string): void;
   /** Fires once on locked to idle (next bootstrap returned no runtime_lock). */
   onSdkRuntimeUnlocked(): void;
+  /** #935 — part of a published config could not be decoded and was DROPPED; the rest still renders. `surface` is the kind ("onboarding_flow", "paywall", ...), `id` the document it came from when one is known, and `detail` the CODING PATH and reason — e.g. "steps[9].content_blocks[3]: Dictionary<String, Any> was null". A count is deliberately not enough: "dropped 4 of 5" tells an engineer that something is wrong and nothing about what, which is how this class of defect stayed invisible for months. Fires on the main thread, once per decode that dropped anything. */
+  onConfigurationIssue(surface: string, id: string | undefined, detail: string): void;
 }
