@@ -46,8 +46,13 @@ internal object AppdnaMappers {
         put("productId", entitlement.productId)
         put("isActive", entitlement.status.lowercase() in ACTIVE_STATUSES)
         entitlement.expiresAt?.let { put("expiresAt", it) }
-        // Android-only, and genuinely populated here (unlike iOS, whose getEntitlements() hardcodes
-        // isActive=true / expiresAt=null). Present means real.
+        // Android-only, and genuinely populated here. Present means real.
+        //
+        // 🔴 This used to add "unlike iOS, whose getEntitlements() hardcodes isActive=true /
+        // expiresAt=null", and the `expiresAt` half is STALE: iOS returns StoreKit's real
+        // `expirationDate` now, as its own source says ("It used to be nil always"). `isActive=true`
+        // is still accurate on iOS and is construction, not a computed check — the list is the
+        // filter there, so no `isActive: false` row ever arrives. Here it is derived from `status`.
         put("store", entitlement.store)
         put("status", entitlement.status)
         put("isTrial", entitlement.isTrial)

@@ -29,8 +29,8 @@ import org.robolectric.RuntimeEnvironment
  *
  * ## Why `false` first is the control, not ceremony
  *
- * The defect shape for a bridged method is a body that runs and does nothing (SPEC-070-B's
- * "bridged-but-dead"). A test that only asserted `set(true) ⇒ true` would pass against a flag that
+ * The defect shape for a bridged method is a body that runs and does nothing — bridged, and dead.
+ * A test that only asserted `set(true) ⇒ true` would pass against a flag that
  * was already `true` for some other reason, and a test that only asserted the write would pass
  * against a setter stuck at `true`. Reading the baseline, writing both values, and reading back
  * each time is what distinguishes a real setter from both.

@@ -55,8 +55,18 @@ enum AppdnaMappers {
             out["expiresAt"] = iso.string(from: expiresAt)
         }
         // `store`, `status`, `isTrial` and `offerType` are Android-only — iOS's Entitlement does not
-        // carry them. `isActive` and `expiresAt` are the native SDK's real values (StoreKit's expiry, or the
-        // server's for a server-only entitlement) on both `getEntitlements()` and `onEntitlementsChanged`.
+        // carry them.
+        //
+        // `expiresAt` is the native SDK's real value: StoreKit's `expirationDate`, or the server's for a
+        // server-only entitlement, on both `getEntitlements()` and `onEntitlementsChanged`. It used to be
+        // nil always, which the Android mapper's comment still said.
+        //
+        // `isActive` is always TRUE here, and that is construction rather than a liveness check: every
+        // product the bridge returns is one the store still entitles, and `Transaction.currentEntitlements`
+        // keeps a subscription through its billing grace period after `expirationDate` has passed
+        // (`AppDNA+Modules.swift` `getEntitlements`). So the LIST is the filter, and a host must not wait
+        // for an `isActive: false` row on iOS — none arrives. Android derives the same field from `status`,
+        // which is why the docs name `isActive` as the cross-platform question and `status` as Android-only.
         return out
     }
 
