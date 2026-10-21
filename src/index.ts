@@ -811,6 +811,9 @@ export class AppDNA {
       setDelegateListeners('lifecycle', () => !delegate ? [] : [
         addNativeListener<{ reason: string; lockedAt: string }>('onSdkRuntimeLocked', (data) => delegate?.onSdkRuntimeLocked?.(data.reason, data.lockedAt)),
         addNativeListener('onSdkRuntimeUnlocked', () => delegate?.onSdkRuntimeUnlocked?.()),
+        // #1047 — every event the native SDK tracks. The wrapper forwards the native name and
+        // property map unchanged.
+        addNativeListener<{ name: string; properties: Record<string, unknown> }>('onEventTracked', (data) => delegate?.onEventTracked?.(data.name, data.properties ?? {})),
       ]);
     },
   };

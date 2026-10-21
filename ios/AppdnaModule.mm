@@ -103,6 +103,7 @@ RCT_EXPORT_MODULE()
   if ([name isEqualToString:@"onWebEntitlementChanged"]) { [self emitOnWebEntitlementChanged:payload]; return; }
   if ([name isEqualToString:@"onSdkRuntimeLocked"]) { [self emitOnSdkRuntimeLocked:payload]; return; }
   if ([name isEqualToString:@"onSdkRuntimeUnlocked"]) { [self emitOnSdkRuntimeUnlocked:payload]; return; }
+  if ([name isEqualToString:@"onEventTracked"]) { [self emitOnEventTracked:payload]; return; }
   if ([name isEqualToString:@"onHostCallback"]) { [self emitOnHostCallback:payload]; return; }
 
   // An event with no emitter is a programming error, not a runtime condition. Dropping it silently

@@ -997,6 +997,8 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
             "onWebEntitlementChanged" -> emitOnWebEntitlementChanged(payload)
             "onSdkRuntimeLocked" -> emitOnSdkRuntimeLocked(payload)
             "onSdkRuntimeUnlocked" -> emitOnSdkRuntimeUnlocked(payload)
+            // #1047 — every event the native SDK tracks, forwarded to JS.
+            "onEventTracked" -> emitOnEventTracked(payload)
             "onHostCallback" -> emitOnHostCallback(payload)
             else -> throw IllegalStateException("AppDNA: no TurboModule emitter for event '$name'")
         }
