@@ -135,6 +135,8 @@ internal object AppdnaMappers {
         "timezone_offset" to loc.timezone_offset,
         "postal_code" to loc.postal_code,
         "raw_query" to loc.raw_query,
+        "mapbox_id" to loc.mapbox_id,
+        "place_id" to loc.place_id,
     )
 
 }

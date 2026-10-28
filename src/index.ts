@@ -722,11 +722,13 @@ export class AppDNA {
   /**
    * The structured answer to an onboarding location field — `{formatted_address, city, state,
    * state_code, country, country_code, latitude, longitude, timezone, timezone_offset, postal_code,
-   * raw_query}`. Resolves `null` when that field was never answered.
+   * raw_query, mapbox_id, place_id}`. Resolves `null` when that field was never answered.
    *
    * Every key except `formatted_address` may be `null`: an address typed without picking a suggestion
    * resolves `{formatted_address: <text>, raw_query: <text>}` with null coordinates, city, state and
-   * country; a picked suggestion fills what the lookup had.
+   * country; a picked suggestion fills what the lookup had. `mapbox_id` is set only on an answer resolved
+   * through a permanent Mapbox geocode — an opaque marker of that, not a stable place id to look up — and
+   * `place_id` only on a Google answer (the Places id the user tapped).
    */
   static async getLocationData(fieldId: string): Promise<Record<string, unknown> | null> {
     return parseNativeJson<Record<string, unknown> | null>(await AppdnaModule.getLocationData(fieldId));

@@ -58,6 +58,17 @@ describe('getLocationData', () => {
     });
   });
 
+  it('a resolved answer carries its provenance ids', async () => {
+    nativeAnswer = JSON.stringify({ formatted_address: 'Porto, Porto, Portugal', city: 'Porto', raw_query: 'port', mapbox_id: 'dXJuOm1ieHBsYzpwcm9iZQ', place_id: null });
+    expect(await AppDNA.getLocationData('field_location')).toEqual({
+      formatted_address: 'Porto, Porto, Portugal',
+      city: 'Porto',
+      raw_query: 'port',
+      mapbox_id: 'dXJuOm1ieHBsYzpwcm9iZQ',
+      place_id: null,
+    });
+  });
+
   it('no answer is null', async () => {
     nativeAnswer = 'null';
     expect(await AppDNA.getLocationData('field_location')).toBeNull();

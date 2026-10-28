@@ -263,6 +263,8 @@ enum AppdnaMappers {
             "timezone_offset": loc.timezone_offset,
             "postal_code": loc.postal_code,
             "raw_query": loc.raw_query,
+            "mapbox_id": loc.mapbox_id,
+            "place_id": loc.place_id,
         ])
     }
 
