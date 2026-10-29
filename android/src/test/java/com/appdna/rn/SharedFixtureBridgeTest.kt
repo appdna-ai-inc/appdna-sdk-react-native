@@ -458,6 +458,11 @@ class SharedFixtureBridgeTest {
     private fun driveIdentify(action: JSONObject) {
         val userId = action.getString("userId")
         val traits = action.optJSONObject("traits") ?: JSONObject()
+        // `location_traits`: each value is a location answer. React Native's getLocationData resolves a
+        // plain object of exactly that shape, so the host passes it as is.
+        action.optJSONObject("location_traits")?.let { loc ->
+            for (key in loc.keys()) traits.put(key, loc.get(key))
+        }
 
         module.identify(userId, jsonToReadableMap(traits), mock(Promise::class.java, Answer { null }))
         idle()

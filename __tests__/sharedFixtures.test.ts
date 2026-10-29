@@ -198,9 +198,13 @@ async function runFixture(fixture: Fixture): Promise<void> {
     case 'identify': {
       const userId = fixture.action.userId as string | undefined;
       if (!userId) throw new Error(`[${fixture.id}] identify fixture has no 'userId'`);
-      const traits = fixture.action.traits as
+      let traits = fixture.action.traits as
         | Record<string, unknown>
         | undefined;
+      // `location_traits`: each value is a location answer. React Native's getLocationData resolves a
+      // plain object of exactly that shape, so the host passes it as is.
+      const locationTraits = fixture.action.location_traits as Record<string, unknown> | undefined;
+      if (locationTraits) traits = { ...(traits ?? {}), ...locationTraits };
       await AppDNA.identify(userId, traits);
       return;
     }
@@ -287,7 +291,10 @@ function assertBridgeContract(fixture: Fixture): void {
       const c = mockCapturedCalls[0]!;
       expect(c.method).toBe('identify');
       expect(c.args[0]).toBe(fixture.action.userId);
-      expect(c.args[1]).toEqual(fixture.action.traits);
+      // What crosses the bridge is what the SDK stores (`state_after.user_traits`): a location answer
+      // object as is.
+      const stateAfter = (fixture.expect as { state_after?: { user_traits?: unknown } } | undefined)?.state_after;
+      expect(c.args[1]).toEqual(stateAfter?.user_traits ?? fixture.action.traits);
       break;
     }
     case 'report_paying_user': {
