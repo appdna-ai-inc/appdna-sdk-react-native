@@ -250,7 +250,9 @@ class SharedFixtureBridgeTest {
             val raw = invocation.arguments
             val args: Array<*> = if (raw.size == 1 && raw[0] is Array<*>) raw[0] as Array<*> else raw
             val name = args.getOrNull(0) as? String
-            if (name != null) {
+            // `onEventTracked` is the wrapper's own observation stream (every tracked event, to JS), not a
+            // delegate call a fixture describes; like `onHostCallback`, it is projected away.
+            if (name != null && name != "onEventTracked") {
                 emitted.add(name to readableToJson(args.getOrNull(1) as? ReadableMap))
             }
             null
@@ -782,8 +784,12 @@ class SharedFixtureBridgeTest {
             .filter { it.name.endsWith(".fixture.json") }
             .sortedBy { it.name }
             .map { it.name.removeSuffix(".fixture.json") to JSONObject(it.readText()) }
-            .filter { (_, json) ->
-                json.getJSONObject("action").getString("kind") == "purchase" &&
+            .filter { (id, json) ->
+                // The ruling's selector: a `purchase` fixture whose id ends in `_fails_loudly`. Selecting by
+                // provider alone also swept in other purchases made with a refusing provider (the failure
+                // banner's fallback-text fixture), which are not this test's subject.
+                id.endsWith("_fails_loudly") &&
+                    json.getJSONObject("action").getString("kind") == "purchase" &&
                     json.optJSONObject("setup")?.optJSONObject("config")?.optString("billing_provider") in REFUSING_PROVIDERS
             }
 
