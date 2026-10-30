@@ -76,7 +76,7 @@ final class AppdnaPromoDefaultTests: XCTestCase {
         let answer = submitPromo(timeout: 0.5, host: { _ in /* silence */ })
         XCTAssertEqual(
             answer, false,
-            "a promo code no host validated was ACCEPTED — this is §11.7, the live defect, reintroduced"
+            "a promo code no host validated was ACCEPTED — the defect this test exists for, reintroduced"
         )
     }
 

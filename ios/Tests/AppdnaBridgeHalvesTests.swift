@@ -15,7 +15,7 @@ import AppDNASDK
 ///    (was a fixed `RESTORE_ERROR`); under `none` that is `providerNotAvailable`, as is `purchase`.
 /// 4. **** `parseOptions`: a key-less Adapty is refused (core `fromWire`); a
 ///    non-positive `vetoTimeout` is the native default.
-final class AppdnaSpec497BridgeTests: XCTestCase {
+final class AppdnaBridgeHalvesTests: XCTestCase {
 
     // The session tests write the process-global session store, which is persisted (UserDefaults) and so
     // outlives the process. It is cleared on both sides of every test:

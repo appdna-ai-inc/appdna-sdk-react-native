@@ -658,7 +658,7 @@ class SharedFixtureBridgeTest {
             // Every `purchase` fixture whose id ends in `_fails_loudly` — the ruling's own
             // selector (check-fixture-coverage.ts `case 'purchase'`), so a new one joins by itself.
             val loud = failsLoudlyFixtures()
-            assertEquals("§3.9 has exactly two refusing-provider purchase fixtures (none, revenueCat)", 2, loud.size)
+            assertEquals("the shared fixtures have exactly two refusing-provider purchase fixtures (none, revenueCat)", 2, loud.size)
             for ((id, fixture) in loud) {
                 val provider = fixture.getJSONObject("setup").getJSONObject("config").getString("billing_provider")
                 val args = fixture.getJSONObject("expect").getJSONArray("delegate_calls").getJSONObject(0).getJSONObject("args")
