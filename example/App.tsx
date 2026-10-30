@@ -593,6 +593,11 @@ export default function App({
         <Section title="Core">
           <Button label="Track event" onPress={() => { AppDNA.track('rn_e2e_button', { source: 'example' }); append('track(rn_e2e_button) queued'); }} />
           <Button label="Flush now" onPress={() => run('flush()', () => AppDNA.flush())} />
+          <Button label="Is ready" onPress={() => run('isReady()', () => AppDNA.isReady())} />
+          <Button
+            label="Keep paywall after restore (next)"
+            onPress={() => { AppDNA.paywall.skipNextAutoDismissOnRestore(true); append('paywall.skipNextAutoDismissOnRestore(true)'); }}
+          />
           <Button label="Identify" onPress={() => run('identify()', () => AppDNA.identify('rn_e2e_user', { plan: 'demo', tier: 2 }))} />
           <Button label="Get user traits" onPress={() => run('getUserTraits()', () => AppDNA.getUserTraits())} />
           {/*
