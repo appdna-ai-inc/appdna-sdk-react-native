@@ -67,6 +67,10 @@ every native change below reaches a React Native app with no JavaScript change.
 
 ### Native SDK changes: onboarding
 
+- **A dropdown-style Select can be multi-select**: with `multi_select` the default dropdown is a
+  multi-pick menu that stores a list, records each pick for `{{selected.<field_id>.<n>.…}}`, honours
+  `max_selections` and closes after each pick. A multi-select field's stored value now draws and records
+  the same way on iOS and Android, also when a host writes it mid-step.
 - **New step behaviour**: `auto_advance_seconds`, `wait_for_host` and `tap_anywhere_advances`, `skip_to_step`, `dismiss_button_style`, `request_store_review` and the
   `rate_app` button action, and the flow's Celebration Effect.
 - **Lottie and Rive render on iOS**, instead of a placeholder box. The iOS SDK now depends on
