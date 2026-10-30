@@ -264,7 +264,7 @@ export class AppDNA {
    * Whether the SDK has finished configuring — the condition `onReady` fires on, readable
    * synchronously from the host's point of view.
    *
-   * #855 — `presentOnboarding` resolves false both when a flow does not exist and when the SDK is
+   * `presentOnboarding` resolves false both when a flow does not exist and when the SDK is
    * not up yet, and on a COLD FIRST LAUNCH that second window is long: ~3s on an iPhone simulator,
    * ~20-25s on a Pixel-class emulator, 103s once on a bad network. One boolean cannot say both, so
    * check this before deciding whether to retry or to treat the flow as missing.
@@ -492,7 +492,7 @@ export class AppDNA {
     present: (paywallId: string, context?: PaywallContext): Promise<boolean> =>
       AppdnaModule.presentPaywall(paywallId, context),
     /**
-     * #970 — keep the paywall up after a successful restore.
+     * Keep the paywall up after a successful restore.
      *
      * A restore that returns at least one product auto-dismisses the paywall, because the user is
      * now entitled. This suppresses that once, so you can show a confirmation of your own or
@@ -813,7 +813,7 @@ export class AppDNA {
       setDelegateListeners('lifecycle', () => !delegate ? [] : [
         addNativeListener<{ reason: string; lockedAt: string }>('onSdkRuntimeLocked', (data) => delegate?.onSdkRuntimeLocked?.(data.reason, data.lockedAt)),
         addNativeListener('onSdkRuntimeUnlocked', () => delegate?.onSdkRuntimeUnlocked?.()),
-        // #1047 — every event the native SDK tracks. The wrapper forwards the native name and
+        // Every event the native SDK tracks. The wrapper forwards the native name and
         // property map unchanged.
         addNativeListener<{ name: string; properties: Record<string, unknown> }>('onEventTracked', (data) => delegate?.onEventTracked?.(data.name, data.properties ?? {})),
       ]);

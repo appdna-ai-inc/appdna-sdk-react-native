@@ -3,7 +3,7 @@ import AppDNASDK
 @testable import appdna_sdk_react_native
 
 /**
- #970 — the paywall auto-dismiss opt-out reaches the native flag from React Native.
+ The paywall auto-dismiss opt-out reaches the native flag from React Native.
 
  ## What is under test, and what is NOT
 

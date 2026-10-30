@@ -373,7 +373,7 @@ export interface Spec extends TurboModule {
   readonly onSdkRuntimeUnlocked: EventEmitter<UnsafeObject>;
 
   /**
-   * #1047 — every event the native SDK tracks, as `{name, properties}`, right after it is
+   * Every event the native SDK tracks, as `{name, properties}`, right after it is
    * queued. For forwarding AppDNA analytics into a host pipeline; an observer, so nothing a JS
    * handler does affects delivery.
    */

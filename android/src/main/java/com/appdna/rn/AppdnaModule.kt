@@ -483,7 +483,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
      * (`sdk-methods.ts`) rather than left as a parameter that does nothing.
      */
     /**
-     * #855 — the question a host must be able to ask before trusting a `presentOnboarding` false.
+     * The question a host must be able to ask before trusting a `presentOnboarding` false.
      *
      * That call resolves false both when a flow does not exist and when the SDK is not up yet, and
      * on a COLD FIRST LAUNCH the second window is long — measured at ~20-25s on a Pixel-class
@@ -997,7 +997,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
             "onWebEntitlementChanged" -> emitOnWebEntitlementChanged(payload)
             "onSdkRuntimeLocked" -> emitOnSdkRuntimeLocked(payload)
             "onSdkRuntimeUnlocked" -> emitOnSdkRuntimeUnlocked(payload)
-            // #1047 — every event the native SDK tracks, forwarded to JS.
+            // Every event the native SDK tracks, forwarded to JS.
             "onEventTracked" -> emitOnEventTracked(payload)
             "onHostCallback" -> emitOnHostCallback(payload)
             else -> throw IllegalStateException("AppDNA: no TurboModule emitter for event '$name'")

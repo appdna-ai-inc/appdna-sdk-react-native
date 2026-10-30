@@ -585,7 +585,7 @@ enum AppdnaVetoDecoder {
         return ElementInteractionResult(
             fieldConfigPatches: patches,
             inputValuePatches: anyMap(map["inputValuePatches"]),
-            // #657 — replacement options for a refresh; same decoder as the render-time override.
+            // Replacement options for a refresh; same decoder as the render-time override.
             fieldOptions: decodeFieldOptions(map["fieldOptions"]),
             advance: (map["advance"] as? Bool) ?? false,
             // A one-line forward into the CORE decoder. Never `anyMap`: it drops

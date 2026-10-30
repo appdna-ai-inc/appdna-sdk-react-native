@@ -445,7 +445,7 @@ internal class LifecycleForwarder(private val emitter: AppdnaEventEmitter) : App
     }
 
     /*
-     * #1047 — every event the native SDK tracks, forwarded verbatim. A JS host that implements
+     * Every event the native SDK tracks, forwarded verbatim. A JS host that implements
      * `onEventTracked` gets the same name and properties the native delegate was handed; the
      * wrapper decides nothing (ADR-001).
      */
@@ -612,7 +612,7 @@ internal object AppdnaVetoDecoder {
         return ElementInteractionResult(
             fieldConfigPatches = patches,
             inputValuePatches = map["inputValuePatches"]?.let { anyMap(it) },
-            // #657 — replacement options for a refresh; same decoder as the render-time override.
+            // Replacement options for a refresh; same decoder as the render-time override.
             fieldOptions = decodeFieldOptions(map["fieldOptions"]),
             advance = map["advance"] as? Boolean ?: false,
             // A one-line forward into the core decoder. NOT `anyMap`: it drops null

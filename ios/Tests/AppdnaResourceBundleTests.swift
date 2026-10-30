@@ -1,7 +1,7 @@
 import XCTest
 @testable import AppDNASDK
 
-/// #1171 — the SDK's resources reach a CocoaPods host.
+/// The SDK's resources reach a CocoaPods host.
 ///
 /// The Google sign-in mark was read through `Bundle.module`, which only SwiftPM generates: as a pod the SDK did not
 /// compile at all, and every React Native and Flutter iOS host is a pod. The podspec's `resource_bundles` also left
