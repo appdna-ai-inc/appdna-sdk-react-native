@@ -587,7 +587,7 @@ class SharedFixtureBridgeTest {
                     module.respondToHostCallback(id, if (payload.optString("hook") == "shouldOpen") "true" else "null")
                 }
             }
-            val pushEvents = persistedEnvelopes().count { !isRoutedScreenDismissal(it) }
+            val pushEvents = persistedEnvelopes().count { !isRoutedScreenDismissal(it) && !isDroppedEventsReport(it) }
             if (pushEvents >= wantEvents && projectedPushCalls().size >= wantCalls) {
                 Thread.sleep(50); idle()
                 return
@@ -616,6 +616,13 @@ class SharedFixtureBridgeTest {
             if (out.containsKey("push_id") && !out.containsKey("pushId")) out["pushId"] = out.remove("push_id")
             name to out
         }
+
+    /**
+     * The SDK's report of events it lost is not what a fixture describes. The live uploader posts this run's events with a fake
+     * key, the 401 counts them as lost, and the next event carries that report whenever the reply happens to land, so a fixture
+     * would pass or fail on network timing. The drop counter has its own tests in the Android SDK.
+     */
+    private fun isDroppedEventsReport(e: JSONObject): Boolean = e.optString("event_name") == "_sdk_events_dropped"
 
     private fun isRoutedScreenDismissal(e: JSONObject): Boolean {
         val r = routed ?: return false
@@ -887,7 +894,7 @@ class SharedFixtureBridgeTest {
         // with no such screen in this runner's config — emits `screen_dismissed` for THAT id. Only that
         // exact event (and the matching `onScreenDismissed`, below) belongs to the routed destination
         // rather than the push path the fixture pins; the route is asserted via `state_after.routed`.
-        val envelopes = persistedEnvelopes().filterNot { isRoutedScreenDismissal(it) }
+        val envelopes = persistedEnvelopes().filterNot { isRoutedScreenDismissal(it) || isDroppedEventsReport(it) }
 
         // Wrapper-only invariant. No other runner can assert it: on iOS/Android core
         // the tag is `native`. A wrapper that stops injecting it mis-attributes every RN event in
