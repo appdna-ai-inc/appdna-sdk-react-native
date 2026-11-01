@@ -38,14 +38,23 @@ final class AppdnaBridgeHalvesTests: XCTestCase {
     // MARK: - 1. sign-in floor (scripted scheduler)
 
     /// A scheduler that records each requested give-up interval and holds the callback.
+    /// Locked, because the forwarder schedules from another task while the test reads: seeing the interval
+    /// without its callback would make `fireAll` fire nothing, and the "late" reply would win.
     private final class ScriptedScheduler {
-        var requested: [TimeInterval] = []
-        var pending: [() -> Void] = []
+        private let lock = NSLock()
+        private var requestedWaits: [TimeInterval] = []
+        private var pendingFires: [() -> Void] = []
+        var requested: [TimeInterval] { lock.lock(); defer { lock.unlock() }; return requestedWaits }
+        var pending: [() -> Void] { lock.lock(); defer { lock.unlock() }; return pendingFires }
         lazy var schedule: AppdnaVetoInvoker.TimeoutScheduler = { [unowned self] wait, fire in
-            self.requested.append(wait)
-            self.pending.append(fire)
+            self.lock.lock(); defer { self.lock.unlock() }
+            self.requestedWaits.append(wait)
+            self.pendingFires.append(fire)
         }
-        func fireAll() { let p = pending; pending.removeAll(); p.forEach { $0() } }
+        func fireAll() {
+            lock.lock(); let p = pendingFires; pendingFires.removeAll(); lock.unlock()
+            p.forEach { $0() }
+        }
     }
 
     private func forwarder(timeout: TimeInterval, scheduler: ScriptedScheduler, reply: String?) -> OnboardingForwarder {
