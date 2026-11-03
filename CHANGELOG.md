@@ -6,8 +6,15 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [1.0.21] — unreleased
 
-Wraps iOS 1.0.84 / Android 1.0.56. Rendering, billing and networking live in the native SDKs, so
+Wraps iOS 1.0.84 / Android 1.0.57. Rendering, billing and networking live in the native SDKs, so
 every native change below reaches a React Native app with no JavaScript change.
+
+### Installation
+
+- **iOS: the package carries the AppDNA iOS SDK.** CocoaPods Trunk stops accepting new pods on
+  2 December 2026, so the iOS SDK is no longer a separate `AppDNASDK` pod: this package compiles it in
+  its own pod. Your `Podfile` names nothing for AppDNA; remove a `pod 'AppDNASDK'` line if you added one.
+  The SDK's dependencies (Firebase, Google Maps, Lottie, Rive) still install from CocoaPods.
 
 ### Added
 
@@ -25,6 +32,10 @@ every native change below reaches a React Native app with no JavaScript change.
   tapped Mapbox or Google suggestion.
 
 ### Changed
+
+- **Android: push token on first launch** (Android 1.0.57). The token was requested before the SDK's
+  own Firebase app existed, so the first launch registered none (or, in an app with its own Firebase, one
+  AppDNA cannot send to).
 
 - **Android: Play Billing Library 8**. Google Play refuses an app update built on Play
   Billing Library 7, which every app using 1.0.20 or earlier got from the native Android SDK. Android
