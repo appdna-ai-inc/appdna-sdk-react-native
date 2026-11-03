@@ -112,8 +112,12 @@ class AppdnaListenerLifecycleTest {
             listeners.size
         } ?: 0
 
+        lastBreakdown = "pending=${pending.size} attached=$attached manager=${if (manager == null) "none" else "present"}"
         return pending.size + attached
     }
+
+    /** #1299 — what the last count was made of, so an intermittent failure says which side moved. */
+    private var lastBreakdown = ""
 
     @After
     fun cleanUp() {
@@ -158,6 +162,7 @@ class AppdnaListenerLifecycleTest {
         // leave 1"). This is the native half: the count that actually decides how many times a host's
         // `onEntitlementsChanged` fires lives on the SDK singleton, not in JS.
         val before = entitlementListenerCount()
+        val beforeBreakdown = lastBreakdown
 
         repeat(100) {
             val module = newModule()
@@ -165,10 +170,12 @@ class AppdnaListenerLifecycleTest {
             tearDown(module)
         }
 
+        val after = entitlementListenerCount()
         assertEquals(
-            "every reload left its listener behind — 100 live modules, each fanning the same event out again",
+            "every reload left its listener behind — 100 live modules, each fanning the same event out again " +
+                "(before: $beforeBreakdown; after: $lastBreakdown)",
             before,
-            entitlementListenerCount(),
+            after,
         )
 
         // …and the surviving module is still attached exactly once.
