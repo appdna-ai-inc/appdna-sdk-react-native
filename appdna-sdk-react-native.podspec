@@ -62,7 +62,39 @@ Pod::Spec.new do |s|
   # The wrapper always pins the freshest native. `~>` admits a newer PATCH with no
   # source edit, so `check:version-lockstep` asserts this line matches the shipped iOS
   # version rather than trusting that it does.
-  s.dependency "AppDNASDK", "~> 1.0.84"
+  #
+  # SPEC-515 — or through Swift Package Manager when CocoaPods cannot supply it. CocoaPods Trunk refused
+  # AppDNASDK 1.0.84 in its read-only week and stops accepting versions on 2026-12-02; the same SDK is
+  # published as a Swift package (the public `appdna-sdk-ios` repo, tag per version). The rule:
+  #   - APPDNA_IOS_SPM=1 forces SPM, APPDNA_IOS_SPM=0 forces CocoaPods;
+  #   - a Podfile that names AppDNASDK itself (a local :path, a pinned version) keeps CocoaPods;
+  #   - otherwise CocoaPods when its sources have a version in range, SPM when they do not.
+  # SPM needs React Native's `spm_dependency` (0.75+; this package requires 0.76.9).
+  appdna_ios_requirement = "~> 1.0.84"
+  appdna_ios_via_spm = lambda do
+    forced = ENV["APPDNA_IOS_SPM"]
+    return forced == "1" if %w[0 1].include?(forced)
+    return false unless respond_to?(:spm_dependency, true)
+    podfile = (Pod::Config.instance.podfile rescue nil)
+    return false if podfile && podfile.dependencies.any? { |d| d.root_name == "AppDNASDK" }
+    begin
+      set = Pod::Config.instance.sources_manager.search(Pod::Dependency.new("AppDNASDK", appdna_ios_requirement))
+      requirement = Pod::Requirement.create(appdna_ios_requirement)
+      !(set && set.versions.any? { |v| requirement.satisfied_by?(v) })
+    rescue StandardError
+      false
+    end
+  end.call
+
+  if appdna_ios_via_spm
+    Pod::UI.puts "[AppDNA] AppDNASDK #{appdna_ios_requirement} is not available from CocoaPods; using the Swift package"
+    spm_dependency(s,
+      url: "https://github.com/appdna-ai-inc/appdna-sdk-ios.git",
+      requirement: { kind: "upToNextMinorVersion", minimumVersion: "1.0.84" },
+      products: ["AppDNASDK"])
+  else
+    s.dependency "AppDNASDK", "~> 1.0.84"
+  end
 
   # 🔴 STATIC, because this pod links the static AppDNASDK and inherits its map symbols.
   #
