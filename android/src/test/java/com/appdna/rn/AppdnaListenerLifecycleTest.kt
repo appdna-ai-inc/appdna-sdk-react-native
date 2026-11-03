@@ -116,7 +116,7 @@ class AppdnaListenerLifecycleTest {
         return pending.size + attached
     }
 
-    /** #1299 — what the last count was made of, so an intermittent failure says which side moved. */
+    /** What the last count was made of, so an intermittent failure says which side moved. */
     private var lastBreakdown = ""
 
     @After
