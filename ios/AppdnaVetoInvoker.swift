@@ -1,5 +1,7 @@
 import Foundation
+#if !APPDNA_CORE_BUNDLED
 import AppDNASDK
+#endif
 
 /**
  * Ask the JS host for a veto, and give up after `timeout` seconds.

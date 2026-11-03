@@ -21,6 +21,7 @@
     "src",
     "lib",
     "ios",
+    "ios-core",
     "android",
     "app.plugin.js",
     "appdna-sdk-react-native.podspec",

@@ -1,5 +1,7 @@
 import Foundation
+#if !APPDNA_CORE_BUNDLED
 import AppDNASDK
+#endif
 
 /// DTO → bridge-safe dictionary mappers.
 ///

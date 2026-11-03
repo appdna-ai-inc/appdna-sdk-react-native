@@ -1,7 +1,9 @@
 import Foundation
 import UIKit
 import SwiftUI
+#if !APPDNA_CORE_BUNDLED
 import AppDNASDK
+#endif
 
 /**
  * The Swift half of the iOS ScreenSlot Fabric component.

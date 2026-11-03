@@ -25,6 +25,10 @@
 
 // The generated Swift header — exposes `AppdnaScreenSlotHostView`. Same module-name rewrite
 // (`-` → `_`) + `DEFINES_MODULE = YES` as the TurboModule adapter relies on.
+// The generated Swift header reaches its frameworks through `@import`, which ObjC++ does not process here. When
+// the published package compiles the iOS SDK into this module, the header also declares the SDK's notification
+// classes (UNUserNotificationCenterDelegate, UNNotificationServiceExtension), so import their framework first.
+#import <UserNotifications/UserNotifications.h>
 #import <appdna_sdk_react_native/appdna_sdk_react_native-Swift.h>
 
 using namespace facebook::react;

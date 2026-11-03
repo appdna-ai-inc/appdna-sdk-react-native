@@ -63,18 +63,36 @@ Pod::Spec.new do |s|
   # source edit, so `check:version-lockstep` asserts this line matches the shipped iOS
   # version rather than trusting that it does.
   #
-  # When CocoaPods Trunk does not have the pinned AppDNASDK. Trunk refused 1.0.84 during its
-  # read-only week and stops accepting versions on 2026-12-02. Every version is also a git tag on the public
-  # `appdna-sdk-ios` repo, whose own podspec installs it, so the app names it in its Podfile (documented in
-  # docs/sdks/react-native/installation.mdx):
+  # How the iOS SDK reaches the app. CocoaPods Trunk accepts no new versions after 2026-12-02, so a
+  # published package cannot depend on the AppDNASDK pod for a new version. The publish copies the iOS
+  # SDK (its podspec and the sources it lists) into `ios-core/` of the npm package, and this pod compiles
+  # them itself. The SDK's own dependencies (Firebase, Google Maps, Lottie, Rive, KeychainAccess) are read
+  # from that podspec, so they cannot drift, and are older versions that stay on Trunk. The app adds nothing.
   #
-  #     pod 'AppDNASDK', :git => 'https://github.com/appdna-ai-inc/appdna-sdk-ios.git', :tag => 'v1.0.84'
+  # The SDK resolves its classes by Objective-C name and its resources by bundle name ("AppDNASDK"), so
+  # compiling it inside this module changes nothing it looks up. The wrapper's Swift imports `AppDNASDK`
+  # only when it is a separate module, `#if !APPDNA_CORE_BUNDLED`.
   #
-  # Not Swift Package Manager: this pod is a static framework (see below), and with React Native's
-  # `spm_dependency` the binary Firestore target never reaches the app's link (`_OBJC_CLASS_$_FIRFirestore`
-  # undefined, RN 0.76.9, 2026-11-03). Nor a check in this file that reads the Podfile: React Native's
-  # autolinking CLI reads this podspec, the Podfile runs that CLI, and `pod install` fails on the recursion.
-  s.dependency "AppDNASDK", "~> 1.0.84"
+  # The separate pod is still used when `ios-core/` is absent (a checkout of this repo) or when
+  # APPDNA_IOS_SDK_PATH names a local SDK (this repo's example app and CI): then the Podfile names it.
+  # Not Swift Package Manager: with React Native's `spm_dependency` the binary Firestore target never
+  # reaches the app's link (`_OBJC_CLASS_$_FIRFirestore` undefined, RN 0.76.9, 2026-11-03).
+  appdna_core_podspec = File.join(__dir__, "ios-core", "AppDNASDK.podspec")
+  appdna_core_bundled = File.exist?(appdna_core_podspec) && ENV["APPDNA_IOS_SDK_PATH"].to_s.empty?
+  appdna_core_xcconfig = {}
+  if appdna_core_bundled
+    core = Pod::Specification.from_file(appdna_core_podspec)
+    core_ios = core.consumer(:ios)
+    s.source_files = ["ios/**/*.{h,m,mm,swift}"] + core_ios.source_files.map { |g| "ios-core/#{g}" }
+    core_ios.resource_bundles.each do |name, files|
+      s.resource_bundles = s.attributes_hash["resource_bundles"].merge(name => Array(files).map { |f| "ios-core/#{f}" })
+    end
+    core.all_dependencies.each { |d| s.dependency d.name, *d.requirement.as_list }
+    s.frameworks = core_ios.frameworks
+    appdna_core_xcconfig = { "SWIFT_ACTIVE_COMPILATION_CONDITIONS" => "$(inherited) APPDNA_CORE_BUNDLED" }
+  else
+    s.dependency "AppDNASDK", "~> 1.0.84"
+  end
 
   # 🔴 STATIC, because this pod links the static AppDNASDK and inherits its map symbols.
   #
@@ -97,7 +115,7 @@ Pod::Spec.new do |s|
   # ObjC++ adapter (P2) imports the generated Swift header, which requires DEFINES_MODULE.
   s.pod_target_xcconfig = {
     "DEFINES_MODULE" => "YES",
-  }
+  }.merge(appdna_core_xcconfig)
 
   # install_modules_dependencies wires the New-Architecture flags, the codegen'd spec pod,
   # React-Core, ReactCommon and folly. It is defined by react_native_pods.rb, which only a host

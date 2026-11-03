@@ -26,7 +26,7 @@ enum AppdnaJSON {
 
         // A type we cannot represent is a mapper bug. Encoding its `description` would be a lie that
         // typechecks — refuse instead, and make the facade's parse fail loudly.
-        Log.warning("AppDNA: cannot JSON-encode a value of type \(type(of: value)); returning null")
+        WrapperLog.warning("AppDNA: cannot JSON-encode a value of type \(type(of: value)); returning null")
         return "null"
     }
 
@@ -46,7 +46,8 @@ enum AppdnaJSON {
 }
 
 /// The core SDK's logger is internal to `AppDNASDK`; this wrapper has no logger of its own and must
-/// not invent one. `NSLog` keeps the single diagnostic above visible without adding a subsystem.
-private enum Log {
+/// not invent one. `NSLog` keeps the single diagnostic above visible without adding a subsystem. Not named
+/// `Log`: when the published package compiles the SDK into this module, the SDK's own `Log` is in scope.
+private enum WrapperLog {
     static func warning(_ message: String) { NSLog("%@", message) }
 }

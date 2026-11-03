@@ -15,3 +15,6 @@ ios/generated/
 
 # Scratch dir for scripts/check-rn-docs-types.ts (generated doc snippets)
 .docs-typecheck/
+
+# The iOS SDK, copied in at publish time by scripts/sdk-bundle-ios-core.ts; never committed.
+ios-core/

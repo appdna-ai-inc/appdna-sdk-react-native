@@ -13,6 +13,10 @@
 
 // The pod is `appdna-sdk-react-native`; CocoaPods rewrites '-' to '_' for the module name, and
 // `DEFINES_MODULE = YES` in the podspec is what makes this generated header exist.
+// The generated Swift header reaches its frameworks through `@import`, which ObjC++ does not process here. When
+// the published package compiles the iOS SDK into this module, the header also declares the SDK's notification
+// classes (UNUserNotificationCenterDelegate, UNNotificationServiceExtension), so import their framework first.
+#import <UserNotifications/UserNotifications.h>
 #import <appdna_sdk_react_native/appdna_sdk_react_native-Swift.h>
 
 /**
