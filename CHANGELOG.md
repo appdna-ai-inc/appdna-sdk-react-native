@@ -10,6 +10,8 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- iOS: **unstyled headings and text inside a dark row or section background are drawn light**, as on Android.
+- iOS: **an `animated_loading` block that sets `variant`** draws that variant, as on Android.
 - **Text inside a zoned section background is readable.** Unstyled text in a `section_background` takes its ink
   from the zones behind it (one zone: its colour; several: any dark zone means light text). Before, it took the
   step's background, so it could be dark on a dark zone.
