@@ -10,6 +10,10 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **Text inside a zoned section background is readable.** Unstyled text in a `section_background` takes its ink
+  from the zones behind it (one zone: its colour; several: any dark zone means light text). Before, it took the
+  step's background, so it could be dark on a dark zone.
+- iOS: **the rating block stores its answer** at its `field_id`, as on Android.
 - iOS: **Multi-buttons no longer draws a button your data hid**, matching Android.
 - **Onboarding image alt text is set in the Console**, in the image block's new "Alt text" field, and read
   out as the image's accessibility label. A blank value is now announced as "Image", as an unset one is
