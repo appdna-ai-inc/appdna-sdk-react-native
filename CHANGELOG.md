@@ -10,6 +10,9 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **Onboarding image alt text is set in the Console**, in the image block's new "Alt text" field, and read
+  out as the image's accessibility label. A blank value is now announced as "Image", as an unset one is
+  (it was announced as nothing).
 - **Paywall images use their Alt Text as the accessibility label.** The Console's "Alt Text" on an image
   section (`alt`) is now read out by VoiceOver and TalkBack; before, it was saved and ignored.
 - **In-app messages honour "Allow Dismiss" and "Dismiss Delay".** With dismissal off, a message draws no
