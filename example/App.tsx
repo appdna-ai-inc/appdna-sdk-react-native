@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Linking,
   NativeModules,
   Platform,
   SafeAreaView,
@@ -238,6 +239,14 @@ export default function App({
   permissionsFlowId,
   waitUrl,
 }: Props) {
+  // `appdnasample://…` (declared in the iOS Info.plist): a custom-scheme CTA or push deep
+  // link the OS opens is handed to the SDK, which passes it to the deep-link delegate.
+  useEffect(() => {
+    const route = (url: string | null) => { if (url) AppDNA.deepLinks.handleURL(url).catch(() => undefined); };
+    Linking.getInitialURL().then(route).catch(() => undefined);
+    const sub = Linking.addEventListener('url', ({ url }) => route(url));
+    return () => sub.remove();
+  }, []);
   const [status, setStatus] = useState(apiKey ? 'Configuring…' : 'No API key — pass -appdnaApiKey');
   const [log, setLog] = useState<string[]>([]);
   const [diagnostics, setDiagnostics] = useState('');
