@@ -14,6 +14,10 @@ Feature parity: iOS 1.0.86.
   onboarding flow, paywall and survey the server no longer lists is dropped from memory and from the cached
   config, so it does not come back after a restart. An empty list means none are live. A failed fetch
   (offline, an error) removes nothing. Before, a device kept serving every one it had ever fetched.
+- Android: **An event upload is one request.** When a reused connection dropped after a batch was sent, OkHttp
+  re-sent the batch on its own, outside the queue's retry and backoff, so a batch could reach the server more
+  times than the retry policy allows. The upload (in the app and in the background worker) now makes one
+  request per attempt and leaves the retry to the queue.
 - **Option labels and summary headlines are readable on any step.** An unstyled option label in a Select
   (options without their own fill) and a `summary_screen` headline with no `text_color` take their ink from
   what is behind them; before, labels were dark on a dark step and the headline white on a light one.
