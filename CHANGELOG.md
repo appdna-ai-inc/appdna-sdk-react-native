@@ -10,6 +10,9 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **Option labels and summary headlines are readable on any step.** An unstyled option label in a Select
+  (options without their own fill) and a `summary_screen` headline with no `text_color` take their ink from
+  what is behind them; before, labels were dark on a dark step and the headline white on a light one.
 - **Unstyled rich text and lists are readable on dark screens.** A `rich_text` or `list` block with no colour
   takes its ink from what is behind it, as text does; before, it was dark on a dark step or fill.
 - iOS: **unstyled headings and text inside a dark row or section background are drawn light**, as on Android.
