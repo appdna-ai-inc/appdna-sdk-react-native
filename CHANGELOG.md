@@ -10,6 +10,10 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **An archived, unpublished or deleted flow, paywall or survey stops showing.** After a config fetch, every
+  onboarding flow, paywall and survey the server no longer lists is dropped from memory and from the cached
+  config, so it does not come back after a restart. An empty list means none are live. A failed fetch
+  (offline, an error) removes nothing. Before, a device kept serving every one it had ever fetched.
 - **Option labels and summary headlines are readable on any step.** An unstyled option label in a Select
   (options without their own fill) and a `summary_screen` headline with no `text_color` take their ink from
   what is behind them; before, labels were dark on a dark step and the headline white on a light one.
