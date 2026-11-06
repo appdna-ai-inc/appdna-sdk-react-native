@@ -10,6 +10,8 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **Unstyled rich text and lists are readable on dark screens.** A `rich_text` or `list` block with no colour
+  takes its ink from what is behind it, as text does; before, it was dark on a dark step or fill.
 - iOS: **unstyled headings and text inside a dark row or section background are drawn light**, as on Android.
 - iOS: **an `animated_loading` block that sets `variant`** draws that variant, as on Android.
 - **Text inside a zoned section background is readable.** Unstyled text in a `section_background` takes its ink
