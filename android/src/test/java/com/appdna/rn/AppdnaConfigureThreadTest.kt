@@ -32,6 +32,11 @@ import java.util.concurrent.atomic.AtomicReference
  * resolve does, and the threading contract is what is under test. The promise is a Mockito mock with
  * a catch-all Answer rather than a hand-written stub: `Promise` has ten `reject` overloads, and a
  * stub that misses one stops compiling every time RN adds another.
+ *
+ * The wait is long because this is usually the first `configure` in the JVM, so it pays for every
+ * class the SDK loads under Robolectric and for Robolectric unpacking its native runtime: about 2 s
+ * on a free machine, and measured at 22-27 s with the JVM held to a seventh of one core. It is a
+ * bound on a hang, not a budget, and a run that settles returns at once.
  */
 @RunWith(RobolectricTestRunner::class)
 class AppdnaConfigureThreadTest {
@@ -59,13 +64,17 @@ class AppdnaConfigureThreadTest {
         module.configure("adn_test_placeholder", "sandbox", JavaOnlyMap(), promise)
 
         assertTrue(
-            "configure() never settled its promise within 10s",
-            latch.await(10, TimeUnit.SECONDS),
+            "configure() never settled its promise within ${SETTLE_TIMEOUT_SECONDS}s",
+            latch.await(SETTLE_TIMEOUT_SECONDS, TimeUnit.SECONDS),
         )
         assertNotEquals(
             "configure() settled on the CALLING thread — it ran inline and blocked the JS thread (W15)",
             callingThread,
             settledOn.get(),
         )
+    }
+
+    private companion object {
+        const val SETTLE_TIMEOUT_SECONDS = 120L
     }
 }
