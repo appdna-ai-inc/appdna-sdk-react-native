@@ -650,6 +650,7 @@ export default function App({
             label="Present onboarding"
             onPress={() => run('onboarding.present()', () => AppDNA.onboarding.present(onboardingId ?? 'default'))}
           />
+          <Button label="Flow by placement" onPress={() => run('onboarding.presentByPlacement()', () => AppDNA.onboarding.presentByPlacement(placement ?? 'default'))} />
           <Button
             label="Get location data"
             onPress={() => run('getLocationData()', () => AppDNA.getLocationData('location'))}
@@ -668,6 +669,7 @@ export default function App({
 
         <Section title="Survey & in-app message">
           <Button label="Show survey" onPress={() => run('surveys.present()', () => AppDNA.surveys.present(surveyId ?? 'default'))} />
+          <Button label="Survey by placement" onPress={() => run('surveys.presentByPlacement()', () => AppDNA.surveys.presentByPlacement(placement ?? 'default'))} />
           <Button
             label="Trigger in-app message"
             onPress={() => {

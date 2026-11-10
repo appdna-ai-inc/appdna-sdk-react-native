@@ -366,7 +366,7 @@ public final class AppdnaModuleImpl: NSObject {
 
     @objc(presentOnboarding:resolve:reject:)
     public func presentOnboarding(
-        _ flowId: String,
+        _ flowId: String?,
         resolve: @escaping RCTPromiseResolveBlock,
         reject: @escaping RCTPromiseRejectBlock
     ) {
@@ -420,6 +420,19 @@ public final class AppdnaModuleImpl: NSObject {
                 context: self.parsePaywallContext(context as? [String: Any], fallbackPlacement: placement)
             ))
         }
+    }
+
+    /// The same native selection every platform runs; the wrapper only carries the name.
+    @objc(presentOnboardingByPlacement:resolve:reject:)
+    public func presentOnboardingByPlacement(_ placement: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        DispatchQueue.main.async {
+            resolve(AppDNA.presentOnboarding(placement: placement))
+        }
+    }
+
+    @objc(presentSurveyByPlacement:resolve:reject:)
+    public func presentSurveyByPlacement(_ placement: String, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        resolve(AppDNA.surveys.present(placement: placement))
     }
 
     @objc(presentSurvey:resolve:reject:)

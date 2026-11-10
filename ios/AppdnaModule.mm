@@ -288,6 +288,13 @@ RCT_EXPORT_MODULE()
   [_impl presentOnboarding:flowId resolve:resolve reject:reject];
 }
 
+- (void)presentOnboardingByPlacement:(NSString *)placement
+            resolve:(RCTPromiseResolveBlock )resolve
+            reject:(RCTPromiseRejectBlock )reject
+{
+  [_impl presentOnboardingByPlacement:placement resolve:resolve reject:reject];
+}
+
 - (void)isReady:(RCTPromiseResolveBlock )resolve
             reject:(RCTPromiseRejectBlock )reject
 {
@@ -329,6 +336,13 @@ RCT_EXPORT_MODULE()
             reject:(RCTPromiseRejectBlock )reject
 {
   [_impl presentSurvey:surveyId resolve:resolve reject:reject];
+}
+
+- (void)presentSurveyByPlacement:(NSString *)placement
+            resolve:(RCTPromiseResolveBlock )resolve
+            reject:(RCTPromiseRejectBlock )reject
+{
+  [_impl presentSurveyByPlacement:placement resolve:resolve reject:reject];
 }
 
 - (void)showScreen:(NSString *)screenId

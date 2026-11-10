@@ -496,7 +496,7 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         promise.resolve(AppDNA.isReady)
     }
 
-    override fun presentOnboarding(flowId: String, promise: Promise) {
+    override fun presentOnboarding(flowId: String?, promise: Promise) {
         // E10: dispatch onto the UI thread so native's own main-looper check takes the latch-free
         // path. Blocking here would freeze the JS thread for the latch's five seconds.
         val activity = reactContext.currentActivity ?: return promise.resolve(false)
@@ -553,6 +553,18 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
      */
     override fun skipNextAutoDismissOnRestore(value: Boolean) {
         AppDNA.paywall.skipNextAutoDismissOnRestore = value
+    }
+
+    /** The same native selection every platform runs; the wrapper only carries the name. */
+    override fun presentOnboardingByPlacement(placement: String, promise: Promise) {
+        val activity = reactContext.currentActivity ?: return promise.resolve(false)
+        activity.runOnUiThread {
+            promise.resolve(AppDNA.presentOnboardingByPlacement(activity, placement))
+        }
+    }
+
+    override fun presentSurveyByPlacement(placement: String, promise: Promise) {
+        promise.resolve(AppDNA.surveys.presentByPlacement(placement))
     }
 
     override fun presentSurvey(surveyId: String, promise: Promise) {

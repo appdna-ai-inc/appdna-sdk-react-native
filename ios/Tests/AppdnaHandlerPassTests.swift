@@ -125,6 +125,8 @@ final class AppdnaHandlerPassTests: XCTestCase {
         // either way; AppdnaSkipAutoDismissBridgeTests proves the value actually lands.
         drive("skipNextAutoDismissOnRestore", settles: false) { _, _ in impl.skipNextAutoDismissOnRestore(false) }
         drive("presentSurvey", settles: true) { res, rej in impl.presentSurvey("handler_pass", resolve: res, reject: rej) }
+        drive("presentOnboardingByPlacement", settles: true) { res, rej in impl.presentOnboardingByPlacement("handler_pass", resolve: res, reject: rej) }
+        drive("presentSurveyByPlacement", settles: true) { res, rej in impl.presentSurveyByPlacement("handler_pass", resolve: res, reject: rej) }
         drive("setSessionData", settles: true) { res, rej in impl.setSessionData("handler_pass", valueJson: "handler_pass", resolve: res, reject: rej) }
         drive("getSessionData", settles: true) { res, rej in impl.getSessionData("handler_pass", resolve: res, reject: rej) }
         drive("clearSessionData", settles: true) { res, rej in impl.clearSessionData(resolve: res, reject: rej) }

@@ -106,8 +106,14 @@ export interface Spec extends TurboModule {
    */
   getExperimentExposures(): Promise<Object[]>;
 
-  /** Present an onboarding flow. Resolves false when no view controller / activity is available. */
-  presentOnboarding(flowId: string): Promise<boolean>;
+  /**
+   * Present an onboarding flow. Omit the id for the app's default flow. Resolves false when no
+   * view controller / activity is available.
+   */
+  presentOnboarding(flowId?: string): Promise<boolean>;
+
+  /** Present the onboarding flow answering a placement name, for this user. False when none does. */
+  presentOnboardingByPlacement(placement: string): Promise<boolean>;
 
   /**
    * Whether the SDK has finished configuring — the condition `onReady` fires on, readable
@@ -144,6 +150,9 @@ export interface Spec extends TurboModule {
 
   /** Present a survey by id. */
   presentSurvey(surveyId: string): Promise<void>;
+
+  /** Present the survey answering a placement name. False when none does. */
+  presentSurveyByPlacement(placement: string): Promise<boolean>;
 
   /**
    * Present a server-driven screen. Resolves false when no view controller / activity was

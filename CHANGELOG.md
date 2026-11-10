@@ -10,6 +10,7 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **Onboarding flows and surveys can be asked for by name.** `AppDNA.presentOnboardingByPlacement(placement)` and `AppDNA.surveys.presentByPlacement(placement)` forward the name to the native SDK. `presentOnboarding()` with no id now presents the app's default flow.
 - **A placement can be a name of your own.** `presentPaywallByPlacement` / `presentByPlacement` already take any string; a paywall's placement may now be any name set in the console. Ties between several live paywalls on one placement resolve the same way on every launch, in the native SDKs.
 - **An archived, unpublished or deleted flow, paywall or survey stops showing.** After a config fetch, every
   onboarding flow, paywall and survey the server no longer lists is dropped from memory and from the cached

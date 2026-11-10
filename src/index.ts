@@ -256,7 +256,7 @@ export class AppDNA {
     return AppdnaModule.reportPayingUser(productId, priceCents, currency);
   }
 
-  static async presentOnboarding(flowId: string): Promise<boolean> {
+  static async presentOnboarding(flowId?: string): Promise<boolean> {
     return AppdnaModule.presentOnboarding(flowId);
   }
 
@@ -434,7 +434,9 @@ export class AppDNA {
      * set `experimentOverrides` got a silent no-op. Removed rather than left lying; see
      * `sdk-methods.ts`.
      */
-    present: (flowId: string): Promise<boolean> => AppdnaModule.presentOnboarding(flowId),
+    present: (flowId?: string): Promise<boolean> => AppdnaModule.presentOnboarding(flowId),
+    /** Present the flow answering a placement name, for this user. False when none does. */
+    presentByPlacement: (placement: string): Promise<boolean> => AppdnaModule.presentOnboardingByPlacement(placement),
     /** Set a delegate to receive onboarding lifecycle callbacks. */
     setDelegate: (delegate: Partial<AppDNAOnboardingDelegate> | null): void => {
       // Replaces the previous delegate's listeners rather than stacking a second set on top.
@@ -677,6 +679,8 @@ export class AppDNA {
   /** Surveys module. */
   static surveys = {
     present: (surveyId: string): Promise<void> => AppdnaModule.presentSurvey(surveyId),
+    /** Present the survey answering a placement name. False when none does. */
+    presentByPlacement: (placement: string): Promise<boolean> => AppdnaModule.presentSurveyByPlacement(placement),
     /** Set a delegate to receive survey lifecycle callbacks. */
     setDelegate: (delegate: Partial<AppDNASurveyDelegate> | null): void => {
       // Replaces the previous delegate's listeners rather than stacking a second set on top.
