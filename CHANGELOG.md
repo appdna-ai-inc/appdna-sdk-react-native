@@ -10,6 +10,9 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **`app_open` is tracked on a cold launch too** (native SDKs: iOS 1.0.86, Android 1.0.59). It was tracked only
+  when the app returned from the background; it is now tracked once each time the app comes to the foreground,
+  the launch included. Nothing changes in the wrapper's API.
 - **A plan's savings figure is computed from the prices drawn.** `{{savings_percent}}` in a plan's `badge` or `savings_text` is filled by the native SDKs from the prices the paywall shows (the store's once it answers), and the text is hidden when no figure can be worked out.
 - **Onboarding flows and surveys can be asked for by name.** `AppDNA.onboarding.presentByPlacement(placement)` and `AppDNA.surveys.presentByPlacement(placement)` forward the name to the native SDK. `presentOnboarding()` with no id now presents the app's default flow.
 - **A placement can be a name of your own.** `presentPaywallByPlacement` / `presentByPlacement` already take any string; a paywall's placement may now be any name set in the console. Ties between several live paywalls on one placement resolve the same way on every launch, in the native SDKs.
