@@ -28,6 +28,13 @@ Feature parity: iOS 1.0.86.
   so the server can honour the decision on messages it sends. No API change: `setConsent` works as before, and it
   can now be called before `configure`.
 
+### Changed
+
+- **An image with no description is decorative, and screen readers skip it.** An onboarding image block, a
+  paywall image section or a screen image section whose Alt text is blank or unset is now hidden from VoiceOver and TalkBack
+  (it was announced as "Image", or with no description); one with Alt text is read as that text, as an image. An
+  in-app message's image and a survey question's image have no description field, so they are always skipped.
+
 ### Fixed
 
 - **The Date Picker draws the style chosen in the console, and can pick a range of days** (native SDKs): `picker_variant` is honoured on Android, an inline Date field draws its variant, and `selection_mode: "range"` answers `start/end` with `_start`, `_end` and `_days`. Nothing changes in the wrapper's API.
