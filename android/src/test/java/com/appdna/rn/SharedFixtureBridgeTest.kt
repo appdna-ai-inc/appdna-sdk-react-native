@@ -171,7 +171,11 @@ class SharedFixtureBridgeTest {
 
         module = AppdnaModule(reactContext)
         installEmitterRecorder(module)
+        configureForFixtures()
+    }
 
+    /** Configure the live native SDK through the wrapper and wait for READY. */
+    private fun configureForFixtures() {
         // CONFIGURE THROUGH THE WRAPPER — its own bridged method, its own options parsing.
         //
         // No event leaves the device: Robolectric reports no active network, so the network-sized batch is
@@ -366,6 +370,13 @@ class SharedFixtureBridgeTest {
         val action = fixtureJson.getJSONObject("action")
         when (val kind = action.getString("kind")) {
             "identify" -> driveIdentify(action)
+            // the consent-signal fixtures, every SDK call through the bridged module into the live
+            // native SDK, against a stub server. They leave the singleton reset, so the SDK is configured again.
+            "script" -> {
+                RnConsentFixtureRunner(RuntimeEnvironment.getApplication(), module).runAll(fixtureName, action)
+                configureForFixtures()
+                return
+            }
             "report_paying_user" -> driveReportPayingUser(action)
             "track_event" -> driveTrackEvent(action)
             "show_paywall" -> driveShowPaywall(action)

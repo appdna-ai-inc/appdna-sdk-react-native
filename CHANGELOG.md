@@ -23,6 +23,10 @@ Feature parity: iOS 1.0.86.
   shows the how-to sheet written in the console. The step then advances with `widget_status` (`added`,
   `not_added` or `unavailable`) in its answers. The widget itself lives in the native projects (a WidgetKit
   extension in `ios/`, an `AppWidgetProvider` in `android/`); nothing changes in the wrapper's API.
+- **Consent signal (native iOS 1.0.86 / Android).** The native SDKs now send AppDNA one consent signal when the
+  analytics decision is set or changes, when the user changes while declined, and at each launch while declined,
+  so the server can honour the decision on messages it sends. No API change: `setConsent` works as before, and it
+  can now be called before `configure`.
 
 ### Fixed
 
