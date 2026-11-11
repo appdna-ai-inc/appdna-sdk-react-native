@@ -180,8 +180,64 @@ function loadRnFixtures(): Fixture[] {
 
 // ---- Drivers + assertions ---------------------------------------------
 
+// the consent-signal `script` fixtures. The wrapper's half is the bridge contract: each SDK call in
+// every case's script crosses the bridge, in order, as the matching native call. `relaunch`, `reinstall` and
+// `advance_clock_ms` are runner operations on a native process — nothing crosses the bridge for them. The
+// consent requests themselves are native HTTP, asserted by the native-backed runner (SharedFixtureBridgeTest.kt).
+const CONSENT_BRIDGE_METHODS = new Set(['configure', 'setConsent', 'identify', 'reset', 'shutdown']);
+type ScriptOp = { kind: string; analytics?: boolean; userId?: string; require_consent?: boolean };
+
+async function runConsentScript(fixture: Fixture): Promise<void> {
+  const cases = fixture.action.cases as Array<{ name: string; script: ScriptOp[] }> | undefined;
+  if (!cases?.length) throw new Error(`[${fixture.id}] script fixture has no cases`);
+  for (const c of cases) {
+    mockCapturedCalls.length = 0;
+    const expected: Array<{ method: string; args: unknown[] }> = [];
+    for (const op of c.script) {
+      const before = mockCapturedCalls.length;
+      switch (op.kind) {
+        case 'configure':
+          await AppDNA.configure('adn_test_consent_fixture', 'sandbox', { requireConsent: op.require_consent ?? false });
+          expected.push({ method: 'configure', args: ['adn_test_consent_fixture', 'sandbox', { requireConsent: op.require_consent ?? false }] });
+          break;
+        case 'set_consent':
+          await AppDNA.setConsent(op.analytics as boolean);
+          expected.push({ method: 'setConsent', args: [op.analytics] });
+          break;
+        case 'identify':
+          await AppDNA.identify(op.userId as string);
+          expected.push({ method: 'identify', args: [op.userId, undefined] });
+          break;
+        case 'reset':
+          await AppDNA.reset();
+          expected.push({ method: 'reset', args: [] });
+          break;
+        case 'shutdown':
+          await AppDNA.shutdown();
+          expected.push({ method: 'shutdown', args: [] });
+          break;
+        case 'relaunch':
+        case 'reinstall':
+        case 'advance_clock_ms':
+          // A non-bridge step: nothing may cross the bridge while it runs.
+          expect(mockCapturedCalls.length).toBe(before);
+          break;
+        default:
+          throw new Error(`[${fixture.id} / ${c.name}] no driver for script op '${op.kind}'`);
+      }
+    }
+    const crossed = mockCapturedCalls
+      .filter((call) => CONSENT_BRIDGE_METHODS.has(call.method))
+      .map((call) => ({ method: call.method, args: [...call.args] }));
+    expect({ name: c.name, calls: crossed }).toEqual({ name: c.name, calls: expected });
+  }
+}
+
 async function runFixture(fixture: Fixture): Promise<void> {
   switch (fixture.action.kind) {
+    case 'script':
+      await runConsentScript(fixture);
+      return;
     case 'track_event': {
       // The fixture key is `event_name`, not `event`. The driver read the wrong key
       // and papered over it with `?? 'unknown'` — so it drove a track('unknown') and asserted
@@ -275,6 +331,9 @@ function pushPayload(fixture: Fixture): Record<string, unknown> {
 function assertBridgeContract(fixture: Fixture): void {
   const id = fixture.id;
   switch (fixture.action.kind) {
+    case 'script':
+      // Asserted per case inside runConsentScript.
+      break;
     case 'track_event': {
       expect(mockCapturedCalls).toHaveLength(1);
       const c = mockCapturedCalls[0]!;
