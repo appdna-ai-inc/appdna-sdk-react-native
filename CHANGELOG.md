@@ -10,6 +10,8 @@ Feature parity: iOS 1.0.86.
 
 ### Added
 
+- **A Select that advances on the pick can ask first** (native SDKs). `field_config.advance_confirm` opens a
+  confirmation dialog in the native renderer before the step moves on. Nothing changes in the wrapper's API.
 - **A Select can say whether the pick was right** (native SDKs). `field_config.correct_values` marks the correct
   option(s) and the native renderer shows a right or wrong message under the options once the user has answered.
   Nothing changes in the wrapper's API.
