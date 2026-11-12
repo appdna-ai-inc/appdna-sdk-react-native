@@ -19,6 +19,7 @@ Feature parity: iOS 1.0.86.
   Nothing changes in the wrapper's API.
 ### Fixed
 
+- **The Date Picker draws the style chosen in the console, and can pick a range of days** (native SDKs): `picker_variant` is honoured on Android, an inline Date field draws its variant, and `selection_mode: "range"` answers `start/end` with `_start`, `_end` and `_days`. Nothing changes in the wrapper's API.
 - **A linear style for the measurement wheel picker** (native SDKs): `measurement_style: "linear"`, a vertical slider beside the value with one locked unit, sized by `linear_height`, `track_width` and `thumb_size`, thumb in `thumb_color`. Nothing changes in the wrapper's API.
 - **Every colour of a measurement wheel picker can be set** (native SDKs). The `wheel` and `dial` styles take `band_color`, `band_text_color` and `row_text_color`, and every style takes `unit_color`, `label_color`, `toggle_active_text_color` and `toggle_text_color`. Nothing changes in the wrapper's API.
 - **`app_open` is tracked on a cold launch too** (native SDKs: iOS 1.0.86, Android 1.0.59). It was tracked only
