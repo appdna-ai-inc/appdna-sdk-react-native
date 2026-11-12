@@ -60,6 +60,7 @@ Feature parity: iOS 1.0.86.
 
 ### Added
 
+- **`animated_image`: one long image scrolling in a seamless loop** (native SDKs: iOS 1.0.86, Android 1.0.59). Drawn by the native renderers; nothing changes in the wrapper's API.
 - **A block's background can reach past it on each side** (native SDKs: iOS 1.0.86, Android 1.0.59). `field_config.background_bleed_top` / `_bottom` / `_left` / `_right` take `"edge"` or a number of points; the native renderers draw it. Nothing changes in the wrapper's API.
 
 ## [1.0.22] — unreleased
