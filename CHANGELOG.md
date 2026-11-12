@@ -10,6 +10,7 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **Every colour of a measurement wheel picker can be set** (native SDKs). The `wheel` and `dial` styles take `band_color`, `band_text_color` and `row_text_color`, and every style takes `unit_color`, `label_color`, `toggle_active_text_color` and `toggle_text_color`. Nothing changes in the wrapper's API.
 - **`app_open` is tracked on a cold launch too** (native SDKs: iOS 1.0.86, Android 1.0.59). It was tracked only
   when the app returned from the background; it is now tracked once each time the app comes to the foreground,
   the launch included. Nothing changes in the wrapper's API.
