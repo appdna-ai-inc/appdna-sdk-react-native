@@ -17,6 +17,12 @@ Feature parity: iOS 1.0.86.
 - **A Select can say whether the pick was right** (native SDKs). `field_config.correct_values` marks the correct
   option(s) and the native renderer shows a right or wrong message under the options once the user has answered.
   Nothing changes in the wrapper's API.
+- **An "Add widget to home screen" button action** (native SDKs: iOS 1.0.86, Android 1.0.59). On Android the
+  native SDK asks the launcher to pin the app's own home-screen widget; on iOS, where no app can add a widget, it
+  shows the how-to sheet written in the console. The step then advances with `widget_status` (`added`,
+  `not_added` or `unavailable`) in its answers. The widget itself lives in the native projects (a WidgetKit
+  extension in `ios/`, an `AppWidgetProvider` in `android/`); nothing changes in the wrapper's API.
+
 ### Fixed
 
 - **The Date Picker draws the style chosen in the console, and can pick a range of days** (native SDKs): `picker_variant` is honoured on Android, an inline Date field draws its variant, and `selection_mode: "range"` answers `start/end` with `_start`, `_end` and `_days`. Nothing changes in the wrapper's API.
