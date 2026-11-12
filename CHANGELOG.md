@@ -8,6 +8,11 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 Feature parity: iOS 1.0.86.
 
+### Added
+
+- **A Select can say whether the pick was right** (native SDKs). `field_config.correct_values` marks the correct
+  option(s) and the native renderer shows a right or wrong message under the options once the user has answered.
+  Nothing changes in the wrapper's API.
 ### Fixed
 
 - **Every colour of a measurement wheel picker can be set** (native SDKs). The `wheel` and `dial` styles take `band_color`, `band_text_color` and `row_text_color`, and every style takes `unit_color`, `label_color`, `toggle_active_text_color` and `toggle_text_color`. Nothing changes in the wrapper's API.
