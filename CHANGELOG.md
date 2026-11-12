@@ -10,6 +10,7 @@ Feature parity: iOS 1.0.86.
 
 ### Added
 
+- **A step that advances by itself can show a countdown** (native SDKs: iOS 1.0.86, Android 1.0.59). `auto_advance_indicator` on the step; drawn by the native step host. Nothing changes in the wrapper's API.
 - **A button can depend on other elements on its screen** (native SDKs). `field_config.cta_dependencies` keeps a
   button inactive in the native renderer until the named conditions hold. Nothing changes in the wrapper's API.
 - **A Select that advances on the pick can ask first** (native SDKs). `field_config.advance_confirm` opens a
