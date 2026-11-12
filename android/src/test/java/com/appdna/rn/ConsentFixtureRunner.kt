@@ -110,7 +110,8 @@ internal open class ConsentFixtureRunner(private val ctx: Context) {
                     "advance_clock_ms" -> advance(scheduler, epoch, op.getLong("ms"))
                     else -> throw AssertionError("NO DRIVER for script op '$kind' on android")
                 }
-                settle(scheduler)
+                // `settle: false`: the next op follows at once, on the same tick (a call made before configure finished).
+                if (op.optBoolean("settle", true)) settle(scheduler)
             }
             assertRequests(case.getJSONObject("expect").getJSONArray("requests"), server.recorded(), epoch)
         } finally {
