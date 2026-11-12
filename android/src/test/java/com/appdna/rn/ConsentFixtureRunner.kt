@@ -58,7 +58,7 @@ internal open class ConsentFixtureRunner(private val ctx: Context) {
         hook("awaitConsentSenderIdleForTesting", Long::class.javaPrimitiveType!!).invoke(AppDNA, timeoutMs) as Int
     open fun nextDeadline(): Long? = hook("nextConsentDeadlineForTesting").invoke(AppDNA) as Long?
     open fun configure(requireConsent: Boolean) = AppDNA.configure(
-        ctx, "adn_test_consent_fixture", Environment.SANDBOX, AppDNAOptions(requireConsent = requireConsent),
+        ctx, "adn_test_placeholder", Environment.SANDBOX, AppDNAOptions(requireConsent = requireConsent),
     )
     open fun setConsent(analytics: Boolean) = AppDNA.setConsent(analytics)
     open fun identify(userId: String) = AppDNA.identify(userId)
