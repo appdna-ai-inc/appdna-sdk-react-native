@@ -16,6 +16,10 @@ Feature parity: iOS 1.0.86.
 - **`AppDNA.push.setSdkDisplaysForwardedMessages(enabled)`** (Android; does nothing on iOS). An app that forwards
   every AppDNA message from its own Firebase messaging handler can let the native SDK display what it forwards;
   AppDNA then sends the device data-only messages, so deliveries are confirmed in the background too.
+- **Push deliveries are confirmed by the device** (native SDKs: iOS 1.0.86, Android). On Android the native
+  messaging service confirms AppDNA pushes in the background too (AppDNA sends it data-only messages); on iOS the
+  AppDNA Notification Service Extension confirms a push that arrives while the app is closed, and, with an App Group
+  named under `AppDNAAppGroup`, hands it to the app for `push_delivered`. Nothing changes in the wrapper's API.
 
 - **A step that advances by itself can show a countdown** (native SDKs: iOS 1.0.86, Android 1.0.59). `auto_advance_indicator` on the step; drawn by the native step host. Nothing changes in the wrapper's API.
 - **A button can depend on other elements on its screen** (native SDKs). `field_config.cta_dependencies` keeps a
