@@ -275,6 +275,8 @@ internal open class ConsentFixtureRunner(private val ctx: Context) {
                         if (r != null && r.optBoolean("network_failure", false)) return
                         if (r != null) {
                             status = r.getInt("status")
+                            // The reply's body: it decides as much as the status (a 400 is a refusal only in the route's error shape).
+                            if (r.has("body")) body = r.getString("body")
                             r.optJSONObject("headers")?.let { h -> h.keys().forEach { k -> headers[k] = h.getString(k) } }
                         }
                     } else if (path.startsWith("/api/v1/sdk/bootstrap")) {

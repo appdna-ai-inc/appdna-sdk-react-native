@@ -51,7 +51,8 @@ Feature parity: iOS 1.0.86.
 - **A queued event batch is deleted only when the server refuses its content** (native iOS 1.0.86 / Android). A 401,
   403, 404, or an error page from a tunnel or proxy in front of the API, keeps the events instead of deleting them; only
   a 400, 413 or 422 carrying the AppDNA API's JSON error body drops a batch, counted. The native SDK does it; no API
-  change.
+  change. The consent signal follows the same rule: a 401 / 403 / 404 or a
+  proxy's page is retried instead of dropping the signal until the next launch.
 
 - **The Date Picker draws the style chosen in the console, and can pick a range of days** (native SDKs): `picker_variant` is honoured on Android, an inline Date field draws its variant, and `selection_mode: "range"` answers `start/end` with `_start`, `_end` and `_days`. Nothing changes in the wrapper's API.
 - **A linear style for the measurement wheel picker** (native SDKs): `measurement_style: "linear"`, a vertical slider beside the value with one locked unit, sized by `linear_height`, `track_width` and `thumb_size`, thumb in `thumb_color`. Nothing changes in the wrapper's API.
