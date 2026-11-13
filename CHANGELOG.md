@@ -48,6 +48,11 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **A queued event batch is deleted only when the server refuses its content** (native iOS 1.0.86 / Android). A 401,
+  403, 404, or an error page from a tunnel or proxy in front of the API, keeps the events instead of deleting them; only
+  a 400, 413 or 422 carrying the AppDNA API's JSON error body drops a batch, counted. The native SDK does it; no API
+  change.
+
 - **The Date Picker draws the style chosen in the console, and can pick a range of days** (native SDKs): `picker_variant` is honoured on Android, an inline Date field draws its variant, and `selection_mode: "range"` answers `start/end` with `_start`, `_end` and `_days`. Nothing changes in the wrapper's API.
 - **A linear style for the measurement wheel picker** (native SDKs): `measurement_style: "linear"`, a vertical slider beside the value with one locked unit, sized by `linear_height`, `track_width` and `thumb_size`, thumb in `thumb_color`. Nothing changes in the wrapper's API.
 - **Every colour of a measurement wheel picker can be set** (native SDKs). The `wheel` and `dial` styles take `band_color`, `band_text_color` and `row_text_color`, and every style takes `unit_color`, `label_color`, `toggle_active_text_color` and `toggle_text_color`. Nothing changes in the wrapper's API.
