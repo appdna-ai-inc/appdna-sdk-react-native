@@ -10,6 +10,10 @@ Feature parity: iOS 1.0.86.
 
 ### Added
 
+- **A Share button action (native iOS 1.0.86 / Android 1.0.58).** Onboarding buttons, in-app message CTAs and
+  paywall extra buttons can open the phone's share sheet with text and an optional link set in the console. The
+  native SDK does it; no API change.
+
 - **A step that advances by itself can show a countdown** (native SDKs: iOS 1.0.86, Android 1.0.59). `auto_advance_indicator` on the step; drawn by the native step host. Nothing changes in the wrapper's API.
 - **A button can depend on other elements on its screen** (native SDKs). `field_config.cta_dependencies` keeps a
   button inactive in the native renderer until the named conditions hold. Nothing changes in the wrapper's API.
