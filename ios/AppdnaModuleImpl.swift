@@ -756,6 +756,12 @@ public final class AppdnaModuleImpl: NSObject {
         resolve(AppDNA.pushModule.handleMessageData(Self.pushUserInfo(data)))
     }
 
+    /// Android only: iOS has no data-only display path (the OS draws every push).
+    @objc(setSdkDisplaysForwardedMessages:resolve:reject:)
+    public func setSdkDisplaysForwardedMessages(_ enabled: Bool, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        resolve(nil)
+    }
+
     @objc(handlePushTap:actionId:resolve:reject:)
     public func handlePushTap(_ data: NSDictionary, actionId: NSString?, resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
         resolve(AppDNA.pushModule.handleNotificationTap(Self.pushUserInfo(data), actionIdentifier: actionId as String?))

@@ -253,9 +253,17 @@ export interface Spec extends TurboModule {
 
   /**
    * Forward a received push. Tracks delivery once and fires onPushReceived for an AppDNA push;
-   * never displays anything. False for any other push.
+   * displays nothing unless setSdkDisplaysForwardedMessages is on (Android). False for any other
+   * push.
    */
   handlePushMessage(data: Object): Promise<boolean>;
+
+  /**
+   * Android: the SDK displays every forwarded AppDNA push, so AppDNA sends this device data-only
+   * messages and delivery is confirmed in the background. Forward EVERY message, including from
+   * the background handler. No-op on iOS.
+   */
+  setSdkDisplaysForwardedMessages(enabled: boolean): Promise<void>;
 
   /**
    * Forward a notification tap (and the tapped action button's id). Tracks the tap once, fires

@@ -787,6 +787,7 @@ export default function App({
           <Button label="Track tapped" onPress={() => run('push.trackTapped()', () => AppDNA.push.trackTapped('rn_e2e_push', 'open'))} />
           <Button label="Is AppDNA message" onPress={() => run('push.isAppDNAMessage()', () => AppDNA.push.isAppDNAMessage(SAMPLE_PUSH))} />
           <Button label="Forward message" onPress={() => run('push.handleMessage()', () => AppDNA.push.handleMessage(freshSamplePush()))} />
+          <Button label="SDK displays forwarded" onPress={() => run('push.setSdkDisplaysForwardedMessages()', () => AppDNA.push.setSdkDisplaysForwardedMessages(true))} />
           <Button label="Forward tap" onPress={() => run('push.handleTap()', () => AppDNA.push.handleTap(freshSamplePush()))} />
         </Section>
 

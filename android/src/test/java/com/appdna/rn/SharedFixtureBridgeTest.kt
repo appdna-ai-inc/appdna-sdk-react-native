@@ -571,6 +571,10 @@ class SharedFixtureBridgeTest {
             unsupported("receive_push without via=handleMessageData — a raw FCM RemoteMessage has no host entry point")
         }
         val payload = jsonToReadableMap(action.getJSONObject("payload"))
+        // The host's display opt-in, through the bridged module — set on EVERY receive fixture (false unless the
+        // fixture asks), because it is stored on the device and would otherwise carry into the next fixture.
+        val optIn = fixtureJson.optJSONObject("setup")?.optBoolean("sdk_displays_forwarded_messages", false) == true
+        capture { p -> module.setSdkDisplaysForwardedMessages(optIn, p) }
         val before = postedCount()
         state["returned"] = capture { p -> module.handlePushMessage(payload, p) }
         settlePush()

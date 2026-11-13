@@ -13,6 +13,9 @@ Feature parity: iOS 1.0.86.
 - **A Share button action (native iOS 1.0.86 / Android 1.0.58).** Onboarding buttons, in-app message CTAs and
   paywall extra buttons can open the phone's share sheet with text and an optional link set in the console. The
   native SDK does it; no API change.
+- **`AppDNA.push.setSdkDisplaysForwardedMessages(enabled)`** (Android; does nothing on iOS). An app that forwards
+  every AppDNA message from its own Firebase messaging handler can let the native SDK display what it forwards;
+  AppDNA then sends the device data-only messages, so deliveries are confirmed in the background too.
 
 - **A step that advances by itself can show a countdown** (native SDKs: iOS 1.0.86, Android 1.0.59). `auto_advance_indicator` on the step; drawn by the native step host. Nothing changes in the wrapper's API.
 - **A button can depend on other elements on its screen** (native SDKs). `field_config.cta_dependencies` keeps a

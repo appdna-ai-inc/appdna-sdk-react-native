@@ -828,9 +828,14 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         promise.resolve(AppDNA.push.isAppDNAMessage(AppdnaPushData.toStringMap(data)))
     }
 
-    /** Never displays anything: a host that forwards owns display (`handleMessageData`, not `handleMessage`). */
+    /** Displays only with the host's `setSdkDisplaysForwardedMessages` opt-in; otherwise the host owns display. */
     override fun handlePushMessage(data: ReadableMap, promise: Promise) {
         promise.resolve(AppDNA.push.handleMessageData(AppdnaPushData.toStringMap(data)))
+    }
+
+    override fun setSdkDisplaysForwardedMessages(enabled: Boolean, promise: Promise) {
+        AppDNA.push.setSdkDisplaysForwardedMessages(enabled)
+        promise.resolve(null)
     }
 
     override fun handlePushTap(data: ReadableMap, actionId: String?, promise: Promise) {

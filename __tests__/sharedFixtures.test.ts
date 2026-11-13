@@ -300,6 +300,10 @@ async function runFixture(fixture: Fixture): Promise<void> {
       if (fixture.action.via !== 'handleMessageData') {
         throw new Error(`[${fixture.id}] receive_push without via=handleMessageData has no RN entry point`);
       }
+      // The host's opt-in that lets the SDK display what it forwards (Android), set first through its own API.
+      if ((fixture.setup as Record<string, unknown> | undefined)?.sdk_displays_forwarded_messages === true) {
+        await AppDNA.push.setSdkDisplaysForwardedMessages(true);
+      }
       await AppDNA.push.handleMessage(pushPayload(fixture));
       return;
     }
@@ -394,8 +398,13 @@ function assertBridgeContract(fixture: Fixture): void {
       break;
     }
     case 'receive_push': {
-      expect(mockCapturedCalls).toHaveLength(1);
-      const c = mockCapturedCalls[0]!;
+      const optIn = (fixture.setup as Record<string, unknown> | undefined)?.sdk_displays_forwarded_messages === true;
+      expect(mockCapturedCalls).toHaveLength(optIn ? 2 : 1);
+      if (optIn) {
+        expect(mockCapturedCalls[0]!.method).toBe('setSdkDisplaysForwardedMessages');
+        expect(mockCapturedCalls[0]!.args[0]).toBe(true);
+      }
+      const c = mockCapturedCalls[optIn ? 1 : 0]!;
       expect(c.method).toBe('handlePushMessage');
       expect(c.args[0]).toEqual(fixture.action.payload);
       break;

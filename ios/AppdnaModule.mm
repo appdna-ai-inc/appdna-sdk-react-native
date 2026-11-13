@@ -523,6 +523,13 @@ RCT_EXPORT_MODULE()
   [_impl handlePushMessage:data resolve:resolve reject:reject];
 }
 
+- (void)setSdkDisplaysForwardedMessages:(BOOL)enabled
+            resolve:(RCTPromiseResolveBlock )resolve
+            reject:(RCTPromiseRejectBlock )reject
+{
+  [_impl setSdkDisplaysForwardedMessages:enabled resolve:resolve reject:reject];
+}
+
 - (void)handlePushTap:(NSDictionary *)data
             actionId:(NSString *)actionId
             resolve:(RCTPromiseResolveBlock )resolve

@@ -399,11 +399,20 @@ export class AppDNA {
       AppdnaModule.isAppDNAMessage(data),
     /**
      * Forward a received push. For an AppDNA push the SDK tracks delivery once and fires
-     * `onPushReceived`; it never displays anything (your app owns display). Resolves `false`, doing
-     * nothing, for any other push.
+     * `onPushReceived`; it displays nothing (your app owns display) unless `setSdkDisplaysForwardedMessages`
+     * is on (Android). Resolves `false`, doing nothing, for any other push.
      */
     handleMessage: (data: Record<string, unknown>): Promise<boolean> =>
       AppdnaModule.handlePushMessage(data),
+    /**
+     * Android: let the SDK display every AppDNA push you forward with `handleMessage`, so AppDNA can send this
+     * device data-only messages and the device can confirm each delivery, also in the background. Turn it on only
+     * when you forward EVERY message, including from your background handler (`setBackgroundMessageHandler`): a
+     * data-only message you do not forward is never shown. Then do not display AppDNA pushes yourself. Stored on
+     * the device. Does nothing on iOS.
+     */
+    setSdkDisplaysForwardedMessages: (enabled: boolean): Promise<void> =>
+      AppdnaModule.setSdkDisplaysForwardedMessages(enabled),
     /**
      * Forward a notification tap, with the tapped action button's id when there is one. For an AppDNA
      * push the SDK tracks the tap once, fires `onPushTapped` and routes the push's action. Resolves
