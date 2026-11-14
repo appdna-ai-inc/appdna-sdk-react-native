@@ -10,6 +10,10 @@ Feature parity: iOS 1.0.86.
 
 ### Added
 
+- **A generated message's or paywall's animation and video play (native iOS 1.0.86 / Android).** The native
+  renderers draw an in-app video hero in a modal on iOS too, play an autoplaying paywall video section with no controls,
+  and treat a blank animation or video URL as no media. Nothing changes in this package's API.
+
 - **A Share button action (native iOS 1.0.86 / Android 1.0.58).** Onboarding buttons, in-app message CTAs and
   paywall extra buttons can open the phone's share sheet with text and an optional link set in the console. The
   native SDK does it; no API change.
