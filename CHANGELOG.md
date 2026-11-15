@@ -56,6 +56,9 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **The selected segment of `input_segmented` draws its authored colour (native iOS 1.0.86 / Android).** It was the
+  system grey on iOS. Nothing changes in this package's API.
+
 - **A chip is as wide as its label, on one line (native iOS 1.0.86 / Android).** `input_chips` no longer splits a
   label inside an equal grid cell on iOS. Nothing changes in this package's API.
 
