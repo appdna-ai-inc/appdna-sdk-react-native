@@ -16,6 +16,9 @@ Feature parity: iOS 1.0.86.
 - **Part of a heading in its own colour, and Justify for headings and rich text (native iOS 1.0.86 / Android).** No
   API change.
 
+- **One Agreement element can hold up to five consents (native iOS 1.0.86 / Android).** Each answer arrives in the
+  step's responses as its own boolean, `<field_id>.<consent_id>`. No API change.
+
 - **A generated message's or paywall's animation and video play (native iOS 1.0.86 / Android).** The native
   renderers draw an in-app video hero in a modal on iOS too, play an autoplaying paywall video section with no controls,
   and treat a blank animation or video URL as no media. Nothing changes in this package's API.
