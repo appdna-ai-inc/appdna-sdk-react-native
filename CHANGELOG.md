@@ -56,6 +56,9 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **A chip is as wide as its label, on one line (native iOS 1.0.86 / Android).** `input_chips` no longer splits a
+  label inside an equal grid cell on iOS. Nothing changes in this package's API.
+
 - **`survey_question_answered` is sent once per question, not once per keystroke (native iOS 1.0.86 / Android).** A
   typed answer is sent when the user moves on with Next or Submit. Nothing changes in this package's API.
 
