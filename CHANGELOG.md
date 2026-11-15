@@ -45,6 +45,10 @@ Feature parity: iOS 1.0.86.
 
 ### Changed
 
+- **Every date picker works in the app's time zone, a date-only one too (native iOS 1.0.86 / Android).** Its opening
+  day, `today` / relative bounds and `allow_past` / `allow_future` follow the app's zone; a form step's time and
+  date-and-time fields store the wall time in that zone with its offset. Nothing changes in this package's API.
+
 - **An image with no description is decorative, and screen readers skip it.** An onboarding image block, a
   paywall image section or a screen image section whose Alt text is blank or unset is now hidden from VoiceOver and TalkBack
   (it was announced as "Image", or with no description); one with Alt text is read as that text, as an image. An
