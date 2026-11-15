@@ -52,6 +52,9 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **`survey_question_answered` is sent once per question, not once per keystroke (native iOS 1.0.86 / Android).** A
+  typed answer is sent when the user moves on with Next or Submit. Nothing changes in this package's API.
+
 - **A survey stays above the keyboard while an answer is typed (native Android).** The native renderer moves a
   bottom-sheet or modal survey up when the keyboard opens for a free-text question, so Submit stays tappable; it was
   covered, and a tap there typed a letter. Nothing changes in this package's API.
