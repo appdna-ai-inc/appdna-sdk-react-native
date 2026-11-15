@@ -56,6 +56,9 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **Text inputs are named for VoiceOver and TalkBack (native iOS 1.0.86 / Android).** Each onboarding text input
+  carries its label, else its placeholder, as its accessibility name. Nothing changes in this package's API.
+
 - **A required field's asterisk trails a wrapped label (native iOS 1.0.86 / Android).** Nothing changes in this
   package's API.
 
