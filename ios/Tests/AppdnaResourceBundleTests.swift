@@ -24,6 +24,15 @@ final class AppdnaResourceBundleTests: XCTestCase {
         XCTAssertNotNil(UIImage(data: data), "appdna_google_g.png in the pod bundle does not decode as an image")
     }
 
+    /// Meta's two Facebook marks reach a pod host too: the podspec's `resource_bundles` lists each by name.
+    func testThePodResolvesBothFacebookMarks() throws {
+        let bundle = try XCTUnwrap(AppDNAResources.bundle)
+        for name in ["appdna_facebook_mark_primary", "appdna_facebook_mark_secondary"] {
+            let url = try XCTUnwrap(bundle.url(forResource: name, withExtension: "png"), "\(name).png is not in \(bundle.bundlePath)")
+            XCTAssertNotNil(UIImage(data: try Data(contentsOf: url)), "\(name).png in the pod bundle does not decode")
+        }
+    }
+
     /// Negative control for the harness: the bundle the test resolved is the SDK's resource bundle — it also carries
     /// the privacy manifest the podspec always shipped — and an absent resource is reported absent, so the lookup
     /// above cannot pass by resolving against some unrelated bundle that answers every query.
