@@ -10,6 +10,9 @@ Feature parity: iOS 1.0.86.
 
 ### Added
 
+- **Social Login draws Meta's official Facebook mark (native iOS 1.0.86 / Android).** The blue mark on a light or
+  outlined button, the white mark on a dark fill. No API change.
+
 - **A generated message's or paywall's animation and video play (native iOS 1.0.86 / Android).** The native
   renderers draw an in-app video hero in a modal on iOS too, play an autoplaying paywall video section with no controls,
   and treat a blank animation or video URL as no media. Nothing changes in this package's API.
