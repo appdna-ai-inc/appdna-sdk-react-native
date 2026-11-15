@@ -45,6 +45,11 @@ Feature parity: iOS 1.0.86.
 
 ### Changed
 
+- **The first-launch deferred-link check reads the pasteboard / clipboard only when it holds a link (native iOS
+  1.0.86 / Android).** Text that is not a link is never read, so iOS shows no "Allow Paste?" prompt and Android 12+
+  shows no "pasted" toast for it. A web page should copy `https://yourapp.com/install?appdna_visitor=<id>`; iOS no
+  longer reads the older `appdna:visitor:<id>` text. No API change.
+
 - **Every date picker works in the app's time zone, a date-only one too (native iOS 1.0.86 / Android).** Its opening
   day, `today` / relative bounds and `allow_past` / `allow_future` follow the app's zone; a form step's time and
   date-and-time fields store the wall time in that zone with its offset. Nothing changes in this package's API.
