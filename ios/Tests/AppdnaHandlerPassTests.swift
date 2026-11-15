@@ -155,6 +155,7 @@ final class AppdnaHandlerPassTests: XCTestCase {
         drive("isAppDNAMessage", settles: true) { res, rej in impl.isAppDNAMessage(["push_id": "handler_pass"] as NSDictionary, resolve: res, reject: rej) }
         drive("handlePushMessage", settles: true) { res, rej in impl.handlePushMessage(["push_id": "handler_pass"] as NSDictionary, resolve: res, reject: rej) }
         drive("handlePushTap", settles: true) { res, rej in impl.handlePushTap(["push_id": "handler_pass"] as NSDictionary, actionId: "handler_pass" as NSString, resolve: res, reject: rej) }
+        drive("setSdkDisplaysForwardedMessages", settles: true) { res, rej in impl.setSdkDisplaysForwardedMessages(false, resolve: res, reject: rej) }
         drive("handleDeepLink", settles: true) { res, rej in impl.handleDeepLink("handler_pass", resolve: res, reject: rej) }
         drive("checkDeferredDeepLink", settles: true) { res, rej in impl.checkDeferredDeepLink(resolve: res, reject: rej) }
         drive("getWebEntitlement", settles: true) { res, rej in impl.getWebEntitlement(resolve: res, reject: rej) }
