@@ -56,6 +56,9 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **A required field's asterisk trails a wrapped label (native iOS 1.0.86 / Android).** Nothing changes in this
+  package's API.
+
 - **The selected segment of `input_segmented` draws its authored colour (native iOS 1.0.86 / Android).** It was the
   system grey on iOS. Nothing changes in this package's API.
 
