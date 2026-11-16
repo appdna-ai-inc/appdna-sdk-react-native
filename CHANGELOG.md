@@ -70,6 +70,9 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **A "link" button inside an option's bottom sheet opens on iOS too (native iOS 1.0.86).** It already opened on
+  Android. No API change.
+
 - **"Maybe later" on a permission step no longer raises the OS permission prompt (native iOS 1.0.86 / Android).** On
   a permission step that has a `permission` button, a decline button authored as `next` now advances without asking.
   No API change.
