@@ -13,6 +13,7 @@ import ai.appdna.sdk.SurveyResponse
 import ai.appdna.sdk.TransactionInfo
 import ai.appdna.sdk.onboarding.AppDNAOnboardingDelegate
 import ai.appdna.sdk.onboarding.ElementInteractionResult
+import ai.appdna.sdk.onboarding.InputValidationResult
 import ai.appdna.sdk.onboarding.PermissionHandling
 import ai.appdna.sdk.onboarding.StepAdvanceResult
 import ai.appdna.sdk.onboarding.StepConfigOverride
@@ -183,6 +184,22 @@ internal class OnboardingForwarder(
         )
         return AppdnaVetoDecoder.elementInteractionResult(reply)
     }
+
+    /** Live validation: live validation of a text input, decoded by core's ONE bridge decoder; waits the field's own timeout. */
+    override suspend fun onValidateInput(flowId: String, stepId: String, fieldId: String, value: String): InputValidationResult? =
+        InputValidationResult.decodeBridgeReply(
+            validationReply(
+                invoker.invoke(
+                    "onValidateInput",
+                    mapOf("flowId" to flowId, "stepId" to stepId, "fieldId" to fieldId, "value" to value),
+                    timeoutMs = InputValidationResult.bridgeTimeoutMs(),
+                ),
+            ),
+        )
+
+    /** JS's "no handler registered" sentinel is the hook's `not_implemented`: the field then behaves like a plain input. */
+    internal fun validationReply(reply: Any?): Any? =
+        if (AppdnaVetoDecoder.isUnhandled(reply)) mapOf("status" to InputValidationResult.NOT_IMPLEMENTED_STATUS) else reply
 
     override suspend fun onPermissionRequest(permissionType: String): PermissionHandling? {
         val reply = invoker.invoke("onPermissionRequest", mapOf("permissionType" to permissionType))

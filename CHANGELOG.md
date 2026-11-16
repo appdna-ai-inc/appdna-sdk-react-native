@@ -13,6 +13,11 @@ Feature parity: iOS 1.0.86.
 - **Sheets inside a step (native iOS 1.0.86 / Android).** A step's sheets slide up over it, opened by a button or by
   Continue; their answers are the step's and arrive in `onBeforeStepAdvance` / `onOnboardingCompleted`. No API change.
 
+- **`onValidateInput` on the onboarding delegate (native iOS 1.0.86 / Android 1.0.59).** A text input set to "Check
+  with your app" in the console asks your app whether its value is acceptable; answer
+  `{status: 'valid' | 'invalid', message?}` or null for no answer. Not implementing it gives a plain text input. The
+  bridge waits the field's own timeout. See Onboarding → Checking a value with your backend.
+
 - **Social Login draws Meta's official Facebook mark (native iOS 1.0.86 / Android).** The blue mark on a light or
   outlined button, the white mark on a dark fill. No API change.
 

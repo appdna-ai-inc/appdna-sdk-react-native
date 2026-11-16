@@ -173,6 +173,20 @@ final class OnboardingForwarder: NSObject, AppDNAOnboardingDelegate {
         return AppdnaVetoDecoder.elementInteractionResult(await invoker.invoke("onElementInteraction", args, timeout: timeout))
     }
 
+    /// Live validation: live validation of a text input. The reply is decoded by core's ONE bridge decoder; the wait is the
+    /// field's own timeout (core passes it through). A JS app with no handler answers `not_implemented`.
+    func onValidateInput(flowId: String, stepId: String, fieldId: String, value: String) async -> InputValidationResult? {
+        let reply = await invoker.invoke("onValidateInput", [
+            "flowId": flowId, "stepId": stepId, "fieldId": fieldId, "value": value,
+        ], timeout: InputValidationResult.bridgeTimeout)
+        return InputValidationResult.decodeBridgeReply(Self.validationReply(reply))
+    }
+
+    /// JS's "no handler registered" sentinel is the hook's `not_implemented`: the field then behaves like a plain input.
+    static func validationReply(_ reply: Any?) -> Any? {
+        AppdnaVetoDecoder.isUnhandled(reply) ? ["status": InputValidationResult.notImplementedStatus] : reply
+    }
+
     func onPermissionRequest(_ permissionType: String) async -> PermissionHandling? {
         let reply = await invoker.invoke("onPermissionRequest", ["permissionType": permissionType])
         return AppdnaVetoDecoder.permissionHandling(reply)

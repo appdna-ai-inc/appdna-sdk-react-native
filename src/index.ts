@@ -484,6 +484,11 @@ export class AppDNA {
         registerHostCallback('onPermissionRequest', (a) =>
           delegate!.onPermissionRequest!(a.permissionType as string));
       }
+      // Live validation: live validation of a text input. Unregistered, native hears `not_implemented` (see hostCallbacks).
+      if (delegate?.onValidateInput) {
+        registerHostCallback('onValidateInput', (a) =>
+          delegate!.onValidateInput!(a.flowId as string, a.stepId as string, a.fieldId as string, a.value as string));
+      }
     },
   };
 

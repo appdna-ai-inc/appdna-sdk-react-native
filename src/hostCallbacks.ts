@@ -28,6 +28,7 @@ export type HostCallbackHook =
   | 'onBeforeStepRender'
   | 'onElementInteraction'
   | 'onPermissionRequest'
+  | 'onValidateInput'
   | 'onPromoCodeSubmit'
   | 'shouldShowMessage'
   | 'shouldOpen'
@@ -162,7 +163,7 @@ export function registerHostCallback(hook: HostCallbackHook, handler: HostCallba
  * to mean replacing ALL of it; the event listeners were only half the delegate.
  */
 export const HOOKS_BY_DELEGATE_SLOT: Readonly<Record<string, readonly HostCallbackHook[]>> = {
-  onboarding: ['onBeforeStepAdvance', 'onBeforeStepRender', 'onElementInteraction', 'onPermissionRequest'],
+  onboarding: ['onBeforeStepAdvance', 'onBeforeStepRender', 'onElementInteraction', 'onPermissionRequest', 'onValidateInput'],
   paywall: ['onPromoCodeSubmit'],
   inAppMessages: ['shouldShowMessage'],
   screens: ['onScreenAction'],

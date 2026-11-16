@@ -197,3 +197,40 @@ describe('onElementInteraction reply forwarding', () => {
   });
 });
 
+
+/**
+ * Live validation — `onValidateInput`. The reply is decoded natively by core's `InputValidationResult.decodeBridgeReply`, so
+ * the JS half's job is to forward the host's map unchanged (every reply in the shared parse fixture, malformed ones
+ * included) and, with no handler registered, to send the "unhandled" sentinel the native forwarders turn into
+ * `not_implemented`. The replies are READ FROM THE FIXTURE the natives decode.
+ */
+describe('onValidateInput reply forwarding', () => {
+  const fixture = JSON.parse(
+    readFileSync(fixturePath('delegate_contracts', 'validate_input_result_parse.fixture.json'), 'utf8'),
+  ) as { action: { cases: Array<{ name: string; reply: unknown }> } };
+
+  beforeEach(() => {
+    mockReplies.length = 0;
+    mockHostCallbackListener = undefined;
+    __resetHostCallbacksForTesting();
+  });
+
+  it('forwards every fixture reply unchanged, with the call arguments native sent', async () => {
+    let seen: Record<string, unknown> | undefined;
+    for (const [i, c] of fixture.action.cases.entries()) {
+      registerHostCallback('onValidateInput', (args) => {
+        seen = args;
+        return c.reply;
+      });
+      await fireHostCallback('onValidateInput', { flowId: 'f', stepId: 's', fieldId: 'username', value: 'abc' }, `e1:${i}`);
+      expect(JSON.parse(mockReplies[i].resultJson)).toEqual(c.reply ?? null);
+    }
+    expect(seen).toEqual({ flowId: 'f', stepId: 's', fieldId: 'username', value: 'abc' });
+  });
+
+  it('with no handler, answers the unhandled sentinel (native reads it as not_implemented)', async () => {
+    registerHostCallback('shouldOpen', () => true); // installs the dispatcher
+    await fireHostCallback('onValidateInput', { flowId: 'f', stepId: 's', fieldId: 'username', value: 'abc' });
+    expect(JSON.parse(mockReplies[0].resultJson)).toEqual({ __appdna_unhandled: true });
+  });
+});

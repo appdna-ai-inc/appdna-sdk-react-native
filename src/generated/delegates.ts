@@ -15,6 +15,8 @@ export interface AppDNAOnboardingDelegate {
   onBeforeStepRender?(flowId: string, stepId: string, stepIndex: number, stepType: string, responses: Record<string, unknown>): Promise<Record<string, unknown> | null>;
   /** Async element-interaction hook. Return null (default) or a live-state result. */
   onElementInteraction?(flowId: string, stepId: string, blockId: string, action: string, value: string | undefined, inputValues: Record<string, unknown>): Promise<Record<string, unknown> | null>;
+  /** Async live-validation hook for a text input with "Check with your app" on. Return {'status': 'valid'|'invalid', 'message'?: String}, or null for no answer. Not overriding it tells the SDK the app does not validate. */
+  onValidateInput?(flowId: string, stepId: string, fieldId: string, value: string): Promise<Record<string, unknown> | null>;
   /** Async permission pre-hook. Return .handledByHost(granted:) to short-circuit, or null to run the native flow. */
   onPermissionRequest?(permissionType: string): Promise<Record<string, unknown> | null>;
   onPermissionResult(flowId: string, stepId: string, permissionType: string, granted: boolean): void;
