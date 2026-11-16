@@ -87,6 +87,9 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **Android: system Back on an onboarding step goes to the previous step (native Android).** As the flow's back
+  arrow does; it closed the whole flow. No API change.
+
 - **A bare-number `element_width` / `element_height` is points on both platforms (native iOS 1.0.86 / Android).** No
   API change.
 
