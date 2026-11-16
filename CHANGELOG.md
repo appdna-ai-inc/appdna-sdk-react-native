@@ -70,6 +70,8 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **A selected segment's fill covers its whole cell when a neighbour's label wraps (native Android).** No API change.
+
 - **A "link" button inside an option's bottom sheet opens on iOS too (native iOS 1.0.86).** It already opened on
   Android. No API change.
 
