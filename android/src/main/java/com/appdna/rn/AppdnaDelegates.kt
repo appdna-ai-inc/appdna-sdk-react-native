@@ -185,7 +185,6 @@ internal class OnboardingForwarder(
         return AppdnaVetoDecoder.elementInteractionResult(reply)
     }
 
-    /** Live validation: live validation of a text input, decoded by core's ONE bridge decoder; waits the field's own timeout. */
     override suspend fun onValidateInput(flowId: String, stepId: String, fieldId: String, value: String): InputValidationResult? =
         InputValidationResult.decodeBridgeReply(
             validationReply(
@@ -197,7 +196,6 @@ internal class OnboardingForwarder(
             ),
         )
 
-    /** JS's "no handler registered" sentinel is the hook's `not_implemented`: the field then behaves like a plain input. */
     internal fun validationReply(reply: Any?): Any? =
         if (AppdnaVetoDecoder.isUnhandled(reply)) mapOf("status" to InputValidationResult.NOT_IMPLEMENTED_STATUS) else reply
 
