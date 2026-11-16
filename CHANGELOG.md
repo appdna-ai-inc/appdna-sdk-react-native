@@ -10,6 +10,9 @@ Feature parity: iOS 1.0.86.
 
 ### Added
 
+- **Onboarding links open in a Custom Tab on Android (native Android).** As iOS opens them in its in-app browser. The
+  native Android SDK now depends on `androidx.browser`; no API change.
+
 - **Sheets inside a step (native iOS 1.0.86 / Android).** A step's sheets slide up over it, opened by a button or by
   Continue; their answers are the step's and arrive in `onBeforeStepAdvance` / `onOnboardingCompleted`. No API change.
 
