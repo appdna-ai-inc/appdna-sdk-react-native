@@ -70,6 +70,10 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **"Maybe later" on a permission step no longer raises the OS permission prompt (native iOS 1.0.86 / Android).** On
+  a permission step that has a `permission` button, a decline button authored as `next` now advances without asking.
+  No API change.
+
 - **Text inputs are named for VoiceOver and TalkBack (native iOS 1.0.86 / Android).** Each onboarding text input
   carries its label, else its placeholder, as its accessibility name. Nothing changes in this package's API.
 
