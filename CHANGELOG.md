@@ -57,6 +57,9 @@ Feature parity: iOS 1.0.86.
 
 ### Changed
 
+- **A stack child's width is honoured on both platforms (native iOS 1.0.86 / Android).** Flows published from now on.
+  No API change.
+
 - **An unaligned block narrower than its row is centred on both platforms (native iOS 1.0.86 / Android).** Applies to
   flows published from now on; a flow published before keeps its placement until it is published again. No API change.
 
