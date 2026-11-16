@@ -54,6 +54,9 @@ Feature parity: iOS 1.0.86.
 
 ### Changed
 
+- **An unaligned block narrower than its row is centred on both platforms (native iOS 1.0.86 / Android).** Applies to
+  flows published from now on; a flow published before keeps its placement until it is published again. No API change.
+
 - **The first-launch deferred-link check reads the pasteboard / clipboard only when it holds a link (native iOS
   1.0.86 / Android).** Text that is not a link is never read, so iOS shows no "Allow Paste?" prompt and Android 12+
   shows no "pasted" toast for it. A web page should copy `https://yourapp.com/install?appdna_visitor=<id>`; iOS no
