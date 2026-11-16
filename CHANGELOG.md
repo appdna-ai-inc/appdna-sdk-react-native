@@ -70,6 +70,9 @@ Feature parity: iOS 1.0.86.
 
 ### Fixed
 
+- **A bare-number `element_width` / `element_height` is points on both platforms (native iOS 1.0.86 / Android).** No
+  API change.
+
 - **A text input's focused and error border colours follow one rule on both platforms (native iOS 1.0.86 / Android).**
   No API change.
 
