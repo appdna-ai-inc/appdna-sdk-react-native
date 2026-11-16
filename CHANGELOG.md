@@ -10,6 +10,9 @@ Feature parity: iOS 1.0.86.
 
 ### Added
 
+- **Sheets inside a step (native iOS 1.0.86 / Android).** A step's sheets slide up over it, opened by a button or by
+  Continue; their answers are the step's and arrive in `onBeforeStepAdvance` / `onOnboardingCompleted`. No API change.
+
 - **Social Login draws Meta's official Facebook mark (native iOS 1.0.86 / Android).** The blue mark on a light or
   outlined button, the white mark on a dark fill. No API change.
 
