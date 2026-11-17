@@ -6,7 +6,7 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [1.0.23] — unreleased
 
-Feature parity: iOS 1.0.86.
+Feature parity: iOS 1.0.86. Wraps iOS 1.0.86 / Android 1.0.58.
 
 ### Added
 
@@ -16,7 +16,7 @@ Feature parity: iOS 1.0.86.
 - **Sheets inside a step (native iOS 1.0.86 / Android).** A step's sheets slide up over it, opened by a button or by
   Continue; their answers are the step's and arrive in `onBeforeStepAdvance` / `onOnboardingCompleted`. No API change.
 
-- **`onValidateInput` on the onboarding delegate (native iOS 1.0.86 / Android 1.0.59).** A text input set to "Check
+- **`onValidateInput` on the onboarding delegate (native iOS 1.0.86 / Android 1.0.58).** A text input set to "Check
   with your app" in the console asks your app whether its value is acceptable; answer
   `{status: 'valid' | 'invalid', message?}` or null for no answer. Not implementing it gives a plain text input. The
   bridge waits the field's own timeout. See Onboarding → Checking a value with your backend.
@@ -45,7 +45,7 @@ Feature parity: iOS 1.0.86.
   AppDNA Notification Service Extension confirms a push that arrives while the app is closed, and, with an App Group
   named under `AppDNAAppGroup`, hands it to the app for `push_delivered`. Nothing changes in the wrapper's API.
 
-- **A step that advances by itself can show a countdown** (native SDKs: iOS 1.0.86, Android 1.0.59). `auto_advance_indicator` on the step; drawn by the native step host. Nothing changes in the wrapper's API.
+- **A step that advances by itself can show a countdown** (native SDKs: iOS 1.0.86, Android 1.0.58). `auto_advance_indicator` on the step; drawn by the native step host. Nothing changes in the wrapper's API.
 - **A button can depend on other elements on its screen** (native SDKs). `field_config.cta_dependencies` keeps a
   button inactive in the native renderer until the named conditions hold. Nothing changes in the wrapper's API.
 - **A Select that advances on the pick can ask first** (native SDKs). `field_config.advance_confirm` opens a
@@ -53,7 +53,7 @@ Feature parity: iOS 1.0.86.
 - **A Select can say whether the pick was right** (native SDKs). `field_config.correct_values` marks the correct
   option(s) and the native renderer shows a right or wrong message under the options once the user has answered.
   Nothing changes in the wrapper's API.
-- **An "Add widget to home screen" button action** (native SDKs: iOS 1.0.86, Android 1.0.59). On Android the
+- **An "Add widget to home screen" button action** (native SDKs: iOS 1.0.86, Android 1.0.58). On Android the
   native SDK asks the launcher to pin the app's own home-screen widget; on iOS, where no app can add a widget, it
   shows the how-to sheet written in the console. The step then advances with `widget_status` (`added`,
   `not_added` or `unavailable`) in its answers. The widget itself lives in the native projects (a WidgetKit
@@ -62,6 +62,10 @@ Feature parity: iOS 1.0.86.
   analytics decision is set or changes, when the user changes while declined, and at each launch while declined,
   so the server can honour the decision on messages it sends. No API change: `setConsent` works as before, and it
   can now be called before `configure`.
+
+- **A Select or segmented question can start with an author-set answer** (native SDKs: iOS 1.0.86, Android 1.0.58).
+  `field_config.default_value` is drawn selected and recorded as the answer when the question shows, so it arrives in
+  the step's responses as if tapped. A restored or host-set answer wins. Nothing changes in the wrapper's API.
 
 ### Changed
 
@@ -84,6 +88,14 @@ Feature parity: iOS 1.0.86.
   paywall image section or a screen image section whose Alt text is blank or unset is now hidden from VoiceOver and TalkBack
   (it was announced as "Image", or with no description); one with Alt text is read as that text, as an image. An
   in-app message's image and a survey question's image have no description field, so they are always skipped.
+
+- **On a wide window, a surface is a centred column, and a wide landscape window splits it** (native SDKs: iOS
+  1.0.86, Android 1.0.58). Onboarding steps, paywalls, full-screen messages and surveys are at most 560 points wide; a
+  landscape tablet or unfolded foldable shows a step's visual, a paywall's pitch or a message's hero beside the rest.
+  A resize, fold or rotation keeps the step, the answers and the selected plan. Nothing changes in the wrapper's API.
+
+- **A required segmented question starts with nothing selected** (native SDKs). Continue waits for a pick; an
+  optional one still starts on its first option. Nothing changes in the wrapper's API.
 
 ### Fixed
 
@@ -136,7 +148,7 @@ Feature parity: iOS 1.0.86.
 - **The Date Picker draws the style chosen in the console, and can pick a range of days** (native SDKs): `picker_variant` is honoured on Android, an inline Date field draws its variant, and `selection_mode: "range"` answers `start/end` with `_start`, `_end` and `_days`. Nothing changes in the wrapper's API.
 - **A linear style for the measurement wheel picker** (native SDKs): `measurement_style: "linear"`, a vertical slider beside the value with one locked unit, sized by `linear_height`, `track_width` and `thumb_size`, thumb in `thumb_color`. Nothing changes in the wrapper's API.
 - **Every colour of a measurement wheel picker can be set** (native SDKs). The `wheel` and `dial` styles take `band_color`, `band_text_color` and `row_text_color`, and every style takes `unit_color`, `label_color`, `toggle_active_text_color` and `toggle_text_color`. Nothing changes in the wrapper's API.
-- **`app_open` is tracked on a cold launch too** (native SDKs: iOS 1.0.86, Android 1.0.59). It was tracked only
+- **`app_open` is tracked on a cold launch too** (native SDKs: iOS 1.0.86, Android 1.0.58). It was tracked only
   when the app returned from the background; it is now tracked once each time the app comes to the foreground,
   the launch included. Nothing changes in the wrapper's API.
 - **A plan's savings figure is computed from the prices drawn.** `{{savings_percent}}` in a plan's `badge` or `savings_text` is filled by the native SDKs from the prices the paywall shows (the store's once it answers), and the text is hidden when no figure can be worked out.
@@ -173,12 +185,28 @@ Feature parity: iOS 1.0.86.
   button keep working, and a message with neither stays dismissable, so the user always has a way out.
   Applies to banner, modal, fullscreen and tooltip messages. Before, the SDK always showed the close button.
 
+- **A select answer drawn in text shows the option's label** (native SDKs). A `{{responses.…}}` or
+  `{{onboarding.…}}` token naming a Select, Segmented or chips answer draws the picked label (several, comma-joined),
+  also after a relaunch, for a default or host-set answer, and when two steps share a field id. The answer your app
+  receives is unchanged: it is still the option's value. Nothing changes in the wrapper's API.
+- **Readability and layout fixes in the native renderers** (native SDKs). A paywall's pinned plans sit on the
+  paywall's own colour (iOS); a list on its own card spans its row; a summary tile keeps its words whole and a row of
+  tiles shares one height; a paywall with no background draws a readable header; unstyled controls, the close control
+  and Skip follow the step's background rather than the phone's appearance; Android's status-bar icons follow the
+  step's background; the date wheel's rows fade at its edges; a compact date sheet draws in one appearance (iOS); an
+  in-app message draws its authored font and sizes (iOS); Android's paywall close circle, plan-card selection circle,
+  plan badge and feature-list check colour match iOS. Nothing changes in the wrapper's API.
+- **A rule on a number answer matches however the number was written** (native SDKs). A 4-star rating now matches a
+  rule written as `4` or `"4"`. Nothing changes in the wrapper's API.
+- iOS: **one tap on a button moves a tap-anywhere step once**; it could skip the next step.
+- iOS: **a step the user has scrolled stays where they put it**, even when the SDK's own scroll lands late.
+
 ### Added
 
-- **`animated_image`: one long image scrolling in a seamless loop** (native SDKs: iOS 1.0.86, Android 1.0.59). Drawn by the native renderers; nothing changes in the wrapper's API.
-- **A block's background can reach past it on each side** (native SDKs: iOS 1.0.86, Android 1.0.59). `field_config.background_bleed_top` / `_bottom` / `_left` / `_right` take `"edge"` or a number of points; the native renderers draw it. Nothing changes in the wrapper's API.
+- **`animated_image`: one long image scrolling in a seamless loop** (native SDKs: iOS 1.0.86, Android 1.0.58). Drawn by the native renderers; nothing changes in the wrapper's API.
+- **A block's background can reach past it on each side** (native SDKs: iOS 1.0.86, Android 1.0.58). `field_config.background_bleed_top` / `_bottom` / `_left` / `_right` take `"edge"` or a number of points; the native renderers draw it. Nothing changes in the wrapper's API.
 
-## [1.0.22] — unreleased
+## [1.0.22] — 2026-11-04
 
 Wraps iOS 1.0.85 / Android 1.0.57.
 
@@ -192,7 +220,7 @@ Wraps iOS 1.0.85 / Android 1.0.57.
 - In-app message buttons open their link on both platforms, including a CTA saved as `{type, value}`
   (the shape the console writes), which before only dismissed the message.
 
-## [1.0.21] — unreleased
+## [1.0.21] — 2026-11-03
 
 Wraps iOS 1.0.84 / Android 1.0.57. Rendering, billing and networking live in the native SDKs, so
 every native change below reaches a React Native app with no JavaScript change.
