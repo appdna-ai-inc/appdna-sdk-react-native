@@ -6,6 +6,11 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Events from onboarding flows, paywalls, in-app messages and surveys carry `content_version` and, while an item shows
+  another item's content (Serve instead), `content_source_id`, from the native SDK this release wraps. No API change.
+  `PaywallContext.customData` cannot set either key.
+
 ## [1.0.23] — 2026-11-17
 
 Feature parity: iOS 1.0.86. Wraps iOS 1.0.86 / Android 1.0.58.
