@@ -4,7 +4,7 @@ All notable changes to the AppDNA React Native SDK are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.24] — 2026-11-19
 
 ### Added
 - Events from onboarding flows, paywalls, in-app messages and surveys carry `content_version` and, while an item shows
