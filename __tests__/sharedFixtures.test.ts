@@ -69,6 +69,10 @@ interface CapturedCall {
 }
 
 const mockCapturedCalls: CapturedCall[] = [];
+/** what the fake native module answers `getAnonymousId` with; the facade must hand it back unchanged. */
+const mockNativeAnonId = '00000000-0000-4000-8000-0000000a0001';
+/** What the facade handed back to the host, per call that returns a value. */
+const mockReturned: unknown[] = [];
 const mockEventListeners: Map<string, ((data: unknown) => void)[]> = new Map();
 
 /**
@@ -93,7 +97,7 @@ const mockAppdnaModule = new Proxy(
 
       return (...args: unknown[]) => {
         mockCapturedCalls.push({ method: methodName, args });
-        return Promise.resolve(null);
+        return Promise.resolve(methodName === 'getAnonymousId' ? mockNativeAnonId : null);
       };
     },
   },
@@ -235,6 +239,16 @@ async function runConsentScript(fixture: Fixture): Promise<void> {
 
 async function runFixture(fixture: Fixture): Promise<void> {
   switch (fixture.action.kind) {
+    case 'anonymous_id_lifecycle': {
+      // the host's calls in order; the id is native's (SharedFixtureBridgeTest.kt proves it).
+      for (const step of fixture.action.calls as string[]) {
+        if (step === 'read') mockReturned.push(await AppDNA.getAnonymousId());
+        else if (step === 'identify') await AppDNA.identify(fixture.action.userId as string);
+        else if (step === 'reset') await AppDNA.reset();
+        else throw new Error(`[${fixture.id}] step '${step}' is not a host API call`);
+      }
+      return;
+    }
     case 'script':
       await runConsentScript(fixture);
       return;
@@ -333,6 +347,14 @@ function pushPayload(fixture: Fixture): Record<string, unknown> {
 }
 
 function assertBridgeContract(fixture: Fixture): void {
+  if (fixture.action.kind === 'anonymous_id_lifecycle') {
+    const steps = fixture.action.calls as string[];
+    const methodOf: Record<string, string> = { read: 'getAnonymousId', identify: 'identify', reset: 'reset' };
+    expect(mockCapturedCalls.map((c) => c.method)).toEqual(steps.map((s) => methodOf[s]));
+    for (const c of mockCapturedCalls.filter((x) => x.method === 'getAnonymousId')) expect(c.args).toEqual([]);
+    expect(mockReturned).toEqual(steps.filter((s) => s === 'read').map(() => mockNativeAnonId));
+    return;
+  }
   const id = fixture.id;
   switch (fixture.action.kind) {
     case 'script':
@@ -421,6 +443,7 @@ const fixtures = loadRnFixtures();
 describe('SharedFixtures (React Native bridge contract)', () => {
   beforeEach(() => {
     mockCapturedCalls.length = 0;
+    mockReturned.length = 0;
     mockEventListeners.clear();
   });
 

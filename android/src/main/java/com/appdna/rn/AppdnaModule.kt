@@ -307,6 +307,11 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         promise.resolve(null)
     }
 
+    /** the host passes it to its MMP as the customer user id; null before configure. */
+    override fun getAnonymousId(promise: Promise) {
+        promise.resolve(AppDNA.getAnonymousId())
+    }
+
     /** Fire-and-forget: native enqueues, so a Promise per event would allocate for nothing. */
     override fun track(event: String, properties: ReadableMap?) {
         AppDNA.track(event, AppdnaBridge.toPropertyMap(properties))

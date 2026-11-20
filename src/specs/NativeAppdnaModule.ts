@@ -116,6 +116,13 @@ export interface Spec extends TurboModule {
   presentOnboardingByPlacement(placement: string): Promise<boolean>;
 
   /**
+   * The anonymous id AppDNA keys this install's events by. Pass it to your MMP as the customer
+   * user id before the MMP starts. Stable across restarts, identify() and reset(); null on
+   * Android before configure().
+   */
+  getAnonymousId(): Promise<string>;
+
+  /**
    * Whether the SDK has finished configuring — the condition `onReady` fires on, readable
    * synchronously. A `presentOnboarding` that resolves false while this is false means "the SDK
    * is not up yet", not "no such flow". Note this is NOT "the remote config has arrived": the

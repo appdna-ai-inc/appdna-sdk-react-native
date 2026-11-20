@@ -295,6 +295,12 @@ RCT_EXPORT_MODULE()
   [_impl presentOnboardingByPlacement:placement resolve:resolve reject:reject];
 }
 
+- (void)getAnonymousId:(RCTPromiseResolveBlock )resolve
+            reject:(RCTPromiseRejectBlock )reject
+{
+  [_impl getAnonymousId:resolve reject:reject];
+}
+
 - (void)isReady:(RCTPromiseResolveBlock )resolve
             reject:(RCTPromiseRejectBlock )reject
 {

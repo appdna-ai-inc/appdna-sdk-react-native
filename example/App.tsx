@@ -603,6 +603,7 @@ export default function App({
           <Button label="Track event" onPress={() => { AppDNA.track('rn_e2e_button', { source: 'example' }); append('track(rn_e2e_button) queued'); }} />
           <Button label="Flush now" onPress={() => run('flush()', () => AppDNA.flush())} />
           <Button label="Is ready" onPress={() => run('isReady()', () => AppDNA.isReady())} />
+          <Button label="Anonymous id" onPress={() => run('getAnonymousId()', () => AppDNA.getAnonymousId())} />
           <Button
             label="Keep paywall after restore (next)"
             onPress={() => { AppDNA.paywall.skipNextAutoDismissOnRestore(true); append('paywall.skipNextAutoDismissOnRestore(true)'); }}

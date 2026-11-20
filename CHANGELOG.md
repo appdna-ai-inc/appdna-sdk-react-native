@@ -6,6 +6,12 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `AppDNA.getAnonymousId()` → `Promise<string | null>`: the anonymous ID AppDNA keys this install's events by. Pass it
+  to your mobile measurement partner (AppsFlyer, Adjust, Singular) as its customer user ID before the MMP starts.
+  Stable for the life of the install; `null` on Android until `configure` has been called. See
+  [Mobile measurement partners](https://docs.appdna.ai/sdks/react-native/api-reference#mobile-measurement-partners).
+
 ## [1.0.24] — 2026-11-19
 
 ### Added

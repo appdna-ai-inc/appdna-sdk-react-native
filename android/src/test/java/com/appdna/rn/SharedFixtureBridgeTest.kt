@@ -370,6 +370,7 @@ class SharedFixtureBridgeTest {
         val action = fixtureJson.getJSONObject("action")
         when (val kind = action.getString("kind")) {
             "identify" -> driveIdentify(action)
+            "anonymous_id_lifecycle" -> driveAnonymousIdLifecycle(action)
             // the consent-signal fixtures, every SDK call through the bridged module into the live
             // native SDK, against a stub server. They leave the singleton reset, so the SDK is configured again.
             "script" -> {
@@ -467,6 +468,30 @@ class SharedFixtureBridgeTest {
     }
 
     // ── Drivers — every one of them a REAL bridged AppdnaModule method ───────────
+
+    /**
+     * the host's calls in order through the bridged module into the live native SDK: each `read`
+     * is the bridged `getAnonymousId` (the method JS calls), `identify` and `reset` the bridged ones. The id is
+     * native's, so the reads are reported as letters in order of first appearance, with their format.
+     */
+    private fun driveAnonymousIdLifecycle(action: JSONObject) {
+        val steps = action.getJSONArray("calls").let { a -> (0 until a.length()).map { a.getString(it) } }
+        val reads = mutableListOf<String>()
+        for (step in steps) {
+            when (step) {
+                "read" -> reads += (capture { p -> module.getAnonymousId(p) } as? String
+                    ?: unsupported("getAnonymousId resolved no id on a configured SDK"))
+                "identify" -> module.identify(action.getString("userId"), null, mock(Promise::class.java, Answer { null }))
+                "reset" -> module.reset(mock(Promise::class.java, Answer { null }))
+                else -> unsupported("anonymous_id_lifecycle step '$step' is not a host API call")
+            }
+            idle()
+        }
+        val letters = LinkedHashMap<String, String>()
+        state["anonymous_id_reads"] = reads.map { id -> letters.getOrPut(id) { ('A' + letters.size).toString() } }
+        val uuid = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
+        state["anonymous_id_format"] = if (reads.all { uuid.matches(it) }) "uuid_lowercase" else "other"
+    }
 
     private fun driveIdentify(action: JSONObject) {
         val userId = action.getString("userId")

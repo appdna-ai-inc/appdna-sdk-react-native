@@ -163,6 +163,12 @@ public final class AppdnaModuleImpl: NSObject {
         resolve(nil)
     }
 
+    /// the host passes it to its MMP as the customer user id.
+    @objc(getAnonymousId:reject:)
+    public func getAnonymousId(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        resolve(AppDNA.anonymousId)
+    }
+
     /// Fire-and-forget. Native enqueues, so a Promise per event would allocate for nothing.
     @objc(track:properties:)
     public func track(_ event: String, properties: NSDictionary?) {
