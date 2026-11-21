@@ -120,3 +120,31 @@ export interface AppDNAOptions {
    */
   notificationIcon?: number;
 }
+
+/**
+ * the install's attribution as the app hands it to `AppDNA.setAttribution`, from its MMP's on-device
+ * callback. Every field is optional; snake_case or camelCase. `raw` carries the MMP's own parameters
+ * (`af_sub1`, `deep_link_value`, …); any other top-level key is kept under `raw` by native.
+ */
+export interface AttributionPayload {
+  network?: string;
+  source?: string;
+  channel?: string;
+  campaign?: string;
+  campaign_id?: string;
+  adset?: string;
+  adset_id?: string;
+  ad?: string;
+  ad_id?: string;
+  creative?: string;
+  keyword?: string;
+  placement?: string;
+  site_id?: string;
+  is_organic?: boolean;
+  isOrganic?: boolean;
+  attribution_type?: string;
+  install_country?: string;
+  mmp?: string;
+  raw?: { [key: string]: string | number | boolean | null };
+  [key: string]: unknown;
+}

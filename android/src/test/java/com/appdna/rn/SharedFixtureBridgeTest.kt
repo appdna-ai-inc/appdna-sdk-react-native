@@ -371,6 +371,7 @@ class SharedFixtureBridgeTest {
         when (val kind = action.getString("kind")) {
             "identify" -> driveIdentify(action)
             "anonymous_id_lifecycle" -> driveAnonymousIdLifecycle(action)
+            "set_attribution_bridge" -> driveSetAttribution(action)
             // the consent-signal fixtures, every SDK call through the bridged module into the live
             // native SDK, against a stub server. They leave the singleton reset, so the SDK is configured again.
             "script" -> {
@@ -491,6 +492,21 @@ class SharedFixtureBridgeTest {
         state["anonymous_id_reads"] = reads.map { id -> letters.getOrPut(id) { ('A' + letters.size).toString() } }
         val uuid = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
         state["anonymous_id_format"] = if (reads.all { uuid.matches(it) }) "uuid_lowercase" else "other"
+    }
+
+    /**
+     * the bridged `setAttribution` then each `waitForAttribution` (a null wait is the facade's 1500 ms),
+     * into the live native SDK; native's attribution_set envelope is asserted by `expect.events`.
+     */
+    private fun driveSetAttribution(action: JSONObject) {
+        module.setAttribution(jsonToReadableMap(action.getJSONObject("attribution")), mock(Promise::class.java, Answer { null }))
+        idle()
+        val waits = action.getJSONArray("waits")
+        state["wait_results"] = (0 until waits.length()).map { i ->
+            val ms = if (waits.isNull(i)) 1500.0 else waits.getDouble(i)
+            capture { p -> module.waitForAttribution(ms, p) }
+        }
+        idle()
     }
 
     private fun driveIdentify(action: JSONObject) {

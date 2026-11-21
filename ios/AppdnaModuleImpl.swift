@@ -163,6 +163,27 @@ public final class AppdnaModuleImpl: NSObject {
         resolve(nil)
     }
 
+    /// the MMP's on-device attribution, handed to native unchanged.
+    @objc(setAttribution:resolve:reject:)
+    public func setAttribution(
+        _ attribution: NSDictionary,
+        resolve: @escaping RCTPromiseResolveBlock,
+        reject: @escaping RCTPromiseRejectBlock
+    ) {
+        AppDNA.setAttribution(attribution as? [String: Any] ?? [:])
+        resolve(nil)
+    }
+
+    /// the facade always passes the timeout (its default is 1500).
+    @objc(waitForAttribution:resolve:reject:)
+    public func waitForAttribution(
+        _ timeoutMs: Double,
+        resolve: @escaping RCTPromiseResolveBlock,
+        reject: @escaping RCTPromiseRejectBlock
+    ) {
+        AppDNA.waitForAttribution(timeoutMs: Int(timeoutMs)) { arrived in resolve(arrived) }
+    }
+
     /// the host passes it to its MMP as the customer user id.
     @objc(getAnonymousId:reject:)
     public func getAnonymousId(resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {

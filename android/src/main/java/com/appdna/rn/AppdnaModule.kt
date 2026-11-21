@@ -307,6 +307,17 @@ class AppdnaModule(private val reactContext: ReactApplicationContext) :
         promise.resolve(null)
     }
 
+    /** the MMP's on-device attribution, handed to native unchanged (nulls survive, E9.2). */
+    override fun setAttribution(attribution: ReadableMap, promise: Promise) {
+        AppDNA.setAttribution(AppdnaBridge.toPropertyMap(attribution) ?: emptyMap())
+        promise.resolve(null)
+    }
+
+    /** the facade always passes the timeout (its default is 1500). */
+    override fun waitForAttribution(timeoutMs: Double?, promise: Promise) {
+        AppDNA.waitForAttribution((timeoutMs ?: 1500.0).toLong()) { arrived -> promise.resolve(arrived) }
+    }
+
     /** the host passes it to its MMP as the customer user id; null before configure. */
     override fun getAnonymousId(promise: Promise) {
         promise.resolve(AppDNA.getAnonymousId())

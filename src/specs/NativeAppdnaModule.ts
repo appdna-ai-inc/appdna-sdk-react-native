@@ -123,6 +123,21 @@ export interface Spec extends TurboModule {
   getAnonymousId(): Promise<string>;
 
   /**
+   * Hand AppDNA the install's attribution from the MMP's on-device callback (standard fields
+   * such as network, campaign, adset, ad, creative, is_organic, mmp; the MMP's own parameters
+   * under raw). Stored on the device, sent as attribution_set, and read by audience rules at
+   * once.
+   */
+  setAttribution(attribution: Object): Promise<void>;
+
+  /**
+   * Resolves true once attribution is stored (at once if it already is), or false after
+   * timeoutMs (default 1500) when none arrived. A wait that runs out is remembered, so a later
+   * launch answers false at once.
+   */
+  waitForAttribution(timeoutMs?: number): Promise<boolean>;
+
+  /**
    * Whether the SDK has finished configuring — the condition `onReady` fires on, readable
    * synchronously. A `presentOnboarding` that resolves false while this is false means "the SDK
    * is not up yet", not "no such flow". Note this is NOT "the remote config has arrived": the

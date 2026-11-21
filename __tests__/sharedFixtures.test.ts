@@ -97,6 +97,7 @@ const mockAppdnaModule = new Proxy(
 
       return (...args: unknown[]) => {
         mockCapturedCalls.push({ method: methodName, args });
+        if (methodName === 'waitForAttribution') return Promise.resolve(true);
         return Promise.resolve(methodName === 'getAnonymousId' ? mockNativeAnonId : null);
       };
     },
@@ -239,6 +240,14 @@ async function runConsentScript(fixture: Fixture): Promise<void> {
 
 async function runFixture(fixture: Fixture): Promise<void> {
   switch (fixture.action.kind) {
+    case 'set_attribution_bridge': {
+      // the host's calls; normalising is native's, so the payload must cross unchanged.
+      await AppDNA.setAttribution(fixture.action.attribution as Record<string, unknown>);
+      for (const w of fixture.action.waits as (number | null)[]) {
+        mockReturned.push(w === null ? await AppDNA.waitForAttribution() : await AppDNA.waitForAttribution(w));
+      }
+      return;
+    }
     case 'anonymous_id_lifecycle': {
       // the host's calls in order; the id is native's (SharedFixtureBridgeTest.kt proves it).
       for (const step of fixture.action.calls as string[]) {
@@ -347,6 +356,17 @@ function pushPayload(fixture: Fixture): Record<string, unknown> {
 }
 
 function assertBridgeContract(fixture: Fixture): void {
+  if (fixture.action.kind === 'set_attribution_bridge') {
+    const state = fixture.expect.state_after as { wait_results: unknown[] };
+    const waits = fixture.action.waits as (number | null)[];
+    // a module call per host call, in order, the payload unchanged and the default timeout filled by the facade.
+    expect(mockCapturedCalls).toEqual([
+      { method: 'setAttribution', args: [fixture.action.attribution] },
+      ...waits.map((w) => ({ method: 'waitForAttribution', args: [w ?? 1500] })),
+    ]);
+    expect(mockReturned).toEqual(state.wait_results);
+    return;
+  }
   if (fixture.action.kind === 'anonymous_id_lifecycle') {
     const steps = fixture.action.calls as string[];
     const methodOf: Record<string, string> = { read: 'getAnonymousId', identify: 'identify', reset: 'reset' };

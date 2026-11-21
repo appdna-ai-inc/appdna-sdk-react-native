@@ -10,6 +10,10 @@ the project uses [Semantic Versioning](https://semver.org/).
 - Audience rules: `gte` and `lte` no longer match a user who has no value for the trait, or a value that is not a number, from the native SDKs this release wraps. No API change.
 
 ### Added
+- `AppDNA.setAttribution(payload)` and `AppDNA.waitForAttribution(timeoutMs?)` → `Promise<boolean>`, and the
+  `AttributionPayload` type: hand AppDNA the attribution your MMP's on-device callback delivers, so audience rules can
+  target any acquisition field on the first launch. See
+  [Target content by acquisition source](https://docs.appdna.ai/sdks/react-native/api-reference#target-content-by-acquisition-source).
 - `AppDNA.getAnonymousId()` → `Promise<string | null>`: the anonymous ID AppDNA keys this install's events by. Pass it
   to your mobile measurement partner (AppsFlyer, Adjust, Singular) as its customer user ID before the MMP starts.
   Stable for the life of the install; `null` on Android until `configure` has been called. See

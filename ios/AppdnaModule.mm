@@ -301,6 +301,20 @@ RCT_EXPORT_MODULE()
   [_impl getAnonymousId:resolve reject:reject];
 }
 
+- (void)setAttribution:(NSDictionary *)attribution
+            resolve:(RCTPromiseResolveBlock )resolve
+            reject:(RCTPromiseRejectBlock )reject
+{
+  [_impl setAttribution:attribution resolve:resolve reject:reject];
+}
+
+- (void)waitForAttribution:(double)timeoutMs
+            resolve:(RCTPromiseResolveBlock )resolve
+            reject:(RCTPromiseRejectBlock )reject
+{
+  [_impl waitForAttribution:timeoutMs resolve:resolve reject:reject];
+}
+
 - (void)isReady:(RCTPromiseResolveBlock )resolve
             reject:(RCTPromiseRejectBlock )reject
 {
