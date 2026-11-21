@@ -10,6 +10,10 @@ the project uses [Semantic Versioning](https://semver.org/).
 - Audience rules: `gte` and `lte` no longer match a user who has no value for the trait, or a value that is not a number, from the native SDKs this release wraps. No API change.
 
 ### Added
+- In-app messages and surveys honour audience rules (user traits and install attribution), from the native SDKs this
+  release wraps: a message or survey with rules triggers only for a user they match, and presenting a survey by
+  placement skips one whose rules do not match. No API change. See
+  [Target content by acquisition source](https://docs.appdna.ai/sdks/react-native/api-reference#target-content-by-acquisition-source).
 - `AppDNA.setAttribution(payload)` and `AppDNA.waitForAttribution(timeoutMs?)` → `Promise<boolean>`, and the
   `AttributionPayload` type: hand AppDNA the attribution your MMP's on-device callback delivers, so audience rules can
   target any acquisition field on the first launch. See
