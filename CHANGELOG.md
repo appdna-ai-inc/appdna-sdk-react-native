@@ -6,6 +6,11 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- In-app messages honour segment targeting (`segments` / `exclude_segments`, membership resolved by AppDNA for the
+  current user), from the native SDKs this release wraps. Until the user's membership has arrived, a message with
+  segments is not shown. No API change. See [In-app messages](https://docs.appdna.ai/sdks/react-native/in-app-messages).
+
 ### Fixed
 - A `{{savings_percent}}` badge on a plan whose authored price is a per-month figure (`"$5.00/mo"` on an annual plan) states the real saving ("save 74%" against $19.99/mo, not "save 97%"), from the native SDKs this release wraps. No API change.
 
