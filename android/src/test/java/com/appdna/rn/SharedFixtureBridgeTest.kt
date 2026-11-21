@@ -130,6 +130,12 @@ class SharedFixtureBridgeTest {
     @Volatile
     private var routed: Pair<String, String>? = null
 
+    /**
+     * Envelopes a driver has ALREADY asserted as the by-product of a host call the action makes, set
+     * aside before `expect.events` is compared. Reset per fixture; empty unless a driver sets it.
+     */
+    private var assertedByDriver: (JSONObject) -> Boolean = { false }
+
     // ── Harness ──────────────────────────────────────────────────────────────────
 
     /**
@@ -233,6 +239,7 @@ class SharedFixtureBridgeTest {
         clearPersistedEvents()
         emitted.clear()
         state.clear()
+        assertedByDriver = { false }
         idle()
     }
 
@@ -492,6 +499,22 @@ class SharedFixtureBridgeTest {
         state["anonymous_id_reads"] = reads.map { id -> letters.getOrPut(id) { ('A' + letters.size).toString() } }
         val uuid = Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
         state["anonymous_id_format"] = if (reads.all { uuid.matches(it) }) "uuid_lowercase" else "other"
+
+        // Through the LIVE native SDK the host's `identify` also emits the SDK's `identify` event, whose
+        // shape the event_emission/identify_* fixtures pin. This fixture pins the anonymous id, and its
+        // `expect.events` is what the identity rule emits on the core runners, which drive IdentityManager
+        // directly: nothing. So the bridged identify is asserted here (one `identify` envelope per step,
+        // carrying the fixture's user id: the call reached native), and only those envelopes are set aside.
+        // Any other event, from `reset` or a read, still fails `expect.events`.
+        val userId = action.getString("userId")
+        val isThisIdentify = { e: JSONObject -> e.optString("event_name") == "identify" && e.toString().contains("\"$userId\"") }
+        assertEquals(
+            "[$fixtureName] each bridged identify reaches native as one `identify` event for '$userId' " +
+                "(native emitted ${persistedEnvelopes().map { it.optString("event_name") }})",
+            steps.count { it == "identify" },
+            persistedEnvelopes().count(isThisIdentify),
+        )
+        assertedByDriver = isThisIdentify
     }
 
     /**
@@ -950,7 +973,7 @@ class SharedFixtureBridgeTest {
         // with no such screen in this runner's config — emits `screen_dismissed` for THAT id. Only that
         // exact event (and the matching `onScreenDismissed`, below) belongs to the routed destination
         // rather than the push path the fixture pins; the route is asserted via `state_after.routed`.
-        val envelopes = persistedEnvelopes().filterNot { isRoutedScreenDismissal(it) || isDroppedEventsReport(it) }
+        val envelopes = persistedEnvelopes().filterNot { isRoutedScreenDismissal(it) || isDroppedEventsReport(it) || assertedByDriver(it) }
 
         // Wrapper-only invariant. No other runner can assert it: on iOS/Android core
         // the tag is `native`. A wrapper that stops injecting it mis-attributes every RN event in
