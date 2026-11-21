@@ -10,6 +10,9 @@ the project uses [Semantic Versioning](https://semver.org/).
 - Audience rules: `gte` and `lte` no longer match a user who has no value for the trait, or a value that is not a number, from the native SDKs this release wraps. No API change.
 
 ### Added
+- Android: the plugin lists the native SDK's public fallback repository, `https://us-east1-maven.pkg.dev/pure-tracer-487109-m9/appdna-sdk`, after `mavenCentral()`. Add the
+  same line to your app's Android repositories so it resolves a native release Maven Central has not shown yet.
+  See [Fallback repository](https://docs.appdna.ai/sdks/react-native/installation#fallback-repository-artifact-registry).
 - In-app messages and surveys honour audience rules (user traits and install attribution), from the native SDKs this
   release wraps: a message or survey with rules triggers only for a user they match, and presenting a survey by
   placement skips one whose rules do not match. No API change. See

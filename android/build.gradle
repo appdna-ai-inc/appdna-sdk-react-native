@@ -118,6 +118,14 @@ repositories {
     }
     google()
     mavenCentral()
+    // Fallback for `ai.appdna` only, AFTER mavenCentral(): every Android SDK release is also published to this
+    // public Artifact Registry repository, for when Maven Central lags or refuses a release. No credentials.
+    // This compiles the plugin; a consumer APP resolves the SDK through its OWN repositories, so the same line
+    // is in the installation docs.
+    maven {
+        url 'https://us-east1-maven.pkg.dev/pure-tracer-487109-m9/appdna-sdk'
+        content { includeGroup 'ai.appdna' }
+    }
 }
 
 android.testOptions {

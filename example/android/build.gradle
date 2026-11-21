@@ -46,5 +46,11 @@ allprojects {
                 filter { includeGroup "ai.appdna" }
             }
         }
+        // The line the installation docs give customers: the Android SDK's public fallback repository (Artifact
+        // Registry), for a release Maven Central has not taken yet. After mavenCentral(); `ai.appdna` only.
+        maven {
+            url 'https://us-east1-maven.pkg.dev/pure-tracer-487109-m9/appdna-sdk'
+            content { includeGroup 'ai.appdna' }
+        }
     }
 }
