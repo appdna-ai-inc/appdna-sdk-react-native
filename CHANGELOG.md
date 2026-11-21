@@ -4,7 +4,7 @@ All notable changes to the AppDNA React Native SDK are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.25] — 2026-11-21
 
 ### Fixed
 - Audience rules: `gte` and `lte` no longer match a user who has no value for the trait, or a value that is not a number, from the native SDKs this release wraps. No API change.
