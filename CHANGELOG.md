@@ -6,6 +6,10 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- A plan's badge is drawn in the `pill_selector`, `segmented_toggle` and `product_as_cta` plan layouts on both
+  platforms, from the native SDKs this release wraps. No API change. See [Paywalls](https://docs.appdna.ai/sdks/react-native/paywall).
+
 ## [1.0.26] — 2026-11-22
 
 ### Added
