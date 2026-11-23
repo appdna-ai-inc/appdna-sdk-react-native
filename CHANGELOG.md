@@ -4,7 +4,7 @@ All notable changes to the AppDNA React Native SDK are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.27] — 2026-11-23
 
 ### Fixed
 - A plan's badge is drawn in the `pill_selector`, `segmented_toggle` and `product_as_cta` plan layouts on both
