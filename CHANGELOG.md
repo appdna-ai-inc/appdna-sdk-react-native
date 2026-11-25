@@ -4,7 +4,7 @@ All notable changes to the AppDNA React Native SDK are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.28] — 2026-11-25
 
 ### Fixed
 - A plan's `{{savings_percent}}` no longer overstates the saving when an authored price writes its currency in letters
