@@ -6,6 +6,11 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- An onboarding next-step rule whose target is a step of the same flow goes to that step when the step's id begins
+  with `screen_` (how the Console names the steps it creates), instead of ending the flow, from the native SDKs this
+  release wraps. No API change. See [Onboarding](https://docs.appdna.ai/sdks/react-native/onboarding).
+
 ## [1.0.28] — 2026-11-25
 
 ### Fixed
