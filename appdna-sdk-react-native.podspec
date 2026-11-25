@@ -91,7 +91,7 @@ Pod::Spec.new do |s|
     s.frameworks = core_ios.frameworks
     appdna_core_xcconfig = { "SWIFT_ACTIVE_COMPILATION_CONDITIONS" => "$(inherited) APPDNA_CORE_BUNDLED" }
   else
-    s.dependency "AppDNASDK", "~> 1.0.91"
+    s.dependency "AppDNASDK", "~> 1.0.92"
   end
 
   # 🔴 STATIC, because this pod links the static AppDNASDK and inherits its map symbols.
