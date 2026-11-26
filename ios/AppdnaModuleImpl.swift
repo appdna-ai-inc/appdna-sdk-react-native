@@ -960,7 +960,7 @@ public final class AppdnaModuleImpl: NSObject {
     /// A jest test cannot see a native `?? 3600`, and neither can a Dart one.
     /// The WRAPPER's own version (this package), not the native SDK's. Injected, never read from the
     /// host's options. Kept in lockstep with package.json by `check:wrapper-version-selfreport`.
-    static let wrapperVersion = "1.0.29"
+    static let wrapperVersion = "1.0.30"
 
     internal func parseOptions(_ dict: [String: Any]?) -> AppDNAOptions {
         let values = dict ?? [:]
