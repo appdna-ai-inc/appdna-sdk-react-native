@@ -6,6 +6,12 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- From the native SDKs this release wraps (iOS 1.0.93, Android 1.0.65), a paywall with no `post_purchase.on_success`
+  closes itself 2 s after a successful purchase, if your app has not already closed it, and `onPaywallDismissed`
+  fires. On iOS, the SDK's own close no longer closes the screen the paywall was presented from. No API change. See
+  [Paywalls](https://docs.appdna.ai/sdks/react-native/paywall).
+
 ## [1.0.29] — 2026-11-26
 
 ### Fixed
