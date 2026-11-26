@@ -6,6 +6,12 @@ the project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- From the native SDKs this release wraps (iOS 1.0.93, Android 1.0.65), a Lottie block saved before its playback rate
+  moved to `lottie_speed` plays at the number it carries under `speed`, and a social-proof section whose
+  `review_count` is display text keeps the rest of the section on iOS. Android no longer reports a comparison table's
+  header-list `columns` as a dropped value. No API change. See [Rich media](https://docs.appdna.ai/sdks/react-native/rich-media).
+
 ### Changed
 - From the native SDKs this release wraps (iOS 1.0.93, Android 1.0.65), a paywall with no `post_purchase.on_success`
   closes itself 2 s after a successful purchase, if your app has not already closed it, and `onPaywallDismissed`
