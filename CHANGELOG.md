@@ -4,7 +4,7 @@ All notable changes to the AppDNA React Native SDK are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and
 the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.30] — 2026-11-27
 
 ### Fixed
 - From the native SDKs this release wraps (iOS 1.0.93, Android 1.0.65), a Lottie block saved before its playback rate
